@@ -1,0 +1,6 @@
+{
+  "name": "Skeena Steelhead Run Tracker & Projection Engine",
+  "description": "Interactive Skeena River summer steelhead run comparison across 10 years (current year vs 9 previous years) with Tyee test fishery index, date scrubber slider, real-time projections, and tributary escapement models.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
