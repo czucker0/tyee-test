@@ -32,8 +32,9 @@ export const AboutTyeeModal: React.FC<AboutTyeeModalProps> = ({ isOpen, onClose 
               <Fish className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                About the Skeena Steelhead Run & Tyee Test Fishery
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-xs border border-cyan-500/40">BKLYNFLY</span>
+                <span>Skeena Steelhead Escapement Statistics</span>
               </h3>
               <p className="text-xs text-slate-400">
                 Methodology, Tyee Index Expansion, and Escapement Conservation Framework
