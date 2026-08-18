@@ -5,10 +5,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
-  Calendar,
   Sparkles,
   Fish,
-  SlidersHorizontal
+  SlidersHorizontal,
 } from 'lucide-react';
 import { SEASON_DAYS, TODAY_DAY_INDEX, LATEST_RECORDED_DAY_INDEX } from '../data/historicalData';
 
@@ -52,76 +51,72 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
   const presets = [
     { label: 'Start (Jun 10)', shortLabel: 'Start', index: 0 },
     { label: 'Jul 15', shortLabel: 'Jul 15', index: 35 },
-    { label: 'Peak (Aug 14)', shortLabel: 'Peak', index: 65, icon: <Flame className="w-2.5 h-2.5 text-amber-400" /> },
+    { label: 'Peak (Aug 14)', shortLabel: 'Peak', index: 65, icon: <Flame className="w-2.5 h-2.5 text-[var(--accent-amber)]" /> },
     { label: `Latest (${latestRecordedMonthDay})`, shortLabel: `Latest (${latestRecordedMonthDay})`, index: latestRecordedDayIndex, highlight: true },
     { label: 'Sep 05', shortLabel: 'Sep 05', index: 87 },
     { label: 'Finish (Sep 30)', shortLabel: 'Finish', index: SEASON_DAYS.length - 1 },
   ];
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800/90 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-lg relative overflow-hidden">
-      {/* Background subtle gradient glow */}
-      <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="relative z-10 space-y-2 sm:space-y-3">
-        {/* Top Info Bar: Date Title, % Complete Meter, Playback Controls */}
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-sm relative overflow-hidden transition-colors duration-200">
+      <div className="relative z-10 space-y-2.5 sm:space-y-3.5">
+        {/* Top Info Bar */}
         <div className="flex items-center justify-between gap-2">
-          {/* Current Selected Date Display */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="p-1 sm:p-2 bg-gradient-to-br from-cyan-950/80 to-slate-900 border border-cyan-500/30 rounded-lg text-center min-w-[50px] sm:min-w-[65px] shadow-inner shrink-0">
-              <span className="block text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+          {/* Current Selected Date Display - Editorial Serif */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <div className="p-1 sm:p-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-center min-w-[54px] sm:min-w-[68px] shrink-0">
+              <span className="block text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--accent-amber)]">
                 {currentDay.monthDay.split(' ')[0]}
               </span>
-              <span className="block text-base sm:text-2xl font-black text-white leading-none mt-0.5">
+              <span className="block text-base sm:text-2xl font-black text-[var(--text-main)] leading-none mt-0.5">
                 {currentDay.day}
               </span>
             </div>
 
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-sm sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-1.5 truncate">
-                  <span>{currentDay.monthDay}</span>
+                <h2 className="text-base sm:text-xl font-heading font-bold text-[var(--text-main)] tracking-tight flex items-center gap-2 truncate">
+                  <span>{currentDay.monthDay}, 2026</span>
                   {isFutureForecast ? (
-                    <span className="text-[9px] sm:text-xs px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold border border-indigo-500/30 flex items-center gap-0.5 shrink-0">
-                      <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                    <span className="stamp-badge stamp-amber font-mono">
+                      <Sparkles className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
                       FORECAST
                     </span>
                   ) : isLatestRecorded ? (
-                    <span className="text-[9px] sm:text-xs px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/30 flex items-center gap-0.5 shrink-0">
-                      <Fish className="w-2.5 h-2.5 text-cyan-400" />
+                    <span className="stamp-badge stamp-teal font-mono">
+                      <Fish className="w-2.5 h-2.5" />
                       LATEST
                     </span>
                   ) : (
-                    <span className="text-[9px] sm:text-xs px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-300 font-mono font-bold border border-emerald-500/30 shrink-0">
+                    <span className="stamp-badge stamp-spruce font-mono">
                       RECORDED
                     </span>
                   )}
                   {isPeak && (
-                    <span className="hidden xs:flex text-[9px] sm:text-xs px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30 items-center gap-0.5 shrink-0">
-                      <Flame className="w-2.5 h-2.5 text-amber-400" />
+                    <span className="hidden xs:flex stamp-badge stamp-amber font-mono">
+                      <Flame className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
                       PEAK
                     </span>
                   )}
                 </h2>
               </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+              <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-mono truncate mt-0.5">
                 Day {currentDayIndex + 1}/113 &bull; {percentElapsed.toFixed(0)}% Elapsed
               </p>
             </div>
           </div>
 
           {/* Stepper / Playback Controls */}
-          <div className="flex items-center gap-1 sm:gap-2 bg-slate-950/70 border border-slate-800/80 p-1 sm:p-1.5 rounded-lg sm:rounded-xl shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] p-1 sm:p-1.5 rounded-lg sm:rounded-xl shrink-0">
             {/* Run Elapsed meter (visible on sm+) */}
-            <div className="space-y-0.5 hidden md:block w-24 lg:w-32 pr-2 border-r border-slate-800">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-slate-400">Run Passed</span>
-                <span className="text-cyan-300 font-bold font-mono">{percentElapsed.toFixed(1)}%</span>
+            <div className="space-y-0.5 hidden md:block w-24 lg:w-32 pr-2 border-r border-[var(--border-main)]">
+              <div className="flex justify-between text-[10px] font-mono">
+                <span className="text-[var(--text-muted)]">Run Passed</span>
+                <span className="text-[var(--accent-amber)] font-bold">{percentElapsed.toFixed(1)}%</span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-[var(--border-main)] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-300"
+                  className="bg-[var(--accent-amber)] h-full rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(100, Math.max(0, percentElapsed))}%` }}
                 />
               </div>
@@ -132,19 +127,15 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
               onClick={() => onDayChange(Math.max(0, currentDayIndex - 1))}
               disabled={currentDayIndex === 0}
               title="Previous Day"
-              className="p-1 sm:p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 hover:text-white transition"
+              className="p-1 sm:p-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] transition border border-[var(--border-main)]"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
             <button
               onClick={onTogglePlay}
-              title={isPlaying ? 'Pause Animation' : 'Play Timeline Animation'}
-              className={`p-1.5 sm:p-2 rounded-lg font-bold flex items-center justify-center transition shadow-sm ${
-                isPlaying
-                  ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
-                  : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
-              }`}
+              title={isPlaying ? 'Pause Timeline Animation' : 'Play Timeline Animation'}
+              className="p-1.5 sm:p-2 rounded-lg font-bold flex items-center justify-center transition shadow-sm bg-[var(--accent-amber)] text-white hover:opacity-90"
             >
               {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 translate-x-0.5" />}
             </button>
@@ -153,7 +144,7 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
               onClick={() => onDayChange(Math.min(SEASON_DAYS.length - 1, currentDayIndex + 1))}
               disabled={currentDayIndex === SEASON_DAYS.length - 1}
               title="Next Day"
-              className="p-1 sm:p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 hover:text-white transition"
+              className="p-1 sm:p-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] transition border border-[var(--border-main)]"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -166,107 +157,119 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
                 onChangeSpeed(nextSpeed);
               }}
               title="Change Playback Speed"
-              className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white border border-slate-700 transition"
+              className="px-1.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[10px] font-mono font-bold text-[var(--text-secondary)] border border-[var(--border-main)] transition"
             >
               {playSpeed}x
             </button>
+          </div>
+        </div>
 
-            {/* Mobile quick presets toggle button */}
+        {/* Date Timeline Track Slider */}
+        <div className="space-y-1 sm:space-y-1.5">
+          <div className="relative flex items-center">
+            {/* Native range input */}
+            <input
+              type="range"
+              min="0"
+              max={SEASON_DAYS.length - 1}
+              value={currentDayIndex}
+              onChange={(e) => onDayChange(Number(e.target.value))}
+              aria-label="Season Day Scrubber"
+              className="w-full h-2 sm:h-2.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg appearance-none cursor-pointer focus:outline-none accent-[var(--accent-amber)]"
+            />
+          </div>
+
+          {/* Month labels along track */}
+          <div className="flex justify-between px-1 text-[9px] sm:text-[10px] font-editorial text-[var(--text-muted)] font-medium">
+            {monthStarts.map((m) => (
+              <button
+                key={m.label}
+                onClick={() => onDayChange(m.startIdx)}
+                className={`hover:text-[var(--text-main)] transition ${
+                  currentDayIndex >= m.startIdx ? 'text-[var(--accent-amber)] font-bold' : ''
+                }`}
+              >
+                {m.label} 01
+              </button>
+            ))}
             <button
-              onClick={() => setShowMobilePresets(!showMobilePresets)}
-              className={`sm:hidden p-1 rounded border transition ${
-                showMobilePresets
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}
-              title="Toggle Presets Bar"
+              onClick={() => onDayChange(SEASON_DAYS.length - 1)}
+              className="hover:text-[var(--text-main)] transition"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Sep 30
             </button>
           </div>
         </div>
 
-        {/* Main Slider Track */}
-        <div className="space-y-1.5">
-          <div className="relative py-1">
-            {/* Peak Window Highlight Band on Slider track */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 h-2.5 bg-amber-500/25 border border-amber-500/40 rounded-sm pointer-events-none z-0"
-              style={{
-                left: `${(61 / (SEASON_DAYS.length - 1)) * 100}%`,
-                width: `${(11 / (SEASON_DAYS.length - 1)) * 100}%`,
-              }}
-              title="Historical Peak Migration Window (Aug 10 - Aug 20)"
-            />
-
-            {/* Today's Marker Pin */}
-            <div
-              className="absolute top-0 -translate-y-1 -translate-x-1/2 pointer-events-none z-10 flex flex-col items-center"
-              style={{ left: `${(TODAY_DAY_INDEX / (SEASON_DAYS.length - 1)) * 100}%` }}
-            >
-              <span className="text-[7px] sm:text-[8px] font-bold font-mono px-1 rounded bg-cyan-500 text-slate-950 shadow">
-                Today
-              </span>
-              <div className="w-0.5 h-2 bg-cyan-400" />
-            </div>
-
-            <input
-              type="range"
-              min={0}
-              max={SEASON_DAYS.length - 1}
-              value={currentDayIndex}
-              onChange={(e) => onDayChange(parseInt(e.target.value, 10))}
-              className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 focus:outline-none relative z-10 transition"
-            />
-          </div>
-
-          {/* Month & Preset Quick Jumps (Always shown on sm+, expandable or horizontal scroll on mobile) */}
-          <div
-            className={`flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 text-[10px] sm:text-[11px] ${
-              showMobilePresets ? 'flex' : 'hidden sm:flex'
-            }`}
-          >
-            {/* Months */}
-            <div className="flex items-center gap-1 shrink-0 border-r border-slate-800 pr-1.5">
-              {monthStarts.map((m) => (
+        {/* Preset Chips */}
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-mono mr-1 font-semibold">
+              Field Milestones:
+            </span>
+            {presets.map((preset) => {
+              const isSelected = currentDayIndex === preset.index;
+              return (
                 <button
-                  key={m.label}
-                  onClick={() => onDayChange(m.startIdx)}
-                  className={`px-2 py-0.5 rounded transition font-medium border ${
-                    currentDay.month === m.monthNum
-                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300 font-bold'
-                      : 'bg-slate-800/40 border-slate-800 text-slate-400 hover:text-slate-200'
+                  key={preset.label}
+                  onClick={() => onDayChange(preset.index)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-editorial transition flex items-center gap-1 ${
+                    isSelected
+                      ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                      : preset.highlight
+                      ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] font-medium hover:bg-[var(--accent-amber)] hover:text-white'
+                      : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border border-[var(--border-main)]'
                   }`}
                 >
-                  {m.label}
+                  {preset.icon}
+                  <span>{preset.label}</span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Presets */}
-            <div className="flex items-center gap-1 shrink-0">
-              {presets.map((p) => {
-                const isActive = currentDayIndex === p.index;
-                return (
-                  <button
-                    key={p.label}
-                    onClick={() => onDayChange(p.index)}
-                    className={`px-2 py-0.5 rounded transition flex items-center gap-1 border shrink-0 ${
-                      isActive
-                        ? 'bg-cyan-500 text-slate-950 font-bold border-cyan-400 shadow-sm'
-                        : p.highlight
-                        ? 'bg-cyan-950/50 text-cyan-300 border-cyan-800/60 font-semibold'
-                        : 'bg-slate-800/60 text-slate-300 border-slate-700/60 hover:text-white'
-                    }`}
-                  >
-                    {p.icon}
-                    <span>{p.shortLabel}</span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Mobile Presets Toggle */}
+          <div className="sm:hidden w-full flex items-center justify-between">
+            <button
+              onClick={() => setShowMobilePresets(!showMobilePresets)}
+              className="px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[10px] text-[var(--text-secondary)] flex items-center gap-1 font-mono"
+            >
+              <SlidersHorizontal className="w-3 h-3 text-[var(--accent-amber)]" />
+              <span>{showMobilePresets ? 'Hide Milestones' : 'Milestones'}</span>
+            </button>
+
+            {/* Quick jump to latest on mobile */}
+            <button
+              onClick={() => onDayChange(latestRecordedDayIndex)}
+              className="px-2 py-1 rounded bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[10px] text-[var(--accent-amber)] font-bold flex items-center gap-1 font-editorial"
+            >
+              <Fish className="w-3 h-3" />
+              <span>Latest ({latestRecordedMonthDay})</span>
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown preset chips */}
+        {showMobilePresets && (
+          <div className="sm:hidden grid grid-cols-3 gap-1.5 pt-1 border-t border-[var(--border-main)] animate-in fade-in duration-150">
+            {presets.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => {
+                  onDayChange(preset.index);
+                  setShowMobilePresets(false);
+                }}
+                className={`px-2 py-1 rounded text-[10px] font-editorial text-center transition ${
+                  currentDayIndex === preset.index
+                    ? 'bg-[var(--accent-amber)] text-white font-bold'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]'
+                }`}
+              >
+                {preset.shortLabel}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

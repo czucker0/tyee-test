@@ -1,1 +1,181 @@
 @import "tailwindcss";
+
+@layer base {
+  /* =========================================================================
+     EDITORIAL LIGHT THEME (DEFAULT: Naturalist Field Journal)
+     Warm cotton parchment, crisp ivory cardstock, forest-espresso charcoal ink,
+     hairline sandstone rules, and amber/spruce naturalist accents.
+     ========================================================================= */
+  :root, [data-theme="light"] {
+    --bg-canvas: #f8f5ee;
+    --bg-surface: #ffffff;
+    --bg-card: #fcfbfa;
+    --bg-subtle: #f0ebe1;
+    --bg-muted: #e7dfd1;
+
+    --border-main: #e2d9cb;
+    --border-light: #ece5d8;
+    --border-highlight: #c7b9a2;
+    --border-accent: #c66c28;
+
+    --text-main: #191d1a;
+    --text-secondary: #424c46;
+    --text-muted: #6b776f;
+    --text-faint: #929e96;
+
+    --accent-amber: #c56a25;
+    --accent-amber-light: #fcf4eb;
+    --accent-amber-border: #e89553;
+
+    --accent-spruce: #224b38;
+    --accent-spruce-light: #eef6f1;
+    --accent-spruce-border: #4d8869;
+
+    --accent-teal: #1a6467;
+    --accent-teal-light: #ebf6f6;
+    --accent-teal-border: #3d9396;
+
+    --accent-rose: #a8383b;
+    --accent-rose-light: #fdf0f0;
+
+    --shadow-card: 0 1px 3px rgba(30, 35, 30, 0.04), 0 4px 12px rgba(30, 35, 30, 0.03);
+    --shadow-elevated: 0 4px 20px rgba(30, 35, 30, 0.08);
+
+    --grid-line: rgba(70, 80, 75, 0.08);
+  }
+
+  /* =========================================================================
+     NIGHT FLOAT STATION (DARK THEME)
+     Deep obsidian water, oxidized dark river spruce, glowing amber wax accents.
+     ========================================================================= */
+  .dark, [data-theme="dark"] {
+    --bg-canvas: #060a0b;
+    --bg-surface: #0e1618;
+    --bg-card: #0b1214;
+    --bg-subtle: #080d0e;
+    --bg-muted: #152225;
+
+    --border-main: #1f3034;
+    --border-light: #182629;
+    --border-highlight: #2f484e;
+    --border-accent: #f59e0b;
+
+    --text-main: #f3f5f6;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+
+    --accent-amber: #f59e0b;
+    --accent-amber-light: #2a1a08;
+    --accent-amber-border: #f59e0b;
+
+    --accent-spruce: #10b981;
+    --accent-spruce-light: #06281e;
+    --accent-spruce-border: #10b981;
+
+    --accent-teal: #2dd4bf;
+    --accent-teal-light: #072a29;
+    --accent-teal-border: #2dd4bf;
+
+    --accent-rose: #f43f5e;
+    --accent-rose-light: #2c0b11;
+
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 8px 30px rgba(0, 0, 0, 0.6);
+
+    --grid-line: rgba(255, 255, 255, 0.06);
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.01em;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+/* Typography Utility Classes */
+.font-heading {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+.font-editorial {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: -0.015em;
+}
+
+/* Clean Journal Card Styles */
+.journal-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease-in-out;
+}
+
+.journal-card:hover {
+  border-color: var(--border-highlight);
+}
+
+.journal-card-amber {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent-amber-border);
+  box-shadow: var(--shadow-card);
+}
+
+/* Archival Badges & Stamps */
+.stamp-badge {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stamp-amber {
+  background-color: var(--accent-amber-light);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber-border);
+}
+
+.stamp-spruce {
+  background-color: var(--accent-spruce-light);
+  color: var(--accent-spruce);
+  border: 1px solid var(--accent-spruce-border);
+}
+
+.stamp-teal {
+  background-color: var(--accent-teal-light);
+  color: var(--accent-teal);
+  border: 1px solid var(--accent-teal-border);
+}
+
+/* Ledger hairline separator */
+.ledger-border {
+  border-color: var(--border-main);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-subtle);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-highlight);
+  border-radius: 3px;
+}

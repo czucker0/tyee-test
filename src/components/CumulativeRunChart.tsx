@@ -18,18 +18,12 @@ import {
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
 import {
-  Eye,
-  EyeOff,
-  Filter,
   Sparkles,
   Fish,
   BarChart3,
   LineChart,
-  Trophy,
-  TrendingUp,
-  TrendingDown,
-  ShieldCheck,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface CumulativeRunChartProps {
   currentDayIndex: number;
@@ -46,30 +40,28 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
   projection,
   isMetricInAdults,
   selectedYears,
-  onToggleYear,
   onSelectPreset,
   allYears = [],
 }) => {
+  const { isDark } = useTheme();
   // Toggle between Horizontal Standings / Benchmark Bars and the S-Curve Line Chart
   const [visualMode, setVisualMode] = useState<'bars' | 'curve'>('bars');
   const [barScope, setBarScope] = useState<'onDate' | 'seasonTotal'>('onDate');
 
   const [showAverage, setShowAverage] = useState<boolean>(true);
-  const [showEnvelope, setShowEnvelope] = useState<boolean>(true);
-  const [showThresholds, setShowThresholds] = useState<boolean>(true);
+  const [showEnvelope] = useState<boolean>(true);
+  const [showThresholds] = useState<boolean>(true);
   const [showConfidenceBands, setShowConfidenceBands] = useState<boolean>(true);
 
   // Multiplier for display units
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
-  const unitLabel = isMetricInAdults ? 'Adult Steelhead' : 'Tyee Index Points';
 
   const isYearSelected = (year: number) => selectedYears.includes(year);
 
   // Build line chart dataset
-  const { chartData, lastRecordedDayIndex, isSelectedDateFuture } = useMemo(() => {
+  const { chartData, isSelectedDateFuture } = useMemo(() => {
     const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
     
-    // Find the latest day with published in-season DFO data
     let lastRecIdx = 67; // Aug 16 fallback
     if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
       for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
@@ -109,30 +101,21 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         }
       });
 
-      // Current Year 2026 handling:
+      // 2026 In-Season actual vs projected trajectory
       if (isPastOrRecorded) {
-        const raw = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
-        row.currentActual = Math.round(raw * mult * 10) / 10;
+        const recVal = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
+        row.currentActual = Math.round(recVal * mult * 10) / 10;
         if (idx === lastRecIdx) {
-          row.currentProjected = row.currentActual;
-          row.ciLow = row.currentActual;
-          row.ciHigh = row.currentActual;
-          row.ciRange = [row.currentActual, row.currentActual];
-        } else {
-          row.currentProjected = null;
-          row.ciLow = null;
-          row.ciHigh = null;
-          row.ciRange = null;
+          row.currentProjected = Math.round(recVal * mult * 10) / 10;
         }
       } else {
-        row.currentActual = null;
+        const projectedVal = projItem?.projectedCumulative ?? projection.projectedBaselineIndex;
+        row.currentProjected = Math.round(projectedVal * mult * 10) / 10;
+
         if (projItem) {
-          row.currentProjected = Math.round(projItem.projectedCumulative * mult * 10) / 10;
-          row.ciLow = Math.round(projItem.projectedCumulativeLow * mult * 10) / 10;
-          row.ciHigh = Math.round(projItem.projectedCumulativeHigh * mult * 10) / 10;
           row.ciRange = [
-            Math.round(projItem.projectedCumulativeLow * mult * 10) / 10,
-            Math.round(projItem.projectedCumulativeHigh * mult * 10) / 10,
+            Math.round(projItem.projectedLowCI * mult * 10) / 10,
+            Math.round(projItem.projectedHighCI * mult * 10) / 10,
           ];
         }
       }
@@ -141,126 +124,127 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
     });
 
     return { chartData: data, lastRecordedDayIndex: lastRecIdx, isSelectedDateFuture: isFuture };
-  }, [currentDayIndex, projection, mult, allYears]);
+  }, [allYears, currentDayIndex, mult, projection]);
 
-  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
-
-  // =========================================================================
-  // HORIZONTAL STANDINGS & BENCHMARK BAR DATA
-  // =========================================================================
+  // Build horizontal benchmark bar dataset
   const horizontalBarData = useMemo(() => {
     const histDay = HISTORICAL_AVERAGE_CURVE[currentDayIndex] || HISTORICAL_AVERAGE_CURVE[0];
-    const histAvgCumulative = histDay.avgCumulative;
+    const histAvgOnDate = histDay.avgCumulative;
     const histFinalAvg = HISTORICAL_AVERAGE_CURVE[HISTORICAL_AVERAGE_CURVE.length - 1].avgCumulative;
 
-    // Items list
-    const items = allYears.map((y) => {
-      const isCurrent = y.isCurrentYear || y.year === CURRENT_YEAR;
-      let valOnDate = y.data[currentDayIndex]?.cumulativeIndex || 0;
-      let seasonTotal = y.totalIndex;
+    const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
+    const currentOnDate = currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative;
+    const currentSeasonTotal = projection.projectedBaselineIndex;
 
-      if (isCurrent) {
-        valOnDate = projection.currentCumulative;
-        seasonTotal = projection.projectedBaselineIndex;
-      }
+    const barItems: Array<{
+      id: string;
+      label: string;
+      year?: number;
+      isCurrent?: boolean;
+      isAverage?: boolean;
+      color: string;
+      rawVal: number;
+      valDisplay: number;
+      adults: number;
+      deltaVsBaseline: number;
+    }> = [];
 
-      const activeRaw = barScope === 'onDate' ? valOnDate : seasonTotal;
-      const baseline = barScope === 'onDate' ? histAvgCumulative : histFinalAvg;
-      const deltaVsBaseline = baseline > 0 ? Math.round(((activeRaw - baseline) / baseline) * 100) : 0;
+    // 1. Current 2026 Year
+    const currentActiveVal = barScope === 'onDate' ? currentOnDate : currentSeasonTotal;
+    const baseToCompare = barScope === 'onDate' ? histAvgOnDate : histFinalAvg;
+    const curDelta = baseToCompare > 0 ? Math.round(((currentActiveVal - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
 
-      return {
-        id: `year_${y.year}`,
-        label: `${y.year}`,
-        isCurrent,
-        isAverage: false,
-        color: isCurrent ? '#06b6d4' : y.color,
-        rawVal: activeRaw,
-        valDisplay: Math.round(activeRaw * mult * 10) / 10,
-        adults: Math.round(activeRaw * ADULT_EXPANSION_FACTOR),
-        status: y.conservationStatus,
-        deltaVsBaseline,
-        notes: y.notes,
-      };
+    barItems.push({
+      id: `current_${CURRENT_YEAR}`,
+      label: barScope === 'onDate' ? `${CURRENT_YEAR} (Recorded to Date)` : `${CURRENT_YEAR} (Forecast Total)`,
+      year: CURRENT_YEAR,
+      isCurrent: true,
+      color: isDark ? '#f59e0b' : '#c56a25',
+      rawVal: currentActiveVal,
+      valDisplay: currentActiveVal * mult,
+      adults: Math.round(currentActiveVal * ADULT_EXPANSION_FACTOR),
+      deltaVsBaseline: curDelta,
     });
 
-    // Add 10-Yr Historical Average Bar as a reference item
-    const avgVal = barScope === 'onDate' ? histAvgCumulative : histFinalAvg;
-    items.push({
-      id: 'avg_10yr',
-      label: '10-Yr Average',
-      isCurrent: false,
+    // 2. 10-Year Historical Average
+    const avgActiveVal = barScope === 'onDate' ? histAvgOnDate : histFinalAvg;
+    barItems.push({
+      id: 'hist_avg',
+      label: barScope === 'onDate' ? '10-Year Average (On Date)' : '10-Year Average (Final)',
       isAverage: true,
-      color: '#38bdf8',
-      rawVal: avgVal,
-      valDisplay: Math.round(avgVal * mult * 10) / 10,
-      adults: Math.round(avgVal * ADULT_EXPANSION_FACTOR),
-      status: 'Target Baseline',
+      color: isDark ? '#2dd4bf' : '#1a6467',
+      rawVal: avgActiveVal,
+      valDisplay: avgActiveVal * mult,
+      adults: Math.round(avgActiveVal * ADULT_EXPANSION_FACTOR),
       deltaVsBaseline: 0,
-      notes: 'DFO 10-Year Historical Mean',
     });
 
-    // Sort descending by raw value
-    items.sort((a, b) => b.rawVal - a.rawVal);
+    // 3. Archival Selected Years
+    allYears.forEach((y) => {
+      if (y.isCurrentYear || y.year === CURRENT_YEAR || !isYearSelected(y.year)) return;
+      const yValOnDate = y.data[currentDayIndex]?.cumulativeIndex || 0;
+      const yValFinal = y.totalIndex;
+      const yActive = barScope === 'onDate' ? yValOnDate : yValFinal;
+      const yDelta = baseToCompare > 0 ? Math.round(((yActive - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
 
-    const maxVal = Math.max(...items.map((i) => i.rawVal), 1);
-    const currentItemRank = items.filter((i) => !i.isAverage).findIndex((i) => i.isCurrent) + 1;
+      barItems.push({
+        id: `year_${y.year}`,
+        label: `${y.year} ${barScope === 'onDate' ? `(${y.data[currentDayIndex]?.monthDay || ''})` : 'Final'}`,
+        year: y.year,
+        color: y.color,
+        rawVal: yActive,
+        valDisplay: yActive * mult,
+        adults: Math.round(yActive * ADULT_EXPANSION_FACTOR),
+        deltaVsBaseline: yDelta,
+      });
+    });
+
+    // Sort descending by value
+    barItems.sort((a, b) => b.rawVal - a.rawVal);
+
+    const maxVal = Math.max(...barItems.map((b) => b.rawVal), 1);
+    const currentRank = barItems.findIndex((b) => b.isCurrent) + 1;
 
     return {
-      items,
+      items: barItems,
       maxVal,
-      currentRank: currentItemRank,
-      totalCount: items.filter((i) => !i.isAverage).length,
+      currentRank,
+      totalCount: barItems.length,
     };
-  }, [allYears, currentDayIndex, projection, barScope, mult]);
+  }, [allYears, barScope, currentDayIndex, isDark, isYearSelected, mult, projection]);
 
-  // Custom Line Chart Tooltip
+  // Selected date info
+  const selectedDayInfo = SEASON_DAYS[currentDayIndex] || SEASON_DAYS[0];
+  const selectedMonthDay = selectedDayInfo.monthDay;
+
+  // Custom Tooltip for S-Curve Line Chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
-    const hoveredDayIndex = payload[0]?.payload?.dayIndex;
-    const isHoveredRecorded = hoveredDayIndex !== undefined && hoveredDayIndex <= lastRecordedDayIndex;
-
-    const filteredEntries = payload.filter((p: any) => {
-      if (!p.dataKey || p.value === undefined || p.value === null || isNaN(p.value)) return false;
-      if (p.dataKey.includes('envelope') || p.dataKey.includes('ciRange') || p.dataKey === 'ciLow' || p.dataKey === 'ciHigh') {
-        return false;
-      }
-      if (isHoveredRecorded && p.dataKey === 'currentProjected' && hoveredDayIndex !== lastRecordedDayIndex) return false;
-      if (!isHoveredRecorded && p.dataKey === 'currentActual') return false;
-      return true;
-    });
-
     return (
-      <div className="bg-slate-950/95 border border-slate-700 rounded-xl p-3.5 shadow-2xl backdrop-blur text-xs space-y-2 min-w-[230px] max-w-[300px]">
-        <div className="font-bold text-white border-b border-slate-800 pb-1.5 flex justify-between items-center">
-          <span className="text-cyan-400 font-extrabold">{label}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold bg-slate-800 text-slate-300">
-            {isHoveredRecorded ? 'Recorded DFO' : 'Forecast'}
-          </span>
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl max-w-xs text-xs font-mono">
+        <div className="border-b border-[var(--border-main)] pb-1.5 mb-2 flex items-center justify-between">
+          <span className="font-bold text-[var(--text-main)] text-sm">{label}</span>
+          <span className="text-[10px] text-[var(--text-muted)] font-mono">Day {payload[0]?.payload?.dayIndex + 1}/113</span>
         </div>
 
-        <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
-          {filteredEntries.map((p: any) => {
-            const is2026 = p.dataKey === 'currentActual' || p.dataKey === 'currentProjected';
-            const isAvg = p.dataKey === 'avgCumulative';
-            const yearName = is2026 ? `${CURRENT_YEAR} (Current)` : isAvg ? '10-Yr DFO Average' : p.name;
-            const val = typeof p.value === 'number' ? p.value : 0;
-            const expandedAdults = isMetricInAdults ? val : Math.round(val * ADULT_EXPANSION_FACTOR);
+        <div className="space-y-1.5">
+          {payload.map((p: any) => {
+            if (p.dataKey === 'envelopeRange' || p.dataKey === 'ciRange') return null;
+
+            let yearName = p.name;
+            let val = Number(p.value || 0);
+            let expandedAdults = Math.round(val * (isMetricInAdults ? 1 : ADULT_EXPANSION_FACTOR));
 
             return (
-              <div
-                key={p.dataKey}
-                className={`flex justify-between items-center py-1 px-1.5 rounded ${
-                  is2026 ? 'bg-cyan-950/50 border border-cyan-500/40 text-cyan-200' : isAvg ? 'bg-slate-900/80 text-slate-300' : 'text-slate-400'
-                }`}
-              >
+              <div key={p.dataKey} className="flex items-center justify-between gap-3 text-[var(--text-secondary)]">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color || '#38bdf8' }} />
-                  <span className="font-medium">{yearName}</span>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color || '#c56a25' }} />
+                  <span className="font-medium font-mono text-[11px]">{yearName}</span>
                 </div>
-                <div className="font-mono font-bold text-right">
+                <div className="font-mono font-bold text-right text-[var(--text-main)]">
                   <span>{val.toFixed(1)}</span>
-                  {!isMetricInAdults && <span className="text-[10px] text-slate-500 ml-1">(~{expandedAdults.toLocaleString()})</span>}
+                  {!isMetricInAdults && <span className="text-[10px] text-[var(--text-muted)] ml-1">(~{expandedAdults.toLocaleString()})</span>}
                 </div>
               </div>
             );
@@ -271,42 +255,43 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xl space-y-4">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
       {/* Top Header & Visual Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3 sm:pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3 sm:pb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide flex items-center gap-2">
               <span>{visualMode === 'bars' ? 'Escapement Standings & Benchmarks' : 'S-Curve Migration Trajectory'}</span>
             </h3>
             {isSelectedDateFuture ? (
-              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-semibold flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-indigo-400" />
+              <span className="stamp-badge stamp-amber">
+                <Sparkles className="w-3 h-3 text-[var(--accent-amber)]" />
                 Forecasting {selectedMonthDay}
               </span>
             ) : (
-              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono font-semibold flex items-center gap-1">
-                <Fish className="w-3 h-3 text-emerald-400" />
-                DFO Data ({selectedMonthDay})
+              <span className="stamp-badge stamp-teal">
+                <Fish className="w-3 h-3" />
+                <span>DFO Telemetry</span>
+                <span className="font-bold normal-case">({selectedMonthDay})</span>
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
             {visualMode === 'bars'
-              ? `2026 currently ranks #${horizontalBarData.currentRank} of ${horizontalBarData.totalCount} seasons recorded`
+              ? `2026 currently ranks #${horizontalBarData.currentRank} of ${horizontalBarData.totalCount} seasons in ledger`
               : 'Tracking in-season run progression against historical percentiles and model projection'}
           </p>
         </div>
 
-        {/* Primary View Toggle Switch: [ 📊 Standings Bars ] ⟷ [ 📈 Run Curve ] */}
+        {/* Primary View Toggle Switch */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1 font-mono">
             <button
               onClick={() => setVisualMode('bars')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                 visualMode === 'bars'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-950/60'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
@@ -317,8 +302,8 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
               onClick={() => setVisualMode('curve')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                 visualMode === 'curve'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-950/60'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
               }`}
             >
               <LineChart className="w-3.5 h-3.5" />
@@ -328,43 +313,42 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 1. HORIZONTAL STANDINGS & BENCHMARK BAR VIEW (Mobile Preferred)            */}
-      {/* ========================================================================= */}
+      {/* 1. HORIZONTAL STANDINGS & BENCHMARK BAR VIEW */}
       {visualMode === 'bars' ? (
         <div className="space-y-3.5">
           {/* Sub-scope toggle: To-Date vs Season Total */}
-          <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1">
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+          <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
+            <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-lg border border-[var(--border-main)]">
               <button
                 onClick={() => setBarScope('onDate')}
-                className={`px-2.5 py-1 rounded font-medium transition ${
-                  barScope === 'onDate' ? 'bg-slate-800 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+                  barScope === 'onDate' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
-                Passage on {selectedMonthDay}
+                <span>Passage on</span>
+                <span className="font-bold">{selectedMonthDay}</span>
               </button>
               <button
                 onClick={() => setBarScope('seasonTotal')}
                 className={`px-2.5 py-1 rounded font-medium transition ${
-                  barScope === 'seasonTotal' ? 'bg-slate-800 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+                  barScope === 'seasonTotal' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
                 Full Season Final / Proj
               </button>
             </div>
 
-            <div className="text-[11px] text-slate-400 flex items-center gap-2">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-                <strong className="text-cyan-300">2026</strong>
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-amber)]" />
+                <strong className="text-[var(--accent-amber)]">2026</strong>
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-teal)]" />
                 <span>10-Yr Avg</span>
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-stone-400" />
                 <span>Archive</span>
               </span>
             </div>
@@ -381,10 +365,10 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                   key={item.id}
                   className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col gap-1.5 ${
                     item.isCurrent
-                      ? 'bg-gradient-to-r from-cyan-950/70 to-slate-900 border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-lg shadow-cyan-950/30'
+                      ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
                       : item.isAverage
-                      ? 'bg-slate-950/90 border-sky-500/40'
-                      : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700'
+                      ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)]'
+                      : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 text-xs">
@@ -394,36 +378,36 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                         <span
                           className={`w-6 h-6 rounded-md flex items-center justify-center font-mono text-[11px] font-black shrink-0 ${
                             rank === 1
-                              ? 'bg-amber-500 text-slate-950'
+                              ? 'bg-[var(--accent-amber)] text-white'
                               : rank === 2
-                              ? 'bg-slate-300 text-slate-950'
+                              ? 'bg-stone-300 text-stone-900'
                               : rank === 3
-                              ? 'bg-amber-700 text-white'
-                              : 'bg-slate-800 text-slate-400'
+                              ? 'bg-stone-400 text-white'
+                              : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
                           }`}
                         >
                           #{rank}
                         </span>
                       ) : (
-                        <span className="w-6 h-6 rounded-md bg-sky-950 text-sky-400 border border-sky-800/60 flex items-center justify-center text-[10px] font-bold shrink-0">
+                        <span className="w-6 h-6 rounded-md bg-[var(--accent-teal)] text-white flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
                           AVG
                         </span>
                       )}
 
-                      <span className={`font-bold truncate ${item.isCurrent ? 'text-cyan-300 text-sm' : item.isAverage ? 'text-sky-300 font-semibold' : 'text-slate-200'}`}>
+                      <span className={`font-bold truncate ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm font-mono' : item.isAverage ? 'text-[var(--accent-teal)] font-mono font-semibold' : 'text-[var(--text-main)] font-mono'}`}>
                         {item.label}
-                        {item.isCurrent && <span className="ml-1.5 text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">CURRENT RUN</span>}
+                        {item.isCurrent && <span className="ml-1.5 stamp-badge stamp-amber">CURRENT</span>}
                       </span>
                     </div>
 
                     {/* Escapement Values & Delta */}
                     <div className="flex items-center gap-2 text-right shrink-0">
                       <div className="font-mono">
-                        <span className={`font-black ${item.isCurrent ? 'text-cyan-300 text-sm' : 'text-white'}`}>
+                        <span className={`font-black ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm' : 'text-[var(--text-main)]'}`}>
                           {item.valDisplay.toFixed(1)} {isMetricInAdults ? 'adults' : 'pts'}
                         </span>
                         {!isMetricInAdults && (
-                          <span className="text-[10px] text-slate-400 ml-1.5 hidden xs:inline">
+                          <span className="text-[10px] text-[var(--text-muted)] ml-1.5 hidden xs:inline">
                             (~{item.adults.toLocaleString()} fish)
                           </span>
                         )}
@@ -433,8 +417,8 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                         <span
                           className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
                             item.deltaVsBaseline >= 0
-                              ? 'bg-emerald-500/15 text-emerald-300'
-                              : 'bg-red-500/15 text-red-300'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
                           }`}
                         >
                           {item.deltaVsBaseline >= 0 ? `+${item.deltaVsBaseline}%` : `${item.deltaVsBaseline}%`}
@@ -444,10 +428,10 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                   </div>
 
                   {/* Horizontal Bar Metric Track */}
-                  <div className="w-full bg-slate-800/80 rounded-full h-2.5 sm:h-3 overflow-hidden relative">
+                  <div className="w-full bg-[var(--bg-subtle)] rounded-full h-2.5 sm:h-3 overflow-hidden relative border border-[var(--border-main)]">
                     {/* Conservation Target Marker line (110 pts) */}
                     <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-emerald-400 z-10 opacity-70 pointer-events-none"
+                      className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-spruce)] z-10 opacity-70 pointer-events-none"
                       style={{
                         left: `${Math.min(100, (ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY / horizontalBarData.maxVal) * 100)}%`,
                       }}
@@ -457,15 +441,12 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         item.isCurrent
-                          ? 'bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 shadow-lg shadow-cyan-500/50'
+                          ? 'bg-[var(--accent-amber)]'
                           : item.isAverage
-                          ? 'bg-gradient-to-r from-sky-400 to-blue-400'
-                          : 'bg-slate-600 hover:bg-slate-500'
+                          ? 'bg-[var(--accent-teal)]'
+                          : 'bg-stone-400 dark:bg-stone-600'
                       }`}
-                      style={{
-                        width: `${barWidthPct}%`,
-                        backgroundColor: !item.isCurrent && !item.isAverage ? item.color : undefined,
-                      }}
+                      style={{ width: `${barWidthPct}%` }}
                     />
                   </div>
                 </div>
@@ -474,37 +455,35 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
           </div>
         </div>
       ) : (
-        /* ========================================================================= */
-        /* 2. S-CURVE MIGRATION LINE CHART VIEW                                      */
-        /* ========================================================================= */
+        /* 2. S-CURVE TRAJECTORY LINE CHART */
         <div className="space-y-3">
-          {/* Controls / Filter Bar */}
-          <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-slate-400 text-xs font-semibold mr-1 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" /> Presets:
-              </span>
+          <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
+            {/* Quick Year Presets */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[11px] text-[var(--text-muted)] mr-1">Presets:</span>
               <button
                 onClick={() => onSelectPreset('currentOnly')}
-                className={`px-2 py-1 rounded-md transition font-medium ${
-                  selectedYears.length === 1 && selectedYears[0] === CURRENT_YEAR
-                    ? 'bg-cyan-500 text-slate-950 font-bold'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
               >
-                2026 + Avg
+                2026 Only
               </button>
               <button
                 onClick={() => onSelectPreset('recent')}
-                className="px-2 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium"
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
               >
-                Recent (2022–2026)
+                Recent (2022–24)
+              </button>
+              <button
+                onClick={() => onSelectPreset('extremes')}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
+              >
+                Extremes
               </button>
               <button
                 onClick={() => onSelectPreset('all')}
-                className="px-2 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium"
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
               >
-                All 10 Years
+                All
               </button>
             </div>
 
@@ -513,7 +492,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
               <button
                 onClick={() => setShowAverage(!showAverage)}
                 className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
-                  showAverage ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300' : 'bg-slate-950/40 border-slate-800 text-slate-400'
+                  showAverage ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)] text-[var(--accent-teal)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
                 }`}
               >
                 10-Yr Avg
@@ -521,7 +500,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
               <button
                 onClick={() => setShowConfidenceBands(!showConfidenceBands)}
                 className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
-                  showConfidenceBands ? 'bg-indigo-950/60 border-indigo-500/50 text-indigo-300' : 'bg-slate-950/40 border-slate-800 text-slate-400'
+                  showConfidenceBands ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
                 }`}
               >
                 80% CI
@@ -538,8 +517,8 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                     type="monotone"
                     dataKey="envelopeRange"
                     stroke="none"
-                    fill="#334155"
-                    fillOpacity={0.18}
+                    fill={isDark ? '#1e2e33' : '#e4dcd0'}
+                    fillOpacity={isDark ? 0.25 : 0.45}
                     isAnimationActive={false}
                   />
                 )}
@@ -549,24 +528,24 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                     type="monotone"
                     dataKey="ciRange"
                     stroke="none"
-                    fill="#6366f1"
-                    fillOpacity={0.22}
+                    fill={isDark ? '#d97706' : '#e89553'}
+                    fillOpacity={isDark ? 0.18 : 0.25}
                     isAnimationActive={false}
                   />
                 )}
 
                 <XAxis
                   dataKey="monthDay"
-                  stroke="#64748b"
-                  tick={{ fill: '#94a3b8', fontSize: 10 }}
-                  tickLine={{ stroke: '#334155' }}
+                  stroke={isDark ? '#475569' : '#a39b8c'}
+                  tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
+                  tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
                   interval={12}
                 />
 
                 <YAxis
-                  stroke="#64748b"
-                  tick={{ fill: '#94a3b8', fontSize: 10 }}
-                  tickLine={{ stroke: '#334155' }}
+                  stroke={isDark ? '#475569' : '#a39b8c'}
+                  tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
+                  tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
                   domain={[0, 'auto']}
                 />
 
@@ -575,7 +554,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                 {showThresholds && (
                   <ReferenceLine
                     y={ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY * mult}
-                    stroke="#10b981"
+                    stroke={isDark ? '#10b981' : '#224b38'}
                     strokeDasharray="4 4"
                     strokeWidth={1.5}
                   />
@@ -584,7 +563,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                 {/* Selected Date Pin */}
                 <ReferenceLine
                   x={selectedMonthDay}
-                  stroke="#38bdf8"
+                  stroke={isDark ? '#f59e0b' : '#c56a25'}
                   strokeWidth={2}
                   strokeDasharray="3 3"
                 />
@@ -593,7 +572,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                   <Line
                     type="monotone"
                     dataKey="avgCumulative"
-                    stroke="#38bdf8"
+                    stroke={isDark ? '#2dd4bf' : '#1a6467'}
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     dot={false}
@@ -621,7 +600,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                 <Line
                   type="monotone"
                   dataKey="currentActual"
-                  stroke="#06b6d4"
+                  stroke={isDark ? '#f59e0b' : '#c56a25'}
                   strokeWidth={3.5}
                   dot={false}
                   name={`${CURRENT_YEAR} Recorded`}
@@ -631,7 +610,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                 <Line
                   type="monotone"
                   dataKey="currentProjected"
-                  stroke="#818cf8"
+                  stroke={isDark ? '#fbbf24' : '#e89553'}
                   strokeWidth={2.5}
                   strokeDasharray="6 4"
                   dot={false}
@@ -645,9 +624,9 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
       )}
 
       {/* Footer Note */}
-      <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] border-t border-slate-800/80 pt-2.5 text-slate-400">
+      <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] border-t border-[var(--border-main)] pt-2.5 text-[var(--text-muted)] font-mono">
         <span>Target: 110 Index pts (~24,200 adult wild steelhead)</span>
-        <span className="font-mono text-cyan-300">Conversion: 1.0 pt &approx; 220 adult fish</span>
+        <span className="text-[var(--accent-amber)]">Conversion: 1.0 pt &approx; 220 adult fish</span>
       </div>
     </div>
   );

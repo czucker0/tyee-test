@@ -3,14 +3,10 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Line,
-  Bar,
-  Area,
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   ReferenceLine,
-  Cell,
 } from 'recharts';
 import {
   ALL_YEARS_DATA,
@@ -18,7 +14,6 @@ import {
   HISTORICAL_AVERAGE_CURVE,
   SEASON_DAYS,
   ADULT_EXPANSION_FACTOR,
-  getPreviousDecadeYears,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
 import {
@@ -26,14 +21,9 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
-  Calendar,
-  Layers,
-  Sparkles,
-  Info,
   CheckCircle2,
-  ChevronRight,
-  Fish,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface HeadToHeadCompareCardProps {
   currentDayIndex: number;
@@ -49,11 +39,9 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
   currentDayIndex,
   projection,
   isMetricInAdults,
-  selectedYears,
-  onToggleYear,
-  onSelectYears,
   allYears = [],
 }) => {
+  const { isDark } = useTheme();
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
   const unitSuffix = isMetricInAdults ? 'adults' : 'pts';
 
@@ -72,7 +60,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
       peakDailyIndex: 3.2,
       medianDate: 'Aug 14',
       conservationStatus: 'Healthy',
-      color: '#38bdf8',
+      color: isDark ? '#2dd4bf' : '#1a6467',
       notes: 'Official 10-Year DFO Rolling Average (2016–2025 Baseline)',
       data: HISTORICAL_AVERAGE_CURVE.map((c, idx) => {
         const sDay = SEASON_DAYS[idx] || { month: 8, day: 16, monthDay: c.monthDay };
@@ -89,7 +77,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         };
       }),
     };
-  }, []);
+  }, [isDark]);
 
   const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
   const isTenYearAvg = benchmarkYear === -1;
@@ -98,15 +86,10 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     : allYears.find((y) => y.year === benchmarkYear) || TEN_YEAR_AVG_RECORD;
 
   const benchmarkDisplayName = isTenYearAvg ? '10-Yr DFO Average' : `${benchmarkYear}`;
-  const benchmarkFullName = isTenYearAvg ? '10-Year DFO Average Baseline (2016–2025)' : `${benchmarkYear} Benchmark Run`;
 
-  // Previous 10 years strictly computed relative to CURRENT_YEAR
-  const previousDecadeYears = getPreviousDecadeYears(CURRENT_YEAR);
-  const lastSeasonYear = CURRENT_YEAR - 1;
-
-  // Find last published date
+  // Find last recorded day index
   const lastRecordedDayIndex = useMemo(() => {
-    let lastRec = 67; // Aug 16
+    let lastRec = 67;
     if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
       for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
         const d: any = currentYearRecord.data[i];
@@ -119,43 +102,47 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     return lastRec;
   }, [currentYearRecord]);
 
+  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
   const isFutureDate = currentDayIndex > lastRecordedDayIndex;
 
-  // Comparison metrics calculation on the current date
+  // Comparison metrics calculation
   const comparisonStats = useMemo(() => {
-    const currentVal = projection.currentCumulative * mult;
-    const benchmarkVal = (benchmarkRecord?.data[currentDayIndex]?.cumulativeIndex || 0) * mult;
-    const diff = currentVal - benchmarkVal;
-    const pctDiff = benchmarkVal > 0 ? (diff / benchmarkVal) * 100 : 0;
+    const currentOnDateRaw =
+      currentDayIndex <= lastRecordedDayIndex
+        ? (currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative)
+        : projection.projectedDailyTrajectory[currentDayIndex]?.projectedCumulative ?? projection.currentCumulative;
 
-    const currentProjectedTotal = projection.projectedBaselineIndex * mult;
-    const benchmarkTotal = (benchmarkRecord?.totalIndex || 0) * mult;
-    const totalDiff = currentProjectedTotal - benchmarkTotal;
-    const totalPctDiff = benchmarkTotal > 0 ? (totalDiff / benchmarkTotal) * 100 : 0;
+    const benchmarkOnDateRaw = benchmarkRecord.data[currentDayIndex]?.cumulativeIndex ?? 0;
+
+    const currentVal = Math.round(currentOnDateRaw * mult * 10) / 10;
+    const benchmarkVal = Math.round(benchmarkOnDateRaw * mult * 10) / 10;
+    const diff = Math.round((currentVal - benchmarkVal) * 10) / 10;
+    const pctDiff = benchmarkVal > 0 ? Math.round(((currentVal - benchmarkVal) / benchmarkVal) * 100) : 0;
+
+    const currentProjectedTotal = Math.round(projection.projectedBaselineIndex * mult * 10) / 10;
+    const benchmarkTotal = Math.round(benchmarkRecord.totalIndex * mult * 10) / 10;
+    const totalDiff = Math.round((currentProjectedTotal - benchmarkTotal) * 10) / 10;
+    const totalPctDiff = benchmarkTotal > 0 ? Math.round(((currentProjectedTotal - benchmarkTotal) / benchmarkTotal) * 100) : 0;
 
     const benchmarkPctElapsedOnDate =
-      benchmarkRecord?.totalIndex > 0
-        ? Math.round(
-            ((benchmarkRecord.data[currentDayIndex]?.cumulativeIndex || 0) /
-              benchmarkRecord.totalIndex) *
-              1000
-          ) / 10
+      benchmarkRecord.totalIndex > 0
+        ? Math.round((benchmarkOnDateRaw / benchmarkRecord.totalIndex) * 100)
         : 0;
 
     return {
-      currentVal: Math.round(currentVal * 10) / 10,
-      benchmarkVal: Math.round(benchmarkVal * 10) / 10,
-      diff: Math.round(diff * 10) / 10,
-      pctDiff: Math.round(pctDiff * 10) / 10,
-      currentProjectedTotal: Math.round(currentProjectedTotal * 10) / 10,
-      benchmarkTotal: Math.round(benchmarkTotal * 10) / 10,
-      totalDiff: Math.round(totalDiff * 10) / 10,
-      totalPctDiff: Math.round(totalPctDiff * 10) / 10,
+      currentVal,
+      benchmarkVal,
+      diff,
+      pctDiff,
+      currentProjectedTotal,
+      benchmarkTotal,
+      totalDiff,
+      totalPctDiff,
       benchmarkPctElapsedOnDate,
     };
-  }, [currentDayIndex, projection, benchmarkRecord, mult]);
+  }, [currentDayIndex, lastRecordedDayIndex, currentYearRecord, projection, benchmarkRecord, mult]);
 
-  // Differential trajectory chart data (2026 vs benchmark difference over time)
+  // Differential line chart dataset
   const diffChartData = useMemo(() => {
     const trajectoryMap = new Map<number, typeof projection.projectedDailyTrajectory[0]>();
     projection.projectedDailyTrajectory.forEach((t) => {
@@ -164,108 +151,70 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
 
     return SEASON_DAYS.map((sDay, idx) => {
       const isPastOrRecorded = idx <= lastRecordedDayIndex;
-      const bCum = (benchmarkRecord?.data[idx]?.cumulativeIndex || 0) * mult;
-
-      let cCum = 0;
-
+      let cur2026 = 0;
       if (isPastOrRecorded) {
-        cCum = (currentYearRecord?.data[idx]?.cumulativeIndex ?? 0) * mult;
+        cur2026 = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
       } else {
         const projItem = trajectoryMap.get(idx);
-        cCum = (projItem ? projItem.projectedCumulative : projection.projectedBaselineIndex) * mult;
+        cur2026 = projItem?.projectedCumulative ?? 0;
       }
 
-      const diffCumulative = Math.round((cCum - bCum) * 10) / 10;
-      const currentValRound = Math.round(cCum * 10) / 10;
-      const benchmarkValRound = Math.round(bCum * 10) / 10;
+      const benchVal = benchmarkRecord.data[idx]?.cumulativeIndex ?? 0;
+      const curDisplay = Math.round(cur2026 * mult * 10) / 10;
+      const benchDisplay = Math.round(benchVal * mult * 10) / 10;
+      const delta = Math.round((curDisplay - benchDisplay) * 10) / 10;
 
       return {
         dayIndex: idx,
         monthDay: sDay.monthDay,
-        current2026: currentValRound,
-        benchmark: benchmarkValRound,
-        delta: diffCumulative,
-        isPositive: diffCumulative >= 0,
+        current2026: curDisplay,
+        benchmark: benchDisplay,
+        delta,
       };
     });
-  }, [currentDayIndex, projection, benchmarkRecord, mult, currentYearRecord, lastRecordedDayIndex]);
+  }, [currentYearRecord, benchmarkRecord, lastRecordedDayIndex, projection, mult]);
 
+  // Quick comparison presets
   const quickComparePresets = [
-    {
-      title: '📊 10-Yr DFO Average',
-      year: -1,
-      desc: 'Official 10-year rolling mean baseline (~95.7 pts / ~21,000 fish)',
-      tag: 'Baseline',
-    },
-    {
-      title: `🐟 ${lastSeasonYear} (Last Season)`,
-      year: lastSeasonYear,
-      desc: `Most recent completed campaign benchmark (${allYears.find((y) => y.year === lastSeasonYear)?.totalIndex || 116.8} pts)`,
-      tag: 'Last Season',
-    },
-    {
-      title: '🏆 2018 (Record Peak)',
-      year: 2018,
-      desc: 'Modern all-time high of 140.7 pts (~31,000 adult steelhead)',
-      tag: 'Decade High',
-    },
-    {
-      title: '⚠️ 2021 (Crisis Low)',
-      year: 2021,
-      desc: 'Emergency closure year: historical low of 22.3 pts (~4,900 fish)',
-      tag: 'Crisis Low',
-    },
-    {
-      title: '📈 2024 (Healthy Return)',
-      year: 2024,
-      desc: 'Solid baseline escapement return (89.1 pts / ~19,600 fish)',
-      tag: 'Benchmark',
-    },
-    {
-      title: '🏛️ 1998 (El Niño Archive)',
-      year: 1998,
-      desc: 'Historic multi-decade reference from DFO archive (98.4 pts)',
-      tag: 'Archive',
-    },
+    { year: -1, title: '10-Yr Baseline', desc: 'Official Mean', tag: 'Baseline' },
+    { year: 2024, title: '2024 Season', desc: 'Recent Analog', tag: 'Strong Run' },
+    { year: 2025, title: '2025 Season', desc: 'Previous Year', tag: 'Recent' },
+    { year: 2021, title: '2021 Low Return', desc: 'Historical Dip', tag: 'Precautionary' },
+    { year: 2018, title: '2018 Strong Run', desc: 'High Escapement', tag: 'Abundant' },
+    { year: 2020, title: '2020 Season', desc: 'Mid Tier', tag: 'Moderate' },
   ];
 
-  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
-
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-5">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 transition-colors duration-200">
+      {/* Header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-main)] pb-4">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <span>Head-to-Head Benchmark Differential: {CURRENT_YEAR} vs. {benchmarkDisplayName}</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Comparing current season pace on <strong>{selectedMonthDay}</strong> against {benchmarkFullName}.
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Scale className="w-5 h-5 text-[var(--accent-amber)]" />
+            <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide">
+              Head-to-Head Benchmark Matchup
+            </h3>
           </div>
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
+            Comparing the live 2026 campaign against historical seasons and the official DFO 10-year mean.
+          </p>
         </div>
 
         {/* Benchmark Selector Dropdown */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400 font-medium whitespace-nowrap">Benchmark Year:</label>
+        <div className="flex items-center gap-2 font-mono">
+          <label className="text-xs text-[var(--text-secondary)] font-medium whitespace-nowrap">Benchmark:</label>
           <select
             value={benchmarkYear}
             onChange={(e) => setBenchmarkYear(parseInt(e.target.value, 10))}
-            className="bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-cyan-500"
+            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)]"
           >
-            <option value={-1}>📊 10-Year DFO Average Baseline (2016–2025)</option>
+            <option value={-1}>10-Year DFO Average Baseline</option>
             {allYears
               .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
               .sort((a, b) => b.year - a.year)
               .map((y) => (
                 <option key={y.year} value={y.year}>
-                  {y.year} Season (Total: {y.totalIndex} pts) &bull; {y.conservationStatus}
+                  {y.year} Season ({y.totalIndex} pts) &bull; {y.conservationStatus}
                 </option>
               ))}
           </select>
@@ -282,51 +231,51 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
               onClick={() => setBenchmarkYear(preset.year)}
               className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-cyan-950/50 border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-lg shadow-cyan-950/30'
-                  : 'bg-slate-950/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/50'
+                  ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
+                  : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--accent-amber)]">
                     {preset.tag}
                   </span>
-                  {isSelected && <CheckCircle2 className="w-3 h-3 text-cyan-400" />}
+                  {isSelected && <CheckCircle2 className="w-3 h-3 text-[var(--accent-amber)]" />}
                 </div>
-                <span className="text-xs font-bold text-white block truncate">{preset.title}</span>
+                <span className="text-xs font-mono font-bold text-[var(--text-main)] block truncate">{preset.title}</span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-tight">{preset.desc}</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-2 leading-tight">{preset.desc}</p>
             </button>
           );
         })}
       </div>
 
       {/* KPI Comparison Scorecard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 font-mono">
         {/* Metric 1: Value on selected date */}
-        <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
-          <div className="flex justify-between items-center text-slate-400 text-xs">
-            <span>Cumulative on {selectedMonthDay}</span>
-            <span className="text-[10px] font-mono font-bold uppercase text-slate-300">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
+            <span>Passage to <span className="font-bold text-[var(--text-main)]">{selectedMonthDay}</span></span>
+            <span className="text-[10px] font-mono font-bold uppercase text-[var(--text-secondary)]">
               {isFutureDate ? 'Model Forecast' : 'DFO Record'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-cyan-300">
+            <span className="text-2xl font-bold text-[var(--accent-amber)]">
               {comparisonStats.currentVal}
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-[var(--text-muted)]">
               vs {comparisonStats.benchmarkVal} ({benchmarkDisplayName})
             </span>
           </div>
           <div className="text-xs pt-1 flex items-center gap-1 font-bold">
             {comparisonStats.diff >= 0 ? (
-              <span className="text-emerald-400 flex items-center gap-0.5">
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" />
                 +{comparisonStats.diff} {unitSuffix} (+{comparisonStats.pctDiff}%)
               </span>
             ) : (
-              <span className="text-red-400 flex items-center gap-0.5">
+              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
                 <TrendingDown className="w-3.5 h-3.5" />
                 {comparisonStats.diff} {unitSuffix} ({comparisonStats.pctDiff}%)
               </span>
@@ -335,27 +284,27 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 2: Final Projected Season Comparison */}
-        <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
-          <div className="flex justify-between items-center text-slate-400 text-xs">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
             <span>Projected Season Total</span>
-            <span className="text-[10px] font-mono uppercase text-indigo-300 font-bold">Full Campaign</span>
+            <span className="text-[10px] uppercase text-[var(--accent-amber)] font-bold">Full Campaign</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-indigo-300">
+            <span className="text-2xl font-bold text-[var(--text-main)]">
               {comparisonStats.currentProjectedTotal}
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-[var(--text-muted)]">
               vs {comparisonStats.benchmarkTotal} (Final)
             </span>
           </div>
           <div className="text-xs pt-1 flex items-center gap-1 font-bold">
             {comparisonStats.totalDiff >= 0 ? (
-              <span className="text-emerald-400 flex items-center gap-0.5">
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" />
                 +{comparisonStats.totalDiff} {unitSuffix} (+{comparisonStats.totalPctDiff}%)
               </span>
             ) : (
-              <span className="text-red-400 flex items-center gap-0.5">
+              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
                 <TrendingDown className="w-3.5 h-3.5" />
                 {comparisonStats.totalDiff} {unitSuffix} ({comparisonStats.totalPctDiff}%)
               </span>
@@ -364,20 +313,20 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 3: Run Progression Pace */}
-        <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
-          <div className="flex justify-between items-center text-slate-400 text-xs">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
             <span>Run Timing Completion</span>
-            <span className="text-[10px] font-mono text-cyan-400 font-bold">Elapsed %</span>
+            <span className="text-[10px] text-[var(--accent-teal)] font-bold">Elapsed %</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-white">
+            <span className="text-2xl font-bold text-[var(--text-main)]">
               {projection.percentElapsedHistorical}%
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-[var(--text-muted)]">
               vs {comparisonStats.benchmarkPctElapsedOnDate}% ({benchmarkDisplayName})
             </span>
           </div>
-          <div className="text-xs text-slate-400 pt-1">
+          <div className="text-xs text-[var(--text-muted)] pt-1">
             {projection.percentElapsedHistorical < 50
               ? 'Early-to-mid season migration'
               : 'Post-peak / late season passage'}
@@ -385,20 +334,20 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 4: Lead/Lag Status Badge */}
-        <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between">
-          <span className="text-xs text-slate-400">Campaign Stance</span>
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
+          <span className="text-xs text-[var(--text-muted)]">Campaign Stance</span>
           <div className="my-1">
             {comparisonStats.diff >= 0 ? (
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 inline-block">
+              <span className="stamp-badge stamp-spruce">
                 Ahead of {benchmarkDisplayName} Pace
               </span>
             ) : (
-              <span className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 inline-block">
+              <span className="stamp-badge bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700">
                 Tracking Below {benchmarkDisplayName}
               </span>
             )}
           </div>
-          <span className="text-[11px] text-slate-500 font-mono">
+          <span className="text-[11px] text-[var(--text-muted)]">
             Delta: {comparisonStats.diff >= 0 ? `+${comparisonStats.diff}` : comparisonStats.diff} {unitSuffix}
           </span>
         </div>
@@ -407,12 +356,12 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
       {/* Differential Line Chart: 2026 vs Benchmark Curve */}
       <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-            <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+          <h4 className="text-sm font-heading font-extrabold text-[var(--text-main)] flex items-center gap-1.5">
+            <ArrowRightLeft className="w-4 h-4 text-[var(--accent-amber)]" />
             <span>Cumulative Run Head-to-Head Differential Curve</span>
           </h4>
-          <span className="text-xs font-mono text-slate-400">
-            Positive (Green) = 2026 Leading &bull; Negative (Red) = 2026 Trailing
+          <span className="text-xs font-mono text-[var(--text-muted)]">
+            Positive = 2026 Leading &bull; Negative = 2026 Trailing
           </span>
         </div>
 
@@ -421,15 +370,15 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
             <ComposedChart data={diffChartData} margin={{ top: 10, right: 20, left: 10, bottom: 15 }}>
               <XAxis
                 dataKey="monthDay"
-                stroke="#64748b"
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                tickLine={{ stroke: '#334155' }}
+                stroke={isDark ? '#475569' : '#a39b8c'}
+                tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+                tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
                 interval={10}
               />
               <YAxis
-                stroke="#64748b"
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                tickLine={{ stroke: '#334155' }}
+                stroke={isDark ? '#475569' : '#a39b8c'}
+                tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+                tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
               />
               <Tooltip
                 content={({ active, payload, label }) => {
@@ -438,24 +387,24 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
                   if (!item) return null;
                   const isRec = item.dayIndex <= lastRecordedDayIndex;
                   return (
-                    <div className="bg-slate-950 border border-slate-700 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 min-w-[200px]">
-                      <div className="font-bold text-white border-b border-slate-800 pb-1 flex justify-between">
+                    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[200px] font-mono">
+                      <div className="font-bold text-[var(--text-main)] border-b border-[var(--border-main)] pb-1 flex justify-between font-editorial">
                         <span>{label}</span>
-                        <span className="text-[10px] font-mono text-slate-400 uppercase">
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-mono">
                           {isRec ? 'Recorded DFO' : 'Model Forecast'}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-cyan-300 font-semibold">{CURRENT_YEAR} {isRec ? 'Actual' : 'Projected'}:</span>
-                        <span className="font-mono text-white font-bold">{item.current2026}</span>
+                        <span className="text-[var(--accent-amber)] font-semibold">{CURRENT_YEAR} {isRec ? 'Actual' : 'Projected'}:</span>
+                        <span className="text-[var(--text-main)] font-bold">{item.current2026}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">{benchmarkDisplayName}:</span>
-                        <span className="font-mono text-slate-300">{item.benchmark}</span>
+                        <span className="text-[var(--text-muted)]">{benchmarkDisplayName}:</span>
+                        <span className="text-[var(--text-secondary)]">{item.benchmark}</span>
                       </div>
-                      <div className="flex justify-between pt-1 border-t border-slate-800 font-bold">
-                        <span className="text-slate-300">Differential:</span>
-                        <span className={`font-mono ${item.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <div className="flex justify-between pt-1 border-t border-[var(--border-main)] font-bold">
+                        <span className="text-[var(--text-secondary)]">Differential:</span>
+                        <span className={`${item.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                           {item.delta >= 0 ? `+${item.delta}` : item.delta} {unitSuffix}
                         </span>
                       </div>
@@ -463,12 +412,12 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
                   );
                 }}
               />
-              <ReferenceLine y={0} stroke="#64748b" strokeWidth={1.5} />
-              <ReferenceLine x={selectedMonthDay} stroke="#38bdf8" strokeWidth={2} strokeDasharray="3 3" />
+              <ReferenceLine y={0} stroke={isDark ? '#475569' : '#a39b8c'} strokeWidth={1.5} />
+              <ReferenceLine x={selectedMonthDay} stroke={isDark ? '#f59e0b' : '#c56a25'} strokeWidth={2} strokeDasharray="3 3" />
               <Line
                 type="monotone"
                 dataKey="current2026"
-                stroke="#06b6d4"
+                stroke={isDark ? '#f59e0b' : '#c56a25'}
                 strokeWidth={2.5}
                 dot={false}
                 name={`${CURRENT_YEAR} Run`}
@@ -476,7 +425,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
               <Line
                 type="monotone"
                 dataKey="benchmark"
-                stroke="#94a3b8"
+                stroke={isDark ? '#2dd4bf' : '#1a6467'}
                 strokeWidth={2}
                 strokeDasharray="4 4"
                 dot={false}

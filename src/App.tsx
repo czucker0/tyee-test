@@ -5,9 +5,7 @@ import {
   HISTORICAL_AVERAGE_CURVE,
   SEASON_DAYS,
   TODAY_DAY_INDEX,
-  TODAY_MONTH_DAY,
   ADULT_EXPANSION_FACTOR,
-  LATEST_RECORDED_DAY_INDEX,
   getLatestRecordedSeasonDayIndex,
 } from './data/historicalData';
 import { useTyeeData } from './hooks/useTyeeData';
@@ -27,10 +25,10 @@ import { TributaryForecastCard } from './components/TributaryForecastCard';
 import { HistoricalComparisonTable } from './components/HistoricalComparisonTable';
 import { HeadToHeadCompareCard } from './components/HeadToHeadCompareCard';
 import { HistoricalYearArchiveSearch } from './components/HistoricalYearArchiveSearch';
+import { SkeenaAlluvialStream } from './components/SkeenaAlluvialStream';
 import { WhatIfSandbox } from './components/WhatIfSandbox';
 import { AIAnalystModal } from './components/AIAnalystModal';
 import { AboutTyeeModal } from './components/AboutTyeeModal';
-import { DFODataSyncModal } from './components/DFODataSyncModal';
 import { AuthModal } from './components/AuthModal';
 import { AuthGate } from './components/AuthGate';
 import { AdminUserbaseModal } from './components/AdminUserbaseModal';
@@ -38,26 +36,16 @@ import { useAuth } from './context/AuthContext';
 import { Footer } from './components/Footer';
 import {
   TrendingUp,
-  Activity,
   MapPin,
-  Table,
   Sparkles,
   Sliders,
-  BarChart3,
   Waves,
   ArrowRightLeft,
   Bot,
-  LayoutDashboard,
-  Calendar,
-  Layers,
-  Database,
-  HelpCircle,
-  Clock,
-  ShieldCheck,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export type MainTabType = 'overview' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
+export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -70,10 +58,6 @@ export default function App() {
     setSelectedYears,
     toggleYear,
     addHistoricalYearToSelection,
-    isLoading,
-    isSyncing,
-    syncMessage,
-    triggerDailySync,
   } = useTyeeData();
 
   const effectiveAllYears = dynamicYearsData.length > 0 ? dynamicYearsData : ALL_YEARS_DATA;
@@ -112,7 +96,6 @@ export default function App() {
   // Modals
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
-  const [isDFOSyncOpen, setIsDFOSyncOpen] = useState<boolean>(false);
   const [isSandboxOpen, setIsSandboxOpen] = useState<boolean>(false);
 
   // Select year presets
@@ -145,11 +128,6 @@ export default function App() {
         Math.round(projection.currentCumulative * ADULT_EXPANSION_FACTOR)
       ),
     [projection]
-  );
-
-  const comparisonMetrics = useMemo(
-    () => getComparisonMetricsOnDate(currentDayIndex, effectiveAllYears),
-    [currentDayIndex, effectiveAllYears]
   );
 
   // Auto-synchronize slider to latest recorded date on dataset load if user hasn't manually scrubbed
@@ -211,7 +189,7 @@ export default function App() {
       particleCount: 25,
       spread: 60,
       origin: { y: 0.8 },
-      colors: ['#06b6d4', '#6366f1', '#10b981'],
+      colors: ['#c97a2b', '#2c5a63', '#1e382b'],
     });
   };
 
@@ -264,6 +242,12 @@ export default function App() {
       badge: 'Live',
     },
     {
+      id: 'alluvial' as MainTabType,
+      label: 'Alluvial Flow Stream',
+      shortLabel: 'Streamflow',
+      icon: <Waves className="w-4 h-4" />,
+    },
+    {
       id: 'forecast' as MainTabType,
       label: 'Forecast & Projections',
       shortLabel: 'Forecast',
@@ -289,16 +273,16 @@ export default function App() {
     },
   ];
 
-  // Auth Protection Gate: Block application until user is signed in
+  // Auth Protection Gate
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-slate-300">
-        <div className="relative p-4 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400">
-          <Waves className="w-8 h-8 animate-pulse text-cyan-400" />
+      <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col items-center justify-center space-y-4 text-[var(--text-secondary)]">
+        <div className="relative p-4 rounded-2xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)]">
+          <Waves className="w-8 h-8 animate-pulse" />
         </div>
         <div className="text-center space-y-1">
-          <p className="text-sm font-bold text-white tracking-wide">SKEENA STEELHEAD TRACKER</p>
-          <p className="text-xs text-slate-400">Verifying authorized river profile &amp; security clearance...</p>
+          <p className="text-sm font-heading font-extrabold text-[var(--text-main)] tracking-wider">BKLYNFLY &bull; SKEENA FIELD STATION</p>
+          <p className="text-xs text-[var(--text-muted)] font-mono">Verifying authorized field profile &amp; telemetry sync...</p>
         </div>
       </div>
     );
@@ -314,7 +298,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-main)] flex flex-col font-sans selection:bg-[var(--accent-amber)] selection:text-white pb-16 sm:pb-0 transition-colors duration-200">
       {/* Top Header */}
       <Header
         selectedMonthDay={selectedMonthDay}
@@ -322,7 +306,6 @@ export default function App() {
         onResetToToday={handleResetToToday}
         onOpenAI={() => setActiveTab('biologist')}
         onOpenAbout={() => setIsAboutModalOpen(true)}
-        onOpenDFOSync={() => setIsDFOSyncOpen(true)}
         onToggleSandbox={() => setIsSandboxOpen(!isSandboxOpen)}
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
@@ -334,7 +317,7 @@ export default function App() {
       />
 
       {/* Timeline & Navigation Header Dock - Firmly Anchored Under Top Header */}
-      <div className="sticky top-[47px] sm:top-[53px] z-20 bg-slate-950/95 border-b border-slate-800/90 shadow-lg backdrop-blur-md">
+      <div className="sticky top-[47px] sm:top-[53px] z-20 bg-[var(--bg-surface)]/95 border-b border-[var(--border-main)] shadow-sm backdrop-blur-md transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 space-y-2">
           {/* Date Slider Control */}
           <DateSliderControl
@@ -349,7 +332,7 @@ export default function App() {
           />
 
           {/* Segmented Tab Navigation */}
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 font-mono">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -358,21 +341,21 @@ export default function App() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition shrink-0 ${
                     isActive
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-md shadow-cyan-950/50 font-extrabold'
-                      : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800/80'
+                      ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
+                      : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)]'
                   }`}
                 >
-                  <span className={isActive ? 'text-slate-950' : 'text-cyan-400'}>
+                  <span>
                     {tab.icon}
                   </span>
                   <span className="hidden sm:inline">{tab.label}</span>
                   <span className="sm:hidden">{tab.shortLabel}</span>
                   {tab.badge && (
                     <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold uppercase ${
                         isActive
-                          ? 'bg-slate-950/30 text-slate-950'
-                          : 'bg-cyan-500/20 text-cyan-300'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)]'
                       }`}
                     >
                       {tab.badge}
@@ -389,24 +372,24 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6 space-y-4 sm:space-y-6">
         {/* What-If Sandbox Alert Banner (if multiplier != 1.0) */}
         {customMultiplier !== 1.0 && (
-          <div className="bg-purple-950/60 border border-purple-500/50 rounded-xl p-3.5 flex items-center justify-between shadow-lg text-xs animate-in fade-in">
+          <div className="bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] rounded-xl p-3.5 flex items-center justify-between shadow-sm text-xs animate-in fade-in text-[var(--text-main)]">
             <div className="flex items-center gap-2.5">
-              <Sliders className="w-4 h-4 text-purple-300" />
+              <Sliders className="w-4 h-4 text-[var(--accent-amber)]" />
               <span>
                 <strong>What-If Sandbox Active:</strong> Simulating run scaled to{' '}
-                <strong className="text-purple-300">{(customMultiplier * 100).toFixed(0)}%</strong> of live pace.
+                <strong className="text-[var(--accent-amber)] font-mono font-bold">{(customMultiplier * 100).toFixed(0)}%</strong> of live pace.
               </span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCustomMultiplier(1.0)}
-                className="px-2.5 py-1 rounded bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-600 transition font-bold"
+                className="px-2.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] transition font-bold"
               >
                 Reset to Live
               </button>
               <button
                 onClick={() => setIsSandboxOpen(true)}
-                className="text-purple-300 hover:text-white underline font-medium"
+                className="text-[var(--accent-amber)] hover:underline font-medium"
               >
                 Adjust Sandbox
               </button>
@@ -447,7 +430,25 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. FORECAST & PROJECTIONS TAB */}
+        {/* 2. ALLUVIAL FLOW STREAM TAB */}
+        {activeTab === 'alluvial' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <SkeenaAlluvialStream
+              currentDayIndex={currentDayIndex}
+              projection={projection}
+              isMetricInAdults={isMetricInAdults}
+              selectedMonthDay={selectedMonthDay}
+            />
+
+            {/* Tributary System Summaries */}
+            <TributaryForecastCard
+              tributaries={tributaries}
+              selectedMonthDay={selectedMonthDay}
+            />
+          </div>
+        )}
+
+        {/* 3. FORECAST & PROJECTIONS TAB */}
         {activeTab === 'forecast' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Statistical Projection & Multi-Scenario Models */}
@@ -469,19 +470,19 @@ export default function App() {
             />
 
             {/* Interactive Sandbox Trigger Card */}
-            <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-purple-400" />
-                  <h3 className="text-base font-bold text-white">Interactive Run Simulation Sandbox</h3>
+                  <Sliders className="w-5 h-5 text-[var(--accent-amber)]" />
+                  <h3 className="text-base font-heading font-extrabold text-[var(--text-main)]">Interactive Run Simulation Sandbox</h3>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
                   Adjust simulated run velocity, delay factors, or river temperatures to project end-of-season outcomes.
                 </p>
               </div>
               <button
                 onClick={() => setIsSandboxOpen(true)}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-950 flex items-center gap-2 shrink-0"
+                className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white text-xs font-bold transition shadow-sm flex items-center gap-2 shrink-0 hover:opacity-90"
               >
                 <Sliders className="w-4 h-4" />
                 <span>Open What-If Sandbox</span>
@@ -514,7 +515,7 @@ export default function App() {
               currentYear={CURRENT_YEAR}
             />
 
-            {/* Annual 11-Year Ranking Chart */}
+            {/* Annual Ranking Chart */}
             <YearRankingChart
               currentDayIndex={currentDayIndex}
               projection={projection}
@@ -538,9 +539,17 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. TRIBUTARIES & RIVERS TAB */}
+        {/* 5. TRIBUTARIES & RIVERS TAB */}
         {activeTab === 'tributaries' && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Infographic Alluvial Stream */}
+            <SkeenaAlluvialStream
+              currentDayIndex={currentDayIndex}
+              projection={projection}
+              isMetricInAdults={isMetricInAdults}
+              selectedMonthDay={selectedMonthDay}
+            />
+
             {/* Watershed Share Breakdown & River Profiles */}
             <TributaryForecastCard
               tributaries={tributaries}
@@ -564,15 +573,15 @@ export default function App() {
         {activeTab === 'biologist' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Quick Status Hero */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Bot className="w-6 h-6 text-cyan-400" />
-                  <h3 className="text-lg font-bold text-white tracking-tight">
+                  <Bot className="w-6 h-6 text-[var(--accent-amber)]" />
+                  <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
                     DFO In-Season Fisheries Biologist AI
                   </h3>
                 </div>
-                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                <p className="text-xs text-[var(--text-secondary)] font-mono mt-1 max-w-2xl leading-relaxed">
                   Real-time ecological assessment powered by Gemini. Analyzes migration velocity, Skeena discharge, water temperatures, and historical analog runs.
                 </p>
               </div>
@@ -580,17 +589,10 @@ export default function App() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setIsAIModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-black text-xs transition shadow-lg flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-bold text-xs transition shadow-sm flex items-center gap-2 hover:opacity-90"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Open Full Biologist Modal</span>
-                </button>
-                <button
-                  onClick={() => setIsDFOSyncOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800/40 text-xs font-bold transition flex items-center gap-1.5"
-                >
-                  <Database className="w-4 h-4 text-cyan-400" />
-                  <span>DFO Sync Hub</span>
                 </button>
               </div>
             </div>
@@ -617,7 +619,7 @@ export default function App() {
       </main>
 
       {/* Mobile Bottom Quick Tab Bar (Sticky at bottom on small screens) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-2 py-1.5 shadow-2xl flex items-center justify-around">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)]/95 backdrop-blur-lg border-t border-[var(--border-main)] px-2 py-1.5 shadow-lg flex items-center justify-around">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -629,18 +631,18 @@ export default function App() {
               }}
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition text-[11px] font-bold ${
                 isActive
-                  ? 'text-cyan-300 font-extrabold scale-105'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'text-[var(--accent-amber)] font-extrabold scale-105'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               <div
                 className={`p-1 rounded-md transition ${
-                  isActive ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'
+                  isActive ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)]' : 'text-[var(--text-muted)]'
                 }`}
               >
                 {tab.icon}
               </div>
-              <span className="mt-0.5 leading-none">{tab.shortLabel}</span>
+              <span className="mt-0.5 leading-none font-mono">{tab.shortLabel}</span>
             </button>
           );
         })}
@@ -649,7 +651,6 @@ export default function App() {
       {/* Application Footer with Build Timestamp & Metadata */}
       <Footer
         onOpenAbout={() => setIsAboutModalOpen(true)}
-        onOpenDFOSync={() => setIsDFOSyncOpen(true)}
         onOpenAI={() => setIsAIModalOpen(true)}
         onExportCSV={handleExportCSV}
       />
@@ -679,17 +680,6 @@ export default function App() {
         onClose={() => setIsAboutModalOpen(false)}
       />
 
-      {/* DFO Live Synchronization & Table Importer Modal */}
-      <DFODataSyncModal
-        isOpen={isDFOSyncOpen}
-        onClose={() => setIsDFOSyncOpen(false)}
-        onSyncTrigger={triggerDailySync}
-        isSyncingParent={isSyncing}
-        syncMessageParent={syncMessage}
-        activeSeasonMetadata={dataset?.activeSeasonMetadata}
-        lastUpdated={dataset?.lastUpdated}
-      />
-
       {/* User Authentication & Profile Modal */}
       <AuthModal />
 
@@ -698,4 +688,3 @@ export default function App() {
     </div>
   );
 }
-

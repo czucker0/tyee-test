@@ -4,7 +4,7 @@ import {
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
-import { Trophy, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 interface YearRankingChartProps {
   currentDayIndex: number;
@@ -22,7 +22,6 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
   selectedMonthDay,
   isMetricInAdults,
   selectedYears,
-  onToggleYear,
   allYears = [],
 }) => {
   const [viewMode, setViewMode] = useState<'onDate' | 'seasonTotal'>('onDate');
@@ -66,19 +65,19 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
   const currentRank = rankingData.findIndex((d) => d.isCurrent) + 1;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-5">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 transition-colors duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)]">
               <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                Annual Escapement & CPUE Standings
+              <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide">
+                Annual Escapement &amp; CPUE Standings
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
                 Relative historical ranking: 2026 sits at #{currentRank} of {rankingData.length} recorded seasons
               </p>
             </div>
@@ -86,14 +85,14 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
         </div>
 
         {/* View Mode Switcher */}
-        <div className="flex items-center gap-2">
-          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+        <div className="flex items-center gap-2 font-mono">
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1">
             <button
               onClick={() => setViewMode('onDate')}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
                 viewMode === 'onDate'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-950'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
               }`}
             >
               On {selectedMonthDay}
@@ -102,8 +101,8 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
               onClick={() => setViewMode('seasonTotal')}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
                 viewMode === 'seasonTotal'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-950'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
               }`}
             >
               Full Season Final
@@ -115,8 +114,8 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
               onClick={() => setFilterToSelectedOnly(!filterToSelectedOnly)}
               className={`text-xs px-2.5 py-2 rounded-xl border font-medium transition ${
                 filterToSelectedOnly
-                  ? 'bg-cyan-950/70 border-cyan-500/50 text-cyan-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)] text-[var(--accent-teal)] font-bold'
+                  : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
               {filterToSelectedOnly ? 'Selected Only' : 'All Years'}
@@ -136,8 +135,8 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
               key={item.year}
               className={`p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 item.isCurrent
-                  ? 'bg-indigo-950/60 border-indigo-500/50 ring-1 ring-indigo-500/30'
-                  : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700'
+                  ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
+                  : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
               }`}
             >
               {/* Year & Rank Info */}
@@ -145,12 +144,12 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
                 <div
                   className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-black ${
                     rank === 1
-                      ? 'bg-amber-500 text-slate-950'
+                      ? 'bg-[var(--accent-amber)] text-white'
                       : rank === 2
-                      ? 'bg-slate-300 text-slate-950'
+                      ? 'bg-stone-300 text-stone-900'
                       : rank === 3
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-slate-800 text-slate-400'
+                      ? 'bg-stone-400 text-white'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
                   }`}
                 >
                   #{rank}
@@ -162,16 +161,16 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="font-mono font-black text-sm text-white">
+                    <span className="font-mono font-black text-sm text-[var(--text-main)]">
                       {item.year}
                     </span>
                     {item.isCurrent && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-300 font-bold uppercase">
+                      <span className="stamp-badge stamp-amber">
                         Current
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] text-slate-400 block font-mono">
+                  <span className="text-[10px] text-[var(--text-muted)] block font-mono">
                     Status: {item.status}
                   </span>
                 </div>
@@ -179,12 +178,12 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
 
               {/* Visual Bar Indicator */}
               <div className="flex-1 px-2 hidden sm:block">
-                <div className="w-full bg-slate-900 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-800">
+                <div className="w-full bg-[var(--bg-subtle)] rounded-full h-3.5 overflow-hidden p-0.5 border border-[var(--border-main)]">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${barWidthPct}%`,
-                      backgroundColor: item.isCurrent ? '#818cf8' : item.color,
+                      backgroundColor: item.isCurrent ? 'var(--accent-amber)' : item.color,
                     }}
                   />
                 </div>
@@ -192,16 +191,16 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
 
               {/* Value & Notes */}
               <div className="text-right min-w-[140px] flex sm:flex-col justify-between sm:justify-center items-center sm:items-end">
-                <div className="font-mono text-xs font-bold text-white">
+                <div className="font-mono text-xs font-bold text-[var(--text-main)]">
                   <span>{item.activeVal.toFixed(1)}</span>
-                  <span className="text-[10px] text-slate-400 font-normal ml-1">
-                    (~{Math.round(item.activeVal * 50).toLocaleString()} fish)
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal ml-1">
+                    (~{Math.round(item.activeVal * ADULT_EXPANSION_FACTOR).toLocaleString()} fish)
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-[var(--text-muted)] font-mono">
                   {viewMode === 'onDate'
-                    ? `Final: ${item.seasonTotal.toFixed(1)} (~${Math.round(item.seasonTotal * 50).toLocaleString()})`
-                    : `On Date: ${item.valOnDate.toFixed(1)} (~${Math.round(item.valOnDate * 50).toLocaleString()})`}
+                    ? `Final: ${item.seasonTotal.toFixed(1)} (~${Math.round(item.seasonTotal * ADULT_EXPANSION_FACTOR).toLocaleString()})`
+                    : `On Date: ${item.valOnDate.toFixed(1)} (~${Math.round(item.valOnDate * ADULT_EXPANSION_FACTOR).toLocaleString()})`}
                 </span>
               </div>
             </div>

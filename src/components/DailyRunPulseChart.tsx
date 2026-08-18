@@ -16,7 +16,8 @@ import {
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
 import { ProjectionModelResult } from '../types/steelhead';
-import { Activity, Sparkles, Fish } from 'lucide-react';
+import { Activity } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface DailyRunPulseChartProps {
   currentDayIndex: number;
@@ -29,6 +30,7 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
   projection,
   isMetricInAdults,
 }) => {
+  const { isDark } = useTheme();
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
   const currentYearRecord = ALL_YEARS_DATA.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || ALL_YEARS_DATA[0];
 
@@ -91,11 +93,11 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
     const isRecorded = dayIdx !== undefined && dayIdx <= lastRecordedDayIndex;
 
     return (
-      <div className="bg-slate-950/95 border border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur text-xs space-y-1.5 min-w-[220px]">
-        <div className="font-bold text-cyan-400 border-b border-slate-800 pb-1 flex justify-between items-center">
-          <span>{label}</span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-            {isRecorded ? 'DFO Recorded' : 'Model Forecast'}
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[220px]">
+        <div className="font-bold text-[var(--accent-amber)] font-mono border-b border-[var(--border-main)] pb-1 flex justify-between items-center">
+          <span className="text-sm font-bold text-[var(--text-main)]">{label}</span>
+          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]">
+            {isRecorded ? 'DFO Telemetry' : 'Model Forecast'}
           </span>
         </div>
         {payload.map((p: any) => {
@@ -104,16 +106,16 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
           const expandedDaily = isMetricInAdults ? rawVal : Math.round(rawVal * ADULT_EXPANSION_FACTOR);
           return (
             <div key={p.dataKey} className="flex justify-between items-center py-1 gap-2">
-              <span className="text-slate-300 flex items-center gap-1.5">
+              <span className="text-[var(--text-secondary)] flex items-center gap-1.5 font-mono text-[11px]">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                 <span>{p.name}</span>
               </span>
               <div className="font-mono text-right">
-                <span className="font-bold text-white">
+                <span className="font-bold text-[var(--text-main)]">
                   {rawVal.toFixed(1)} {isMetricInAdults ? 'adults/day' : 'pts/day'}
                 </span>
                 {!isMetricInAdults && (
-                  <span className="text-[11px] text-slate-400 font-normal ml-1">
+                  <span className="text-[11px] text-[var(--text-muted)] font-normal ml-1">
                     (~{expandedDaily.toLocaleString()} fish)
                   </span>
                 )}
@@ -126,28 +128,28 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            <Activity className="w-5 h-5 text-cyan-400" />
+          <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide flex items-center gap-2">
+            <Activity className="w-5 h-5 text-[var(--accent-amber)]" />
             <span>Daily Migration Pulses &amp; Run Timing Peaks</span>
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
             Daily CPUE index showing tidal entry surges, peak runs, and modeled daily arrivals through September.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs font-mono">
-          <div className="flex items-center gap-1.5 text-indigo-300">
-            <span className="w-3 h-3 bg-indigo-500 rounded-sm" />
+          <div className="flex items-center gap-1.5 text-[var(--accent-amber)] font-bold">
+            <span className="w-3 h-3 bg-[var(--accent-amber)] rounded-sm" />
             <span>Recorded Daily</span>
           </div>
-          <div className="flex items-center gap-1.5 text-indigo-300/70">
-            <span className="w-3 h-3 bg-indigo-400/40 border border-indigo-400 rounded-sm border-dashed" />
+          <div className="flex items-center gap-1.5 text-[var(--accent-amber)]/70">
+            <span className="w-3 h-3 bg-amber-400/40 border border-[var(--accent-amber)] rounded-sm border-dashed" />
             <span>Projected Inflow</span>
           </div>
-          <div className="flex items-center gap-1.5 text-cyan-300">
-            <span className="w-3 h-3 bg-cyan-500/30 border border-cyan-400 rounded-sm" />
+          <div className="flex items-center gap-1.5 text-[var(--accent-teal)]">
+            <span className="w-3 h-3 bg-teal-500/30 border border-[var(--accent-teal)] rounded-sm" />
             <span>10-Yr Avg</span>
           </div>
         </div>
@@ -158,15 +160,15 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
           <BarChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
             <XAxis
               dataKey="monthDay"
-              stroke="#64748b"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              tickLine={{ stroke: '#334155' }}
+              stroke={isDark ? '#475569' : '#a39b8c'}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
               interval={10}
             />
             <YAxis
-              stroke="#64748b"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              tickLine={{ stroke: '#334155' }}
+              stroke={isDark ? '#475569' : '#a39b8c'}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
               domain={[0, 'auto']}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -174,12 +176,12 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
             {/* Slider Date Marker */}
             <ReferenceLine
               x={selectedMonthDay}
-              stroke="#38bdf8"
+              stroke={isDark ? '#f59e0b' : '#c56a25'}
               strokeWidth={2}
               strokeDasharray="3 3"
               label={{
                 value: selectedMonthDay,
-                fill: '#38bdf8',
+                fill: isDark ? '#f59e0b' : '#c56a25',
                 fontSize: 10,
                 position: 'top',
                 fontWeight: 'bold',
@@ -189,29 +191,29 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
             {/* 10-Year Average Bar Baseline */}
             <Bar
               dataKey="histAvgDaily"
-              fill="#0ea5e9"
-              fillOpacity={0.25}
-              stroke="#38bdf8"
+              fill={isDark ? '#0d9488' : '#1a6467'}
+              fillOpacity={isDark ? 0.3 : 0.25}
+              stroke={isDark ? '#14b8a6' : '#1a6467'}
               strokeWidth={1}
               name="10-Yr Historical Mean"
             />
 
-            {/* Recorded Daily Catch Sets (up to Aug 16) */}
+            {/* Recorded Daily Catch Sets */}
             <Bar
               dataKey="recordedDaily"
-              fill="#6366f1"
+              fill={isDark ? '#f59e0b' : '#c56a25'}
               fillOpacity={0.9}
-              stroke="#818cf8"
+              stroke={isDark ? '#fbbf24' : '#e89553'}
               strokeWidth={1}
               name="Recorded Daily CPUE"
             />
 
-            {/* Projected Daily Inflow (Aug 17 to Sep 30) */}
+            {/* Projected Daily Inflow */}
             <Bar
               dataKey="projectedDaily"
-              fill="#a855f7"
+              fill={isDark ? '#d97706' : '#e89553'}
               fillOpacity={0.4}
-              stroke="#c084fc"
+              stroke={isDark ? '#f59e0b' : '#c56a25'}
               strokeDasharray="3 3"
               strokeWidth={1}
               name="Modeled Daily Arrival"
@@ -220,9 +222,9 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
-        <span>Anchor: Recorded data published through <strong>{SEASON_DAYS[lastRecordedDayIndex]?.monthDay}</strong></span>
-        <span>Selected: <strong className="text-cyan-300">{selectedMonthDay}</strong></span>
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-t border-[var(--border-main)] pt-2 font-mono">
+        <span>Anchor: Recorded data published through <strong className="text-[var(--text-main)]">{SEASON_DAYS[lastRecordedDayIndex]?.monthDay}</strong></span>
+        <span>Selected: <strong className="text-[var(--accent-amber)]">{selectedMonthDay}</strong></span>
       </div>
     </div>
   );
