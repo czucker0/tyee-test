@@ -42,6 +42,7 @@ import {
   Waves,
   ArrowRightLeft,
   Bot,
+  Fish,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -265,12 +266,6 @@ export default function App() {
       shortLabel: 'Rivers',
       icon: <MapPin className="w-4 h-4" />,
     },
-    {
-      id: 'biologist' as MainTabType,
-      label: 'AI Biologist & DFO',
-      shortLabel: 'Biologist',
-      icon: <Bot className="w-4 h-4" />,
-    },
   ];
 
   // Auth Protection Gate
@@ -281,8 +276,9 @@ export default function App() {
           <Waves className="w-8 h-8 animate-pulse" />
         </div>
         <div className="text-center space-y-1">
-          <p className="text-sm font-heading font-extrabold text-[var(--text-main)] tracking-wider">BKLYNFLY &bull; SKEENA FIELD STATION</p>
-          <p className="text-xs text-[var(--text-muted)] font-mono">Verifying authorized field profile &amp; telemetry sync...</p>
+          <p className="text-base font-heading font-black text-[var(--text-main)] tracking-wider uppercase">BKLYNFLY</p>
+          <p className="text-xs font-mono font-bold text-[var(--accent-amber)] tracking-wider uppercase">SKEENA STEELHEAD RUN TRACKER</p>
+          <p className="text-[11px] text-[var(--text-muted)] font-mono pt-1">Verifying authorized profile &amp; telemetry sync...</p>
         </div>
       </div>
     );
@@ -310,6 +306,8 @@ export default function App() {
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
         conservationTier={projection.conservationTier}
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
         onLoadScenario={(m) => {
           setCustomMultiplier(m);
           setIsSandboxOpen(true);
@@ -331,28 +329,27 @@ export default function App() {
             latestRecordedDayIndex={latestRecordedDayIndex}
           />
 
-          {/* Segmented Tab Navigation */}
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 font-mono">
+          {/* Segmented Tab Navigation - Shown on desktop / tablet (hidden on mobile, accessible via slide-out menu) */}
+          <div className="hidden sm:grid grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition shrink-0 ${
+                  className={`w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-[13px] font-bold transition ${
                     isActive
                       ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
                       : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)]'
                   }`}
                 >
-                  <span>
+                  <span className="shrink-0">
                     {tab.icon}
                   </span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.shortLabel}</span>
+                  <span className="truncate">{tab.label}</span>
                   {tab.badge && (
                     <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold uppercase ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold uppercase shrink-0 hidden lg:inline ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)]'
@@ -568,85 +565,7 @@ export default function App() {
             />
           </div>
         )}
-
-        {/* 5. AI BIOLOGIST & DFO TELEMETRY TAB */}
-        {activeTab === 'biologist' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Quick Status Hero */}
-            <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-6 h-6 text-[var(--accent-amber)]" />
-                  <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
-                    DFO In-Season Fisheries Biologist AI
-                  </h3>
-                </div>
-                <p className="text-xs text-[var(--text-secondary)] font-mono mt-1 max-w-2xl leading-relaxed">
-                  Real-time ecological assessment powered by Gemini. Analyzes migration velocity, Skeena discharge, water temperatures, and historical analog runs.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setIsAIModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-bold text-xs transition shadow-sm flex items-center gap-2 hover:opacity-90"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Open Full Biologist Modal</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Projection & Escapement Overview */}
-            <ProjectionDetailsCard
-              projection={projection}
-              selectedMonthDay={selectedMonthDay}
-              isMetricInAdults={isMetricInAdults}
-            />
-
-            {/* Historical Reference Table */}
-            <HistoricalComparisonTable
-              currentDayIndex={currentDayIndex}
-              projection={projection}
-              selectedMonthDay={selectedMonthDay}
-              isMetricInAdults={isMetricInAdults}
-              selectedYears={selectedYears}
-              onToggleYear={toggleYear}
-              allYears={effectiveAllYears}
-            />
-          </div>
-        )}
       </main>
-
-      {/* Mobile Bottom Quick Tab Bar (Sticky at bottom on small screens) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)]/95 backdrop-blur-lg border-t border-[var(--border-main)] px-2 py-1.5 shadow-lg flex items-center justify-around">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition text-[11px] font-bold ${
-                isActive
-                  ? 'text-[var(--accent-amber)] font-extrabold scale-105'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-              }`}
-            >
-              <div
-                className={`p-1 rounded-md transition ${
-                  isActive ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)]' : 'text-[var(--text-muted)]'
-                }`}
-              >
-                {tab.icon}
-              </div>
-              <span className="mt-0.5 leading-none font-mono">{tab.shortLabel}</span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Application Footer with Build Timestamp & Metadata */}
       <Footer

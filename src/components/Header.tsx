@@ -1,23 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Fish,
   Sparkles,
   Sliders,
   HelpCircle,
   Download,
-  AlertCircle,
-  CheckCircle2,
-  Database,
   ShieldCheck,
-  MoreVertical,
-  X,
   Compass,
   Sun,
   Moon,
+  Menu,
+  X,
+  TrendingUp,
+  Waves,
+  ArrowRightLeft,
+  MapPin,
+  Bot,
+  Fish,
 } from 'lucide-react';
 import { UserProfileMenu } from './UserProfileMenu';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { MainTabType } from '../types/steelhead';
+import { ClassicSalmonFlyIcon } from './ClassicSalmonFlyIcon';
 
 interface HeaderProps {
   selectedMonthDay: string;
@@ -30,6 +34,8 @@ interface HeaderProps {
   onExportCSV: () => void;
   conservationTier: string;
   onLoadScenario?: (multiplier: number, timingShiftDays: number) => void;
+  activeTab?: MainTabType;
+  onSelectTab?: (tab: MainTabType) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,223 +45,330 @@ export const Header: React.FC<HeaderProps> = ({
   isSandboxOpen,
   onExportCSV,
   onLoadScenario,
+  activeTab = 'overview',
+  onSelectTab,
 }) => {
   const { isAdmin, openAdminModal } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
 
-  // Close mobile dropdown when clicking outside
+  // Prevent background scroll when mobile drawer is open
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-    if (isMobileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (isSidePanelOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
     };
-  }, [isMobileMenuOpen]);
+  }, [isSidePanelOpen]);
+
+  const navLinks = [
+    { id: 'overview' as MainTabType, label: 'Overview & Telemetry', icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'alluvial' as MainTabType, label: 'Alluvial Flow Stream', icon: <Waves className="w-4 h-4" /> },
+    { id: 'forecast' as MainTabType, label: 'Forecast & Projections', icon: <Sparkles className="w-4 h-4" /> },
+    { id: 'compare' as MainTabType, label: 'Historical Comparison', icon: <ArrowRightLeft className="w-4 h-4" /> },
+    { id: 'tributaries' as MainTabType, label: 'Tributaries & Rivers', icon: <MapPin className="w-4 h-4" /> },
+  ];
 
   return (
-    <header className="border-b border-[var(--border-main)] bg-[var(--bg-surface)] backdrop-blur-md sticky top-0 z-30 shadow-sm transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5">
-        <div className="flex items-center justify-between gap-3">
-          {/* Logo & Title - Never cut off */}
-          <div className="flex items-center shrink-0">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-heading text-sm sm:text-base lg:text-lg font-extrabold tracking-tight text-[var(--text-main)] whitespace-nowrap">
-                  BKLYNFLY Skeena Steelhead Escapement Data
+    <>
+      <header className="border-b border-[var(--border-main)] bg-[var(--bg-surface)] backdrop-blur-md sticky top-0 z-30 shadow-sm transition-colors duration-200 w-full">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            {/* Left Section: Mobile Hamburger + Brand Fly Illustration + Brand Logo/Title */}
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink">
+              {/* Mobile Hamburger Button */}
+              <button
+                onClick={() => setIsSidePanelOpen(true)}
+                className="lg:hidden p-2 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
+                aria-label="Open Navigation Menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+
+              {/* Classic Salmon Fly Illustration Badge */}
+              <div 
+                className="relative shrink-0 flex items-center justify-center p-1 sm:p-1.5 rounded-lg bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)] shadow-xs transition-colors duration-200"
+                title="BKLYNFLY Heritage Salmon & Steelhead Fly"
+              >
+                <ClassicSalmonFlyIcon className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--accent-amber)]" />
+              </div>
+
+              {/* Title & Subtitle in two lines, all caps */}
+              <div className="min-w-0 flex flex-col justify-center">
+                <h1 className="font-heading text-xs sm:text-base lg:text-lg font-black tracking-wider text-[var(--text-main)] uppercase leading-tight truncate">
+                  BKLYNFLY
                 </h1>
+                <p className="text-[9px] sm:text-[11px] lg:text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent-amber)] leading-tight truncate">
+                  Skeena Steelhead Run Tracker
+                </p>
               </div>
-              <p className="text-[10px] text-[var(--text-muted)] hidden md:flex items-center gap-1.5 font-mono mt-0.5">
-                <Compass className="w-3 h-3 text-[var(--accent-amber)] shrink-0" />
-                <span>DFO Tyee Escapement Telemetry</span>
-              </p>
             </div>
-          </div>
 
-          {/* Action Toolbar */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Desktop Actions */}
-            <div className="hidden xl:flex items-center gap-1.5">
-              {/* Theme Toggle (☀️ Journal / 🌙 Night) */}
-              <button
-                onClick={toggleTheme}
-                title={`Switch to ${theme === 'light' ? 'Night Mode' : 'Journal Light Mode'}`}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                {theme === 'light' ? (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-stone-600" />
-                    <span>Night</span>
-                  </>
-                ) : (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Journal</span>
-                  </>
-                )}
-              </button>
-
-              {/* Admin Userbase */}
-              {isAdmin && (
+            {/* Right Action Toolbar */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Desktop Actions */}
+              <div className="hidden lg:flex items-center gap-1">
+                {/* Theme Toggle (☀️ Day / 🌙 Night) */}
                 <button
-                  onClick={openAdminModal}
-                  title="Open Admin Userbase & Permissions Directory"
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold font-mono uppercase tracking-wider bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] transition"
+                  onClick={toggleTheme}
+                  title={`Switch to ${theme === 'light' ? 'Night Mode' : 'Day Mode'}`}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-                  <span>Admin</span>
+                  {theme === 'light' ? (
+                    <>
+                      <Moon className="w-3.5 h-3.5 text-stone-600 dark:text-blue-400" />
+                      <span className="hidden xl:inline">Night</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="hidden xl:inline">Day</span>
+                    </>
+                  )}
                 </button>
-              )}
 
-              {/* Sandbox */}
-              <button
-                onClick={onToggleSandbox}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono uppercase tracking-wider border transition ${
-                  isSandboxOpen
-                    ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber-border)] font-bold shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-                <span>Sandbox</span>
-              </button>
+                {/* Admin Userbase */}
+                {isAdmin && (
+                  <button
+                    onClick={openAdminModal}
+                    title="Open Admin Userbase & Permissions Directory"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold font-mono uppercase tracking-wider bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] transition shrink-0"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                    <span>Admin</span>
+                  </button>
+                )}
 
-              {/* AI Biologist */}
-              <button
-                onClick={onOpenAI}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--accent-amber)] hover:opacity-90 text-white text-xs font-bold font-mono uppercase tracking-wider shadow-sm border border-amber-600 transition"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-                <span>AI Biologist</span>
-              </button>
-
-              {/* Export CSV */}
-              <button
-                onClick={onExportCSV}
-                title="Download 10-Year Dataset (CSV)"
-                className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </button>
-
-              {/* About */}
-              <button
-                onClick={onOpenAbout}
-                title="About Tyee Test Fishery & Methodology"
-                className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Intermediate Screen Icons & Mobile Actions Menu */}
-            <div className="flex xl:hidden items-center gap-1">
-              {/* Quick theme toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]"
-                title="Toggle Theme"
-              >
-                {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
-              </button>
-
-              <div className="relative" ref={mobileMenuRef}>
+                {/* Sandbox */}
                 <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className={`p-1.5 rounded-lg border transition ${
-                    isMobileMenuOpen
-                      ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border-[var(--accent-amber-border)]'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-main)]'
+                  onClick={onToggleSandbox}
+                  title="What-If Run Multiplier Sandbox"
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-wider border transition shrink-0 ${
+                    isSandboxOpen
+                      ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber-border)] font-bold shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
                   }`}
-                  title="Field Actions & Tools"
                 >
-                  {isMobileMenuOpen ? <X className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
+                  <Sliders className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                  <span className="hidden xl:inline">Sandbox</span>
                 </button>
 
-                {/* Dropdown Menu */}
-                {isMobileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl shadow-xl py-1.5 z-50 text-xs animate-in fade-in slide-in-from-top-2">
-                    <div className="px-3 py-1.5 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--accent-amber)] border-b border-[var(--border-main)]">
-                      Field Tools &amp; Actions
-                    </div>
+                {/* AI Biologist */}
+                <button
+                  onClick={onOpenAI}
+                  title="DFO & Skeena AI Biologist Analyst"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent-amber)] hover:opacity-90 text-white text-xs font-bold font-mono uppercase tracking-wider shadow-sm border border-[var(--accent-amber-border)] transition shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                  <span className="hidden xl:inline">AI Biologist</span>
+                  <span className="xl:hidden">AI</span>
+                </button>
 
-                    <button
-                      onClick={() => {
-                        onOpenAI();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-[var(--text-main)] hover:bg-[var(--bg-subtle)] flex items-center gap-2.5 transition font-semibold"
-                    >
-                      <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-                      <span>AI Biologist Analyst</span>
-                    </button>
+                {/* Export CSV */}
+                <button
+                  onClick={onExportCSV}
+                  title="Download 10-Year Dataset (CSV)"
+                  className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
 
-                    <button
-                      onClick={() => {
-                        onToggleSandbox();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-[var(--text-main)] hover:bg-[var(--bg-subtle)] flex items-center gap-2.5 transition font-semibold"
-                    >
-                      <Sliders className="w-4 h-4 text-[var(--accent-amber)]" />
-                      <span>What-If Sandbox</span>
-                    </button>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => {
-                          openAdminModal();
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-[var(--accent-amber)] hover:bg-[var(--bg-subtle)] flex items-center gap-2.5 transition font-medium"
-                      >
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Admin User Directory</span>
-                      </button>
-                    )}
-
-                    <div className="border-t border-[var(--border-main)] my-1"></div>
-
-                    <button
-                      onClick={() => {
-                        onExportCSV();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] flex items-center gap-2.5 transition"
-                    >
-                      <Download className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>Export 10-Yr CSV</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onOpenAbout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] flex items-center gap-2.5 transition"
-                    >
-                      <HelpCircle className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>About Tyee Methodology</span>
-                    </button>
-                  </div>
-                )}
+                {/* About */}
+                <button
+                  onClick={onOpenAbout}
+                  title="About Tyee Test Fishery & Methodology"
+                  className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                </button>
               </div>
-            </div>
 
-            {/* User Account / Profile */}
-            <div className="border-l border-[var(--border-main)] pl-1.5 sm:pl-2 ml-0.5">
-              <UserProfileMenu onLoadScenario={onLoadScenario} />
+              {/* Quick Mobile Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="lg:hidden p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]"
+                title={`Switch to ${theme === 'light' ? 'Night Mode' : 'Day Mode'}`}
+              >
+                {theme === 'light' ? <Moon className="w-3.5 h-3.5 text-stone-600 dark:text-blue-400" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+              </button>
+
+              {/* User Account / Profile - Desktop Only */}
+              <div className="hidden lg:block border-l border-[var(--border-main)] pl-1.5 sm:pl-2 ml-0.5">
+                <UserProfileMenu onLoadScenario={onLoadScenario} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* MOBILE SLIDE-OUT SIDE PANEL DRAWER */}
+      {isSidePanelOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsSidePanelOpen(false)}
+          />
+
+          {/* Drawer Content */}
+          <div className="relative w-4/5 max-w-xs bg-[var(--bg-surface)] text-[var(--text-main)] h-full shadow-2xl flex flex-col border-r border-[var(--border-main)] z-10 animate-in slide-in-from-left duration-200">
+            {/* Header of Drawer */}
+            <div className="p-4 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-subtle)]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1 rounded-lg bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)] shrink-0">
+                  <ClassicSalmonFlyIcon className="w-5 h-5 text-[var(--accent-amber)]" />
+                </div>
+                <div>
+                  <span className="font-heading font-black text-xs text-[var(--text-main)] block uppercase tracking-wider">
+                    BKLYNFLY
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] block uppercase tracking-wider">
+                    Skeena Steelhead Run Tracker
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSidePanelOpen(false)}
+                className="p-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Navigation Tabs List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1">
+              <div className="px-2 py-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)]">
+                Tracker Views
+              </div>
+
+              {navLinks.map((link) => {
+                const isActive = activeTab === link.id;
+                return (
+                  <button
+                    key={link.id}
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab(link.id);
+                      setIsSidePanelOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold font-mono transition text-left ${
+                      isActive
+                        ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                    }`}
+                  >
+                    <span className={isActive ? 'text-white' : 'text-[var(--accent-amber)]'}>
+                      {link.icon}
+                    </span>
+                    <span>{link.label}</span>
+                  </button>
+                );
+              })}
+
+              <div className="pt-3 border-t border-[var(--border-main)] my-2">
+                <div className="px-2 py-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)]">
+                  Field Tools &amp; Actions
+                </div>
+
+                {/* Day / Night Theme Button */}
+                <button
+                  onClick={() => {
+                    toggleTheme();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono mt-1"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {theme === 'light' ? <Moon className="w-4 h-4 text-stone-600" /> : <Sun className="w-4 h-4 text-amber-400" />}
+                    <span>Theme: {theme === 'light' ? 'Day' : 'Night'}</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-subtle)] border border-[var(--border-main)] font-bold text-[var(--accent-amber)]">
+                    Toggle
+                  </span>
+                </button>
+
+                {/* What-If Sandbox */}
+                <button
+                  onClick={() => {
+                    onToggleSandbox();
+                    setIsSidePanelOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                >
+                  <Sliders className="w-4 h-4 text-[var(--accent-amber)]" />
+                  <span>Run What-If Sandbox</span>
+                </button>
+
+                {/* Ask Steelie Dan AI */}
+                <button
+                  onClick={() => {
+                    onOpenAI();
+                    setIsSidePanelOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                >
+                  <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
+                  <span>Ask Steelie Dan (AI Modal)</span>
+                </button>
+
+                {/* CSV Export */}
+                <button
+                  onClick={() => {
+                    onExportCSV();
+                    setIsSidePanelOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                >
+                  <Download className="w-4 h-4 text-[var(--text-muted)]" />
+                  <span>Export 10-Yr CSV</span>
+                </button>
+
+                {/* About Tyee */}
+                <button
+                  onClick={() => {
+                    onOpenAbout();
+                    setIsSidePanelOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                >
+                  <HelpCircle className="w-4 h-4 text-[var(--text-muted)]" />
+                  <span>About Tyee Methodology</span>
+                </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      openAdminModal();
+                      setIsSidePanelOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--accent-amber)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-[var(--accent-amber)]" />
+                    <span>Admin Directory</span>
+                  </button>
+                )}
+              </div>
+
+              {/* User Profile / Account Section at bottom of drawer */}
+              <div className="pt-3 border-t border-[var(--border-main)] mt-2">
+                <div className="px-2 pb-1.5 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)]">
+                  Account &amp; Workspace
+                </div>
+                <div className="p-1">
+                  <UserProfileMenu onLoadScenario={onLoadScenario} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-[var(--border-main)] bg-[var(--bg-subtle)] text-[10px] font-mono text-[var(--text-muted)] flex items-center justify-between">
+              <span>DFO Tyee Test Fishery</span>
+              <span className="text-[var(--accent-amber)] font-bold">1956–2026</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

@@ -144,16 +144,15 @@ export const AuthGate: React.FC = () => {
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-[var(--bg-surface)] rounded-full" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="stamp-badge stamp-amber">
+              <div className="flex flex-col">
+                <span className="font-heading font-black text-sm text-[var(--text-main)] uppercase tracking-wider">
                   BKLYNFLY
                 </span>
-                <h1 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">Skeena River Wild Steelhead Escapement</h1>
-                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]">
-                  Portal
+                <span className="font-mono font-bold text-xs text-[var(--accent-amber)] uppercase tracking-wider">
+                  Skeena Steelhead Run Tracker
                 </span>
               </div>
-              <p className="text-xs text-[var(--text-muted)] font-mono">DFO Tyee Test Fishery In-Season Telemetry, Percentiles &amp; Statistics (1956–2025)</p>
+              <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">DFO Tyee Test Fishery In-Season Telemetry, Percentiles &amp; Statistics (1956–2026)</p>
             </div>
           </div>
 
@@ -179,14 +178,14 @@ export const AuthGate: React.FC = () => {
                 BKLYNFLY Analytics
               </span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-[var(--text-main)] tracking-tight leading-tight">
-              Skeena River Wild Steelhead <br />
-              <span className="text-[var(--accent-amber)]">
-                Escapement Statistics &amp; Run Models
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-black text-[var(--text-main)] uppercase tracking-tight leading-tight">
+              BKLYNFLY <br />
+              <span className="text-[var(--accent-amber)] font-mono text-2xl sm:text-3xl lg:text-4xl block mt-1">
+                SKEENA STEELHEAD RUN TRACKER
               </span>
             </h2>
             <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-xl font-sans">
-              Access real-time daily Tyee test fishery indices, probabilistic escapement models, multi-decade historical percentiles (1956–2025), and our AI Escapement Biologist.
+              Access real-time daily Tyee test fishery indices, probabilistic escapement models, multi-decade historical percentiles (1956–2026), and our AI Escapement Biologist.
             </p>
           </div>
 

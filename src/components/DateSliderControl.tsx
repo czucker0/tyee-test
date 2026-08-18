@@ -4,10 +4,10 @@ import {
   Pause,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Sparkles,
-  Fish,
   SlidersHorizontal,
+  Flame,
+  Fish,
 } from 'lucide-react';
 import { SEASON_DAYS, TODAY_DAY_INDEX, LATEST_RECORDED_DAY_INDEX } from '../data/historicalData';
 
@@ -62,9 +62,9 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
       <div className="relative z-10 space-y-2.5 sm:space-y-3.5">
         {/* Top Info Bar */}
         <div className="flex items-center justify-between gap-2">
-          {/* Current Selected Date Display - Editorial Serif */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-            <div className="p-1 sm:p-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-center min-w-[54px] sm:min-w-[68px] shrink-0">
+          {/* Current Selected Date Display */}
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+            <div className="p-1 sm:p-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-center min-w-[50px] sm:min-w-[68px] shrink-0">
               <span className="block text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--accent-amber)]">
                 {currentDay.monthDay.split(' ')[0]}
               </span>
@@ -74,34 +74,22 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-base sm:text-xl font-heading font-bold text-[var(--text-main)] tracking-tight flex items-center gap-2 truncate">
-                  <span>{currentDay.monthDay}, 2026</span>
-                  {isFutureForecast ? (
-                    <span className="stamp-badge stamp-amber font-mono">
-                      <Sparkles className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
-                      FORECAST
-                    </span>
-                  ) : isLatestRecorded ? (
-                    <span className="stamp-badge stamp-teal font-mono">
-                      <Fish className="w-2.5 h-2.5" />
-                      LATEST
-                    </span>
-                  ) : (
-                    <span className="stamp-badge stamp-spruce font-mono">
-                      RECORDED
-                    </span>
-                  )}
-                  {isPeak && (
-                    <span className="hidden xs:flex stamp-badge stamp-amber font-mono">
-                      <Flame className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
-                      PEAK
-                    </span>
-                  )}
+              {/* Date Title */}
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-xl font-heading font-black text-[var(--text-main)] tracking-tight truncate leading-tight">
+                  {currentDay.monthDay}, 2026
                 </h2>
+                {isFutureForecast && (
+                  <span className="stamp-badge stamp-amber font-mono text-[9px] sm:text-[10px] px-1.5 py-0.2 shrink-0">
+                    <Sparkles className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
+                    FORECAST
+                  </span>
+                )}
               </div>
+
+              {/* Sub-line with clear season progress */}
               <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-mono truncate mt-0.5">
-                Day {currentDayIndex + 1}/113 &bull; {percentElapsed.toFixed(0)}% Elapsed
+                Day {currentDayIndex + 1} of 113 &bull; {percentElapsed.toFixed(0)}% Elapsed
               </p>
             </div>
           </div>

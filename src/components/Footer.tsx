@@ -20,21 +20,21 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           {/* Left Column: Project Name and Description */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-mono text-[10px] font-bold border border-[var(--accent-amber-border)]">
+              <span className="font-heading font-black text-sm text-[var(--text-main)] uppercase tracking-wider">
                 BKLYNFLY
               </span>
-              <span className="font-heading font-bold text-[var(--text-main)] tracking-wide text-sm">
-                Skeena River Wild Steelhead Escapement
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)] font-mono text-[11px] font-semibold border border-[var(--border-main)]">
+              <span className="px-1.5 py-0.5 rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)] font-mono text-[10px] font-semibold border border-[var(--border-main)]">
                 v{APP_VERSION}
               </span>
             </div>
-            <p className="text-[var(--text-muted)] text-xs flex items-center gap-1.5 font-mono">
+            <div className="font-mono font-bold text-xs text-[var(--accent-amber)] uppercase tracking-wider">
+              Skeena Steelhead Run Tracker
+            </div>
+            <p className="text-[var(--text-muted)] text-[11px] flex items-center gap-1.5 font-mono pt-0.5">
               <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)] shrink-0" />
-              <span>Fisheries &amp; Oceans Canada (DFO) Tyee Test Fishery Field Station Telemetry</span>
+              <span>Fisheries &amp; Oceans Canada (DFO) Tyee Test Fishery Telemetry</span>
             </p>
           </div>
 
@@ -77,8 +77,12 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Bottom bar */}
         <div className="mt-4 pt-4 border-t border-[var(--border-main)] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] font-mono">
-          <div>
-            BKLYNFLY Heritage Field Station &bull; Skeena River Steelhead Escapement &bull; {CURRENT_YEAR}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <span className="font-bold text-[var(--text-main)] uppercase tracking-wider">BKLYNFLY</span>
+            <span className="hidden sm:inline text-[var(--border-highlight)]">|</span>
+            <span className="text-[var(--accent-amber)] uppercase font-semibold">SKEENA STEELHEAD RUN TRACKER</span>
+            <span className="hidden sm:inline text-[var(--border-highlight)]">|</span>
+            <span>{CURRENT_YEAR}</span>
           </div>
           <div className="flex items-center gap-2">
             <span>Build Date: <strong className="text-[var(--text-main)]">{BUILD_INFO.buildDate}</strong></span>

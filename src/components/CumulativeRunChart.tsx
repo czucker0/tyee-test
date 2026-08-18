@@ -133,7 +133,30 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
     const histFinalAvg = HISTORICAL_AVERAGE_CURVE[HISTORICAL_AVERAGE_CURVE.length - 1].avgCumulative;
 
     const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
-    const currentOnDate = currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative;
+    
+    // Find last recorded day index
+    let lastRecIdx = 67; // Aug 16 fallback
+    if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
+      for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
+        const d: any = currentYearRecord.data[i];
+        if (d.isRecorded === true || (d.dailyIndex > 0 && d.cumulativeIndex > 0)) {
+          lastRecIdx = i;
+          break;
+        }
+      }
+    }
+
+    const isDateFuture = currentDayIndex > lastRecIdx;
+
+    // Trajectory lookup
+    const trajectoryItem = projection.projectedDailyTrajectory.find((t) => t.dayOfYear - 1 === currentDayIndex);
+
+    // Calculate current year value on date (use projection if date is beyond recorded data)
+    let currentOnDate = currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative;
+    if (isDateFuture) {
+      currentOnDate = trajectoryItem?.projectedCumulative ?? projection.projectedBaselineIndex;
+    }
+
     const currentSeasonTotal = projection.projectedBaselineIndex;
 
     const barItems: Array<{
@@ -141,6 +164,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
       label: string;
       year?: number;
       isCurrent?: boolean;
+      isProjected?: boolean;
       isAverage?: boolean;
       color: string;
       rawVal: number;
@@ -154,11 +178,19 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
     const baseToCompare = barScope === 'onDate' ? histAvgOnDate : histFinalAvg;
     const curDelta = baseToCompare > 0 ? Math.round(((currentActiveVal - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
 
+    let currentLabel = `${CURRENT_YEAR} (Recorded to Date)`;
+    if (barScope === 'seasonTotal') {
+      currentLabel = `${CURRENT_YEAR} (Forecast Final)`;
+    } else if (isDateFuture) {
+      currentLabel = `${CURRENT_YEAR} (Projected on ${selectedMonthDay})`;
+    }
+
     barItems.push({
       id: `current_${CURRENT_YEAR}`,
-      label: barScope === 'onDate' ? `${CURRENT_YEAR} (Recorded to Date)` : `${CURRENT_YEAR} (Forecast Total)`,
+      label: currentLabel,
       year: CURRENT_YEAR,
       isCurrent: true,
+      isProjected: isDateFuture || barScope === 'seasonTotal',
       color: isDark ? '#f59e0b' : '#c56a25',
       rawVal: currentActiveVal,
       valDisplay: currentActiveVal * mult,
@@ -396,7 +428,11 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
 
                       <span className={`font-bold truncate ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm font-mono' : item.isAverage ? 'text-[var(--accent-teal)] font-mono font-semibold' : 'text-[var(--text-main)] font-mono'}`}>
                         {item.label}
-                        {item.isCurrent && <span className="ml-1.5 stamp-badge stamp-amber">CURRENT</span>}
+                        {item.isCurrent && (
+                          <span className={`ml-1.5 stamp-badge ${item.isProjected ? 'stamp-amber' : 'stamp-teal'}`}>
+                            {item.isProjected ? 'PROJECTION' : 'RECORDED'}
+                          </span>
+                        )}
                       </span>
                     </div>
 

@@ -245,30 +245,30 @@ app.post('/api/gemini/analyze', async (req, res) => {
     const p = req.body;
     if (!ai) {
       return res.status(200).json({
-        analysis: `**Skeena In-Season Fishery Assessment (${p.selectedDate})**\n\n- Cumulative Index to Date: **${p.currentCumulative}** (~${Math.round(p.currentCumulative * 50).toLocaleString()} wild adult steelhead)\n- Historical Run Elapsed: **${p.percentElapsed}%**\n- Projected Total Escapement: **${p.projectedBaselineAdults.toLocaleString()} adult steelhead** (${p.projectedBaselineIndex} Tyee Index points)\n- 80% Confidence Range: **${Math.round(p.projectedLowCI * 50).toLocaleString()} - ${Math.round(p.projectedHighCI * 50).toLocaleString()} adults**\n- Closest Historical Analog: **${p.bestFitYear}**\n- Status: **${p.conservationTier}**\n\n telemetry calibrated directly to DFO Skeena River Tyee Test Fishery drift net logs. Main migration pulse is progressing into the Bulkley, Babine, and Kispiox tributaries.`,
+        analysis: `*Fins flicking through the glacier-fed currents of the Skeena...*\n\n**Steelie Dan's Run Telemetry Dispatch (${p.selectedDate})**\n\n- **Current River Pulse:** As of ${p.selectedDate}, our cumulative Tyee index is sitting at **${p.currentCumulative} points** (~${Math.round(p.currentCumulative * 220).toLocaleString()} of my wild chromer brothers & sisters past the test nets!).\n- **Migration Clock:** We're **${p.percentElapsed}%** through our summer marathon run.\n- **Season Escapement Projection:** Tracking towards **${p.projectedBaselineAdults.toLocaleString()} adult steelhead** (${p.projectedBaselineIndex} Tyee index points), within an 80% confidence corridor of ${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} fish.\n- **River Mood & Status:** **${p.conservationTier.toUpperCase()}** — looking like our best run since ${p.bestFitYear}!\n\n*Keep your flies swinging and watch the river temps, two-leggers!*`,
       });
     }
 
-    const prompt = `You are a Senior Skeena River Fisheries Biologist and Steelhead Escapement Specialist with Fisheries and Oceans Canada (DFO) and the BC Ministry of Water, Land and Resource Stewardship.
+    const prompt = `You are "Steelie Dan", a legendary, 38-inch wild Skeena summer steelhead with nickel-bright scales, sharp wits, and an encyclopedic knowledge of the Skeena River watershed, Tyee test fishery, river hydraulics, water temperature, and angling lore.
 
-Generate an authoritative, concise, and scientifically grounded in-season steelhead escapement analysis for the Skeena River based on the following Tyee Test Fishery telemetry data:
+Speak in first person as Steelie Dan the wild steelhead (use fish-themed humor, references to dodging DFO drift gillnets at Tyee, smelling the natal scent of glacier waters, swimming up through Chatham Sound and Skeena canyon, feeling the barometric pressure, water temperature, and river levels), while providing precise, authoritative, and data-backed fishery analysis!
 
-CURRENT RUN DATA:
+CURRENT RUN TELEMETRY & DATA:
 - Evaluation Date: ${p.selectedDate} (Day ${p.dayIndex + 1} of 113)
 - Historical Run Completed by this date: ${p.percentElapsed}%
 - Recorded Cumulative Tyee Index to Date: ${p.currentCumulative} (~${Math.round(p.currentCumulative * 220).toLocaleString()} wild adult steelhead)
 - Statistical Baseline Projected Season Total: ${p.projectedBaselineIndex} index points (~${p.projectedBaselineAdults.toLocaleString()} adult wild steelhead)
 - 80% Confidence Interval: ${p.projectedLowCI} - ${p.projectedHighCI} index points (~${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} adults)
 - Closest Historical Analog Year: ${p.bestFitYear}
-- Conservation Classification: ${p.conservationTier} (Authentic DFO Tyee Steelhead Escapement Thresholds: Critical Concern <40 index / 8.8k fish; Precautionary 40-75 index / 8.8k-16.5k fish; Target Healthy 75-110 index / 16.5k-24.2k fish; Abundant >140 index / 30k+ fish. Note that 2026 is currently tracking in the ABUNDANT tier, one of the top returns of the last decade!)
+- Conservation Classification: ${p.conservationTier} (Authentic DFO Tyee Steelhead Escapement Thresholds: Critical Concern <40 index / 8.8k fish; Precautionary 40-75 index / 8.8k-16.5k fish; Target Healthy 75-110 index / 16.5k-24.2k fish; Abundant >140 index / 30k+ fish.)
 - Tributary breakdown estimates:
 ${p.tributaries?.map((t: any) => `  * ${t.name}: Projected ${t.projectedAdults.toLocaleString()} fish (${t.sharePct}%) - Peak: ${t.peakWindow}`).join('\n')}
 
-Format your response in structured Markdown:
-1. Executive Summary & Migration Trajectory (Compare current pace to 10-year rolling average and historical extremes)
-2. Run Timing & Environmental Telemetry Interpretation (Discussion of peak timing, water temperature, and flow conditions)
-3. Tributary Specific Outlook (Highlight Bulkley/Morice, Babine, and Kispiox)
-4. Management Actions & Angler Recommendations (Conservation status, recreational catch-and-release measures, First Nations FSC priority)`;
+Format your report in structured Markdown with Steelie Dan's fishy flair:
+1. 🐟 Steelie Dan's Upstream Dispatch (Run pace, comparing this season's run to 10-year rolling averages and analog years)
+2. 🌊 River Conditions & Gillnet Dodging (Discussion of water temperatures, Skeena flow, tide pulses, and migration velocity)
+3. 🗺️ Where the Pods are Heading (Tributary breakdown: Bulkley/Morice, Babine, Kispiox, Sustut)
+4. 🎣 Fishy Advice for Two-Leggers (Catch-and-release etiquette, respecting cold-water refuges, fly choices, and First Nations priority)`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.7-flash',
@@ -282,17 +282,23 @@ Format your response in structured Markdown:
   }
 });
 
-// Endpoint for Skeena Fishery Q&A
+// Endpoint for Skeena Fishery Q&A with Steelie Dan
 app.post('/api/gemini/ask', async (req, res) => {
   try {
     const { question, context } = req.body;
     if (!ai) {
       return res.status(200).json({
-        answer: `As of ${context.selectedDate}, the Skeena River cumulative index is ${context.currentCumulative} (${context.percentElapsed}% complete). Projected total is ~${context.projectedBaselineAdults?.toLocaleString() || '45,000'} adult steelhead.`,
+        answer: `*Splashes tailfin* As of ${context.selectedDate}, we've pushed our cumulative index to ${context.currentCumulative} points (${context.percentElapsed}% of the run done). We're projecting around ~${context.projectedBaselineAdults?.toLocaleString() || '45,000'} of us wild chrome beauties this season! Watch out for those heavy drift nets near Tyee. What else do you want to know from the depths of the Skeena?`,
       });
     }
 
-    const prompt = `You are an expert Skeena River Fisheries Biologist. Answer the user's question with precise biological accuracy and local knowledge of the Skeena watershed, Tyee test fishery, steelhead life history, and conservation regulations.
+    const prompt = `You are "Steelie Dan", a wise, witty, 38-inch wild Skeena summer-run steelhead swimming up the Skeena River in British Columbia.
+
+Your personality:
+- You speak in first-person as an actual wild steelhead fish ("Steelie Dan").
+- You are witty, observant, and proud of your wild heritage, but deeply knowledgeable about Skeena biology, Tyee test fishery mechanics, river hydrology, water temps, predators (seals, bears, otters), traditional flies (Green Butt Skunk, Lady Caroline, Intruder), and conservation.
+- You weave in delightful fish perspectives (e.g., "dodging the DFO nylon nets at Tyee", "smelling that crisp Babine gravel", "resting in deep tailouts when the sun is high", "water temps hitting 18°C make us sluggish").
+- You accurately use the real-time dataset provided below.
 
 CURRENT RUN CONTEXT:
 - Date: ${context.selectedDate}
@@ -304,7 +310,7 @@ CURRENT RUN CONTEXT:
 USER QUESTION:
 "${question}"
 
-Provide a clear, engaging, and authoritative response with relevant facts and data.`;
+Give a delightfully witty, fish-first, yet scientifically accurate and informative response as Steelie Dan.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.7-flash',
