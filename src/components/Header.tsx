@@ -11,8 +11,11 @@ import {
   AlertCircle,
   CheckCircle2,
   Database,
+  ShieldCheck
 } from 'lucide-react';
 import { TODAY_MONTH_DAY, CURRENT_YEAR } from '../data/historicalData';
+import { UserProfileMenu } from './UserProfileMenu';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   selectedMonthDay: string;
@@ -25,6 +28,7 @@ interface HeaderProps {
   isSandboxOpen: boolean;
   onExportCSV: () => void;
   conservationTier: string;
+  onLoadScenario?: (multiplier: number, timingShiftDays: number) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,7 +42,10 @@ export const Header: React.FC<HeaderProps> = ({
   isSandboxOpen,
   onExportCSV,
   conservationTier,
+  onLoadScenario,
 }) => {
+  const { isAdmin, openAdminModal } = useAuth();
+
   const getStatusBadge = () => {
     switch (conservationTier) {
       case 'Abundant':
@@ -90,14 +97,16 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <div>
-              <h1 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
-                <span>Skeena Steelhead</span>
-                <span className="hidden xs:inline text-cyan-400 font-bold">Tracker</span>
+              <h1 className="text-base sm:text-lg lg:text-xl font-black tracking-tight text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs sm:text-sm font-mono tracking-wider font-extrabold">
+                  BKLYNFLY
+                </span>
+                <span className="text-white">Skeena River Wild Steelhead Escapement</span>
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-400 flex items-center gap-1">
                 <Waves className="w-3 h-3 text-cyan-400 shrink-0" />
-                <span className="hidden sm:inline">Tyee Test Fishery Telemetry &amp; Escapement</span>
-                <span className="sm:hidden">DFO Tyee Fishery &bull; 2026</span>
+                <span className="hidden sm:inline">DFO Tyee Test Fishery Telemetry, Historical Percentiles &amp; Escapement Statistics</span>
+                <span className="sm:hidden">Tyee Escapement Statistics &bull; 2026</span>
               </p>
             </div>
           </div>
@@ -111,6 +120,19 @@ export const Header: React.FC<HeaderProps> = ({
               {status.icon}
               <span>{status.label}</span>
             </div>
+
+            {/* Admin Userbase Button if user has admin role */}
+            {isAdmin && (
+              <button
+                onClick={openAdminModal}
+                title="Open Admin Userbase & Permissions Directory"
+                className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition shadow-sm"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Admin Directory</span>
+                <span className="sm:hidden">Admin</span>
+              </button>
+            )}
 
             {/* DFO Sync Station Button */}
             {onOpenDFOSync && (
@@ -164,6 +186,11 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
+
+            {/* User Account / Profile */}
+            <div className="border-l border-slate-800 pl-1.5 sm:pl-2 ml-0.5">
+              <UserProfileMenu onLoadScenario={onLoadScenario} />
+            </div>
           </div>
         </div>
       </div>

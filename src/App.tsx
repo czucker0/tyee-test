@@ -31,6 +31,10 @@ import { WhatIfSandbox } from './components/WhatIfSandbox';
 import { AIAnalystModal } from './components/AIAnalystModal';
 import { AboutTyeeModal } from './components/AboutTyeeModal';
 import { DFODataSyncModal } from './components/DFODataSyncModal';
+import { AuthModal } from './components/AuthModal';
+import { AuthGate } from './components/AuthGate';
+import { AdminUserbaseModal } from './components/AdminUserbaseModal';
+import { useAuth } from './context/AuthContext';
 import { Footer } from './components/Footer';
 import {
   TrendingUp,
@@ -56,6 +60,8 @@ import confetti from 'canvas-confetti';
 export type MainTabType = 'overview' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
 
 export default function App() {
+  const { user, loading: authLoading } = useAuth();
+
   // Persistent DFO Database hook with rolling decade + multi-decade archive search
   const {
     dataset,
@@ -283,6 +289,30 @@ export default function App() {
     },
   ];
 
+  // Auth Protection Gate: Block application until user is signed in
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-slate-300">
+        <div className="relative p-4 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400">
+          <Waves className="w-8 h-8 animate-pulse text-cyan-400" />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-bold text-white tracking-wide">SKEENA STEELHEAD TRACKER</p>
+          <p className="text-xs text-slate-400">Verifying authorized river profile &amp; security clearance...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <AuthGate />
+        <AuthModal />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 pb-16 sm:pb-0">
       {/* Top Header */}
@@ -297,6 +327,10 @@ export default function App() {
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
         conservationTier={projection.conservationTier}
+        onLoadScenario={(m) => {
+          setCustomMultiplier(m);
+          setIsSandboxOpen(true);
+        }}
       />
 
       {/* Pinned Timeline & Navigation Dock (Sticky Under Header) */}
@@ -626,8 +660,8 @@ export default function App() {
         onClose={() => setIsSandboxOpen(false)}
         customMultiplier={customMultiplier}
         onMultiplierChange={(m) => setCustomMultiplier(m)}
-        currentDayIndex={currentDayIndex}
         projection={projection}
+        selectedMonthDay={selectedMonthDay}
       />
 
       {/* AI Fisheries Escapement Analyst Modal */}
@@ -655,6 +689,12 @@ export default function App() {
         activeSeasonMetadata={dataset?.activeSeasonMetadata}
         lastUpdated={dataset?.lastUpdated}
       />
+
+      {/* User Authentication & Profile Modal */}
+      <AuthModal />
+
+      {/* Admin Userbase Directory & RBAC Permissions Modal */}
+      <AdminUserbaseModal />
     </div>
   );
 }

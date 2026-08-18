@@ -25,8 +25,11 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Left Column: Project Name and Description */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] font-bold border border-cyan-500/40">
+                BKLYNFLY
+              </span>
               <span className="font-bold text-slate-200 tracking-tight text-sm">
-                Skeena River Steelhead Run Tracker
+                Skeena River Wild Steelhead Escapement Statistics
               </span>
               <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 font-mono text-[11px] font-semibold border border-cyan-500/30">
                 v{APP_VERSION}

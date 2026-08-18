@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all unknown paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'chris.zucker@gmail.com' ||
+        request.auth.token.email == 'Chris.Zucker@gmail.com'
+      );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for User Profile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'provider', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             data.provider is string && data.provider in ['google', 'apple', 'facebook', 'local', 'password', 'email'] &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('riverRole' in data) || (data.riverRole is string && data.riverRole in ['angler', 'guide', 'biologist', 'conservationist', 'resident', 'guest'])) &&
+             (!('preferredTributary' in data) || (data.preferredTributary is string && data.preferredTributary.size() <= 50)) &&
+             (!('alertThreshold' in data) || (data.alertThreshold is number)) &&
+             (!('isAdmin' in data) || (data.isAdmin is bool)) &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    // Validation for Admin Record
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['adminId', 'email', 'createdAt']) &&
+             data.adminId is string && data.adminId.size() <= 128 &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('addedBy' in data) || (data.addedBy is string && data.addedBy.size() <= 150)) &&
+             data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    // Validation for Saved Scenario
+    function isValidSavedScenario(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'multiplier', 'timingShiftDays', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.multiplier is number &&
+             data.timingShiftDays is number &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    // Validation for Field Observation
+    function isValidFieldObservation(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'date', 'tributary', 'notes', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             data.date is string && data.date.size() <= 20 &&
+             data.tributary is string && data.tributary.size() <= 50 &&
+             data.notes is string && data.notes.size() <= 1000 &&
+             (!('waterCondition' in data) || (data.waterCondition is string && data.waterCondition.size() <= 50)) &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    // Test connection doc (public check without PII)
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin() && isValidId(adminId) && (request.method == 'delete' || isValidAdminRecord(incoming()));
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId) || isAdmin();
+
+      // Subcollection: Saved Scenarios
+      match /savedScenarios/{scenarioId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(scenarioId) && isValidSavedScenario(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(scenarioId) && isValidSavedScenario(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      // Subcollection: Field Observations
+      match /fieldObservations/{observationId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(observationId) && isValidFieldObservation(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(observationId) && isValidFieldObservation(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}

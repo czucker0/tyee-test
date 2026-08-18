@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and preferences for the Skeena Steelhead Tracker application",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique identifier of the user",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user",
+          "maxLength": 150
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL of the user",
+          "maxLength": 500
+        },
+        "provider": {
+          "type": "string",
+          "description": "Authentication provider used by the user",
+          "enum": ["google", "apple", "facebook", "local", "password"]
+        },
+        "riverRole": {
+          "type": "string",
+          "description": "River role or affiliation of the user",
+          "enum": ["angler", "guide", "biologist", "conservationist", "resident", "guest"]
+        },
+        "preferredTributary": {
+          "type": "string",
+          "description": "User's preferred Skeena watershed tributary",
+          "maxLength": 50
+        },
+        "alertThreshold": {
+          "type": "number",
+          "description": "Tyee index or escapement alert threshold"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp in ISO format",
+          "maxLength": 50
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp in ISO format",
+          "maxLength": 50
+        }
+      },
+      "required": ["userId", "displayName", "provider", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Designated administrator permissions record",
+      "type": "object",
+      "properties": {
+        "adminId": {
+          "type": "string",
+          "description": "UID or normalized email identifier of the administrator",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the administrator",
+          "maxLength": 150
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Email or UID of the admin who granted access",
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of admin registration",
+          "maxLength": 50
+        }
+      },
+      "required": ["adminId", "email", "createdAt"]
+    },
+    "SavedScenario": {
+      "title": "SavedScenario",
+      "description": "Saved What-If sandbox simulation scenario",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID of the scenario",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of scenario owner",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the simulation scenario",
+          "maxLength": 100
+        },
+        "multiplier": {
+          "type": "number",
+          "description": "Multiplier factor applied to run"
+        },
+        "timingShiftDays": {
+          "type": "number",
+          "description": "Days timing is shifted"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Personal simulation notes",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 50
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of update",
+          "maxLength": 50
+        }
+      },
+      "required": ["id", "userId", "title", "multiplier", "timingShiftDays", "createdAt", "updatedAt"]
+    },
+    "FieldObservation": {
+      "title": "FieldObservation",
+      "description": "User field notes and river observations for specific dates",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID of observation note",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of observer",
+          "maxLength": 128
+        },
+        "date": {
+          "type": "string",
+          "description": "Observation date in YYYY-MM-DD format",
+          "maxLength": 20
+        },
+        "tributary": {
+          "type": "string",
+          "description": "Tributary or Skeena section observed",
+          "maxLength": 50
+        },
+        "notes": {
+          "type": "string",
+          "description": "Field notes or water conditions",
+          "maxLength": 1000
+        },
+        "waterCondition": {
+          "type": "string",
+          "description": "Water clarity and height",
+          "maxLength": 50
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 50
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of update",
+          "maxLength": 50
+        }
+      },
+      "required": ["id", "userId", "date", "tributary", "notes", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/AdminRecord"
+      },
+      "description": "Stores administrator authorization records and allowed admin accounts."
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profiles with authentication provider and personalized river preferences."
+    },
+    "/users/{userId}/savedScenarios/{scenarioId}": {
+      "schema": {
+        "$ref": "#/entities/SavedScenario"
+      },
+      "description": "Stores user custom What-If run simulations."
+    },
+    "/users/{userId}/fieldObservations/{observationId}": {
+      "schema": {
+        "$ref": "#/entities/FieldObservation"
+      },
+      "description": "Stores user river notes and field log observations."
+    }
+  }
+}
