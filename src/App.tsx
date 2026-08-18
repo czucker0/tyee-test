@@ -333,10 +333,10 @@ export default function App() {
         }}
       />
 
-      {/* Pinned Timeline & Navigation Dock (Sticky Under Header) */}
-      <div className="sticky top-[61px] sm:top-[69px] z-20 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/90 shadow-xl">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 space-y-2.5">
-          {/* Pinned Date Slider Control */}
+      {/* Timeline & Navigation Header Dock */}
+      <div className="bg-slate-950/95 border-b border-slate-800/90 shadow-md sm:sticky sm:top-[53px] z-20 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 space-y-2">
+          {/* Date Slider Control */}
           <DateSliderControl
             currentDayIndex={currentDayIndex}
             onDayChange={handleDayChange}
@@ -348,15 +348,15 @@ export default function App() {
             latestRecordedDayIndex={latestRecordedDayIndex}
           />
 
-          {/* Sticky Segmented Pill Navigation Tab Bar */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+          {/* Segmented Tab Navigation */}
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition shrink-0 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition shrink-0 ${
                     isActive
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-md shadow-cyan-950/50 font-extrabold'
                       : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800/80'
@@ -369,7 +369,7 @@ export default function App() {
                   <span className="sm:hidden">{tab.shortLabel}</span>
                   {tab.badge && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold uppercase ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase ${
                         isActive
                           ? 'bg-slate-950/30 text-slate-950'
                           : 'bg-cyan-500/20 text-cyan-300'
@@ -386,7 +386,7 @@ export default function App() {
       </div>
 
       {/* Main Tab Content View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6 space-y-4 sm:space-y-6">
         {/* What-If Sandbox Alert Banner (if multiplier != 1.0) */}
         {customMultiplier !== 1.0 && (
           <div className="bg-purple-950/60 border border-purple-500/50 rounded-xl p-3.5 flex items-center justify-between shadow-lg text-xs animate-in fade-in">

@@ -12,7 +12,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
-  getDocs,
+  getDocs, 
   collection, 
   onSnapshot, 
   deleteDoc,
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const emailAdminDoc = await getDoc(doc(db, 'admins', sanitizedId));
         if (emailAdminDoc.exists()) return true;
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
     return false;
@@ -345,6 +345,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [syncFirebaseUserProfile]);
 
+  const handleOAuthError = (err: any, providerName: string) => {
+    console.error(`${providerName} Sign-In error:`, err);
+    if (err?.code === 'auth/unauthorized-domain' || err?.message?.includes('unauthorized-domain')) {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+      setAuthNotice(
+        `OAuth Domain Notice: "${currentHost}" is not yet authorized in Firebase Console > Authentication > Settings > Authorized Domains. You can sign in immediately using "Email / Pass" or "Local Profile" with full access!`
+      );
+    } else if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/configuration-not-found' || err?.message?.includes('provider is not enabled')) {
+      setAuthNotice(`${providerName} is not yet enabled in Firebase Console. Please sign in with Email & Password or Local Profile.`);
+    } else if (err?.code === 'auth/popup-closed-by-user') {
+      setAuthNotice(null);
+    } else {
+      setAuthNotice(err?.message || `${providerName} sign-in encountered an issue.`);
+    }
+  };
+
   // Google Sign In
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -356,8 +372,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem(LOCAL_USER_STORAGE_KEY);
       closeAuthModal();
     } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      setAuthNotice(err?.message || 'Google sign-in was cancelled or encountered an error.');
+      handleOAuthError(err, 'Google');
       throw err;
     } finally {
       setLoading(false);
@@ -375,12 +390,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem(LOCAL_USER_STORAGE_KEY);
       closeAuthModal();
     } catch (err: any) {
-      console.error('Apple Sign-In error:', err);
-      if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/configuration-not-found' || err?.message?.includes('provider is not enabled')) {
-        setAuthNotice('Apple Sign-In requires configuring Apple Service ID in Firebase Console. You can also sign up with Email & Password or Google.');
-      } else {
-        setAuthNotice(err?.message || 'Apple sign-in was cancelled.');
-      }
+      handleOAuthError(err, 'Apple');
       throw err;
     } finally {
       setLoading(false);
@@ -398,12 +408,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem(LOCAL_USER_STORAGE_KEY);
       closeAuthModal();
     } catch (err: any) {
-      console.error('Facebook Sign-In error:', err);
-      if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/configuration-not-found' || err?.message?.includes('provider is not enabled')) {
-        setAuthNotice('Facebook Sign-In requires adding Facebook App ID in Firebase Console. You can also sign up with Email & Password or Google.');
-      } else {
-        setAuthNotice(err?.message || 'Facebook sign-in was cancelled.');
-      }
+      handleOAuthError(err, 'Facebook');
       throw err;
     } finally {
       setLoading(false);
@@ -424,7 +429,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Email sign in error:', err);
       let msg = err.message;
       if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        msg = 'Invalid email or password. Please check credentials or create a new account.';
+        msg = 'Invalid email or password. Please verify your credentials or create a new account.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Domain authorization notice: You can also use Local Profile to enter immediately.';
       }
       setAuthNotice(msg);
       throw err;
@@ -460,6 +467,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         msg = 'This email is already registered. Please sign in or use another email.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'Password must be at least 6 characters.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Domain authorization notice: You can also use Local Profile to enter immediately.';
       }
       setAuthNotice(msg);
       throw err;

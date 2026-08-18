@@ -298,9 +298,27 @@ export const AuthGate: React.FC = () => {
 
             {/* Notifications */}
             {authNotice && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span className="leading-tight">{authNotice}</span>
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{authNotice}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('email')}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg font-semibold text-[11px] border border-amber-500/40 transition"
+                  >
+                    Switch to Email / Pass
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('local')}
+                    className="px-2.5 py-1 bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 rounded-lg font-semibold text-[11px] border border-cyan-500/40 transition"
+                  >
+                    Use Fast Local Setup
+                  </button>
+                </div>
               </div>
             )}
 

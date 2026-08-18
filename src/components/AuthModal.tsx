@@ -222,11 +222,29 @@ export const AuthModal: React.FC = () => {
         {/* Body content */}
         <div className="px-6 py-3 overflow-y-auto flex-1 space-y-4 text-slate-300 text-sm">
           {authNotice && (
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold text-amber-300">Notice</p>
-                <p className="text-amber-200/90 leading-relaxed">{authNotice}</p>
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2">
+              <div className="flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-300">Notice</p>
+                  <p className="text-amber-200/90 leading-relaxed">{authNotice}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('email')}
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg font-semibold text-[11px] border border-amber-500/40 transition"
+                >
+                  Use Email / Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('local')}
+                  className="px-2.5 py-1 bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 rounded-lg font-semibold text-[11px] border border-cyan-500/40 transition"
+                >
+                  Use Fast Local Profile
+                </button>
               </div>
             </div>
           )}
