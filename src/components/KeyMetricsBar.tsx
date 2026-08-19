@@ -55,18 +55,26 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   }
 
   const isBeyondRecordedData = dayIdx > lastRecordedDayIndex;
-  const recordedCum = currentYearData?.data[dayIdx]?.cumulativeIndex ?? projection.currentCumulative;
-  const currentCumAdults = Math.round(recordedCum * ADULT_EXPANSION_FACTOR);
+  
+  // Find trajectory item if looking at future / projection
+  const trajectoryItem = projection.projectedDailyTrajectory?.find((t) => t.dayOfYear - 1 === dayIdx);
+
+  // Use projection.currentCumulative for the active selected date (accurately handles both recorded past and projected future)
+  const activeCumulative = isBeyondRecordedData 
+    ? (trajectoryItem?.projectedCumulative ?? projection.currentCumulative)
+    : (currentYearData?.data[dayIdx]?.cumulativeIndex ?? projection.currentCumulative);
+
+  const activeCumAdults = Math.round(activeCumulative * ADULT_EXPANSION_FACTOR);
 
   const projectedTotal = projection.projectedBaselineIndex;
   const projectedAdults = Math.round(projectedTotal * ADULT_EXPANSION_FACTOR);
   const lowCIAdults = Math.round(projection.projectedLowCI * ADULT_EXPANSION_FACTOR);
   const highCIAdults = Math.round(projection.projectedHighCI * ADULT_EXPANSION_FACTOR);
 
-  // Delta calculations
+  // Delta calculations against historical 10-year mean on this day
   const deltaVsAvgPct =
     histAvgCumulative > 0
-      ? Math.round(((recordedCum - histAvgCumulative) / histAvgCumulative) * 1000) / 10
+      ? Math.round(((activeCumulative - histAvgCumulative) / histAvgCumulative) * 1000) / 10
       : 0;
 
   // Velocity calculations
@@ -80,6 +88,9 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
     const d2 = dayIdx > 1 ? (currentYearData.data[dayIdx - 2]?.dailyIndex ?? 0) : d1;
     const count3 = dayIdx >= 2 ? 3 : dayIdx + 1;
     rolling3DayPace = Math.round(((d0 + d1 + d2) / count3) * 100) / 100;
+  } else if (trajectoryItem) {
+    singleDaySet = trajectoryItem.projectedDaily;
+    rolling3DayPace = trajectoryItem.projectedDaily;
   }
 
   const rollingAdultsPace = Math.round(rolling3DayPace * ADULT_EXPANSION_FACTOR);
@@ -113,7 +124,7 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
 
         {/* 3 Core Hero Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
-          {/* Hero Metric 1: Escapement to Date */}
+          {/* Hero Metric 1: Escapement to Date / Forecast on Date */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
             <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
               <span className="uppercase tracking-wider text-[11px]">
@@ -124,10 +135,10 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
             <div className="my-2">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] font-mono tracking-tight">
-                  {recordedCum.toFixed(1)}
+                  {activeCumulative.toFixed(1)}
                 </span>
                 <span className="text-xs sm:text-sm font-semibold text-[var(--accent-teal)] font-mono">
-                  ~{currentCumAdults.toLocaleString()} Adults
+                  ~{activeCumAdults.toLocaleString()} Adults
                 </span>
               </div>
             </div>
@@ -191,21 +202,25 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
       {/* Progressive Disclosure: Deep-Dive 4-Card Grid */}
       {showDetailedCards && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Detailed Card 1: To Date Telemetry */}
+          {/* Detailed Card 1: To Date Telemetry / Future Forecast */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[10px]">Actual DFO Recorded</span>
+              <span className="uppercase tracking-wider text-[10px]">
+                {isBeyondRecordedData ? 'Projected Cumulative' : 'Actual DFO Recorded'}
+              </span>
               <Fish className="w-4 h-4 text-[var(--accent-teal)]" />
             </div>
             <div className="my-2">
-              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{recordedCum.toFixed(2)} pts</div>
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{activeCumulative.toFixed(2)} pts</div>
               <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
                 Baseline Avg: <span className="text-[var(--text-secondary)] font-semibold">{histAvgCumulative.toFixed(1)} pts</span>
               </div>
             </div>
             <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
               <span>10-Yr Delta:</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">+{deltaVsAvgPct}%</span>
+              <span className={`font-bold ${deltaVsAvgPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {deltaVsAvgPct >= 0 ? `+${deltaVsAvgPct}%` : `${deltaVsAvgPct}%`}
+              </span>
             </div>
           </div>
 
