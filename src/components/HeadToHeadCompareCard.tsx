@@ -253,30 +253,30 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
       {/* KPI Comparison Scorecard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 font-mono">
         {/* Metric 1: Value on selected date */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
-            <span>Passage to <span className="font-bold text-[var(--text-main)]">{selectedMonthDay}</span></span>
-            <span className="text-[10px] font-mono font-bold uppercase text-[var(--text-secondary)]">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
+            <span>Passage to <span className="text-[var(--text-main)] font-bold">{selectedMonthDay}</span></span>
+            <span className="text-xs font-mono font-bold uppercase text-[var(--accent-amber)]">
               {isFutureDate ? 'Model Forecast' : 'DFO Record'}
             </span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[var(--accent-amber)]">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--accent-amber)]">
               {comparisonStats.currentVal}
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
               vs {comparisonStats.benchmarkVal} ({benchmarkDisplayName})
             </span>
           </div>
-          <div className="text-xs pt-1 flex items-center gap-1 font-bold">
+          <div className="text-xs pt-1.5 border-t border-[var(--border-main)] flex items-center gap-1 font-bold">
             {comparisonStats.diff >= 0 ? (
-              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                <TrendingUp className="w-3.5 h-3.5" />
+              <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold">
+                <TrendingUp className="w-4 h-4" />
                 +{comparisonStats.diff} {unitSuffix} (+{comparisonStats.pctDiff}%)
               </span>
             ) : (
-              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                <TrendingDown className="w-3.5 h-3.5" />
+              <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1 font-bold">
+                <TrendingDown className="w-4 h-4" />
                 {comparisonStats.diff} {unitSuffix} ({comparisonStats.pctDiff}%)
               </span>
             )}
@@ -284,28 +284,28 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 2: Final Projected Season Comparison */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
             <span>Projected Season Total</span>
-            <span className="text-[10px] uppercase text-[var(--accent-amber)] font-bold">Full Campaign</span>
+            <span className="text-xs uppercase text-[var(--accent-amber)] font-bold">Full Campaign</span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[var(--text-main)]">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)]">
               {comparisonStats.currentProjectedTotal}
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
               vs {comparisonStats.benchmarkTotal} (Final)
             </span>
           </div>
-          <div className="text-xs pt-1 flex items-center gap-1 font-bold">
+          <div className="text-xs pt-1.5 border-t border-[var(--border-main)] flex items-center gap-1 font-bold">
             {comparisonStats.totalDiff >= 0 ? (
-              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                <TrendingUp className="w-3.5 h-3.5" />
+              <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold">
+                <TrendingUp className="w-4 h-4" />
                 +{comparisonStats.totalDiff} {unitSuffix} (+{comparisonStats.totalPctDiff}%)
               </span>
             ) : (
-              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                <TrendingDown className="w-3.5 h-3.5" />
+              <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1 font-bold">
+                <TrendingDown className="w-4 h-4" />
                 {comparisonStats.totalDiff} {unitSuffix} ({comparisonStats.totalPctDiff}%)
               </span>
             )}
@@ -313,20 +313,20 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 3: Run Progression Pace */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 space-y-1 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-muted)] text-xs">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
+          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
             <span>Run Timing Completion</span>
-            <span className="text-[10px] text-[var(--accent-teal)] font-bold">Elapsed %</span>
+            <span className="text-xs text-[var(--accent-teal)] font-bold">Elapsed %</span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[var(--text-main)]">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)]">
               {projection.percentElapsedHistorical}%
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
               vs {comparisonStats.benchmarkPctElapsedOnDate}% ({benchmarkDisplayName})
             </span>
           </div>
-          <div className="text-xs text-[var(--text-muted)] pt-1">
+          <div className="text-xs text-[var(--text-secondary)] font-medium pt-1.5 border-t border-[var(--border-main)]">
             {projection.percentElapsedHistorical < 50
               ? 'Early-to-mid season migration'
               : 'Post-peak / late season passage'}
@@ -334,8 +334,8 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Metric 4: Lead/Lag Status Badge */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
-          <span className="text-xs text-[var(--text-muted)]">Campaign Stance</span>
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-sm space-y-1.5">
+          <span className="text-xs text-[var(--text-secondary)] font-bold">Campaign Stance</span>
           <div className="my-1">
             {comparisonStats.diff >= 0 ? (
               <span className="stamp-badge stamp-spruce">
@@ -347,7 +347,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
               </span>
             )}
           </div>
-          <span className="text-[11px] text-[var(--text-muted)]">
+          <span className="text-xs text-[var(--text-secondary)] font-medium pt-1.5 border-t border-[var(--border-main)]">
             Delta: {comparisonStats.diff >= 0 ? `+${comparisonStats.diff}` : comparisonStats.diff} {unitSuffix}
           </span>
         </div>
