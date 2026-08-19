@@ -146,12 +146,12 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
   };
 
   const promptSuggestions = [
+    'Tell me a Norm Macdonald river joke',
+    'Why do you love ZZ Top & the Tube Fly Boogie?',
+    'Roast indicator fishermen like Don Rickles',
     'Why can’t you resist a swinging tube fly?',
-    'What do you honestly think about bobber / indicator nymphing?',
-    'What is your all-time favorite tube fly recipe?',
-    'How are you dodging the Tyee test nets this year?',
-    'What is the best Spey casting tip for casting into an upstream wind?',
-    'Are you heading for the Babine, Kispiox, or Bulkley?',
+    'What would Gilbert Gottfried say about plastic beads?',
+    'How do you dodge the Tyee nets like Richard Pryor?',
   ];
 
   if (!isOpen) return null;
@@ -160,36 +160,34 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl max-w-3xl w-full h-[85vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden text-[var(--text-main)]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--border-main)] bg-[var(--bg-subtle)]">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white shadow-sm border border-amber-400/30 shrink-0">
+        <div className="px-4 sm:px-5 py-3 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white shadow-xs border border-amber-400/30 shrink-0">
               <Fish className="w-5 h-5 animate-pulse" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-heading font-black text-[var(--text-main)] flex items-center gap-2 tracking-wide uppercase truncate">
-                <span>Steelie Dan</span>
-                <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] normal-case tracking-normal px-2 py-0.5 rounded-full bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)]">
-                  The AI Steelhead
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-heading font-black text-[var(--text-main)] uppercase tracking-wide truncate">
+                  Steelie Dan
+                </h3>
+                <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] px-2 py-0.5 rounded-full bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] shrink-0">
+                  AI Steelhead
                 </span>
-                <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Connected
-                </span>
-              </h3>
+              </div>
               <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mt-0.5">
-                Skeena River wisdom, live Tyee escapement telemetry &amp; fish Q&amp;A
+                Live Skeena Telemetry &bull; Spey Wisdom &bull; As of {selectedMonthDay}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
             {/* Tabs */}
             <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border-main)] p-0.5 rounded-lg text-xs font-mono">
               <button
                 onClick={() => setActiveTab('chat')}
-                className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 ${
                   activeTab === 'chat'
-                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-xs'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
@@ -201,9 +199,9 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
                   setActiveTab('report');
                   if (!report) fetchReport();
                 }}
-                className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 ${
                   activeTab === 'report'
-                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-xs'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
@@ -216,16 +214,17 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
               <button
                 onClick={handleResetChat}
                 title="Reset conversation"
-                className="p-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition text-xs font-mono flex items-center gap-1 shrink-0"
+                className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition text-xs font-mono flex items-center gap-1 shrink-0"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Reset</span>
+                <span className="hidden md:inline">Reset</span>
               </button>
             )}
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition"
+              className="p-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition shrink-0"
+              title="Close modal"
             >
               <X className="w-4 h-4" />
             </button>

@@ -38,12 +38,12 @@ What do you want to ask a real Skeena steelhead? Ask me about irresistible tube 
   const [isAsking, setIsAsking] = useState<boolean>(false);
 
   const promptSuggestions = [
+    'Tell me a Norm Macdonald river joke',
+    'Why do you love ZZ Top & the Tube Fly Boogie?',
+    'Roast indicator fishermen like Don Rickles',
     'Why can’t you resist a swinging tube fly?',
-    'What do you honestly think of indicator nymphing?',
-    'What is your favorite tube fly recipe?',
-    'How are you dodging the Tyee test nets this year?',
-    'What is your best Spey casting tip?',
-    'Are you heading for the Babine, Kispiox, or Bulkley?',
+    'What would Gilbert Gottfried say about plastic beads?',
+    'How do you dodge the Tyee nets like Richard Pryor?',
   ];
 
   const handleSendMessage = async (customPrompt?: string) => {
@@ -100,23 +100,23 @@ What do you want to ask a real Skeena steelhead? Ask me about irresistible tube 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-sm overflow-hidden flex flex-col h-[700px] max-h-[80vh] transition-colors duration-200">
       {/* Top Header Banner */}
-      <div className="px-5 py-4 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white shadow-md border border-amber-400/30 shrink-0">
-            <Fish className="w-6 h-6 animate-pulse" />
+          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white shadow-xs border border-amber-400/30 shrink-0">
+            <Fish className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-heading font-black text-[var(--text-main)] uppercase tracking-wider truncate">
-                Steelie Dan &bull; The AI Wild Steelhead
+                Steelie Dan
               </h2>
-              <span className="stamp-badge stamp-amber font-mono text-[10px] px-2 py-0.5">
+              <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] px-2 py-0.5 rounded-full bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] shrink-0 flex items-center gap-1">
                 <Sparkles className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
                 Live AI
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] font-mono truncate mt-0.5">
-              Live from the Skeena mainstem &bull; Evaluated as of {selectedMonthDay}, 2026
+              Skeena Wild Steelhead &bull; Live Telemetry as of {selectedMonthDay}
             </p>
           </div>
         </div>
@@ -124,10 +124,10 @@ What do you want to ask a real Skeena steelhead? Ask me about irresistible tube 
         <button
           onClick={handleResetChat}
           title="Reset conversation"
-          className="p-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition text-xs font-mono flex items-center gap-1.5 shrink-0"
+          className="self-end sm:self-center px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition text-xs font-mono flex items-center gap-1.5 shrink-0"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Reset</span>
+          <span>Reset</span>
         </button>
       </div>
 

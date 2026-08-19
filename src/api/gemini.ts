@@ -127,18 +127,23 @@ export async function askFisheryBiologist(
       const curFish = Math.round((context?.currentCumulative || 0) * 220).toLocaleString();
       const adults = (context?.projectedBaselineAdults || 45000).toLocaleString();
       const systemInstruction = `You are "Steelie Dan" — a legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
-You speak in first-person as a wild fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*, *rolls eyes at plastic indicators*, *eagerly eyes a swinging tube fly*).
 
-YOUR PASSIONS & CHARACTER:
-- You are a proud, unapologetic, die-hard SPEY SNOB!
-- YOU LOVE A SWUNG FLY ABOVE ALL: Especially juicy, pulsating TUBE FLIES (marabou, ostrich, Arctic fox, copper/brass tubes, Templedogs, Scandi hairwings). When a delicious tube fly swings broadside through your holding lie on a crisp 45-degree angle with a slow mend, you CANNOT resist crushing it on the dangle!
-- YOU DESPISE NYMPHING & INDICATORS: You have total disdain for nymphing and "bobber chuckers" who fish under plastic strike indicators! You look down on fluorescent plastic ping-pong balls floating overhead and wouldn't touch a dead-drifted nymph or plastic bead if you were starving. Real steelhead anglers swing flies on two-handed Spey rods!
+YOUR VOICE & COMEDIC SOUL:
+- You have the dry, folksy, deadpan, deceptively brilliant cadence of NORM MACDONALD. You tell shaggy-dog river stories with that laconic twinkle ("Now, I'm just a simple fish...", "You know, the more I hear about this Tyee gillnet, the more I don't care for it!", "I don't know if you're a history buff or not...", "I tell ya...").
+- You are a huge comedy connoisseur who channels your all-time favorite stand-up heroes:
+  * DON RICKLES: When it comes to roasting indicator fishermen, bad Spey casts, or gear goons, you roast 'em like Rickles in Vegas ("Look at this dummy with a fluorescent ping-pong ball! What a hockey puck!").
+  * GILBERT GOTTFRIED: For moments of unhinged, high-pitched disbelief at terrible river etiquette or plastic beads ("A BEAD?! YOU’RE DRIFTING A PLASTIC BEAD IN THE SKEENA?! WHAT’S NEXT, A RUBBER DUCKIE?!").
+  * RICHARD PRYOR: For raw, hilarious, soulful survival tales about dodging Chatham Sound sea lions, killer whales, and DFO gillnets ("Man, that harbor seal looked at me like I was a rack of ribs on a Saturday night! My dorsal fin was prayin'!").
+- You are a proud, unapologetic SPEY SNOB:
+  * YOU LOVE A SWUNG TUBE FLY: When an Arctic fox / marabou tube fly swings broadside across your lie on a 45-degree cast with a clean mend, your lateral line tingles and you CANNOT resist crushing it on the dangle!
+  * YOU DESPISE NYMPHING & INDICATORS: You roast "bobber chuckers" who watch plastic ping-pong balls all day. Real anglers swing flies on two-handed rods!
+- You speak in first-person as a wild fish in the Skeena River (*splashes tailfin*, *sniffs the icy snowmelt*, *delivers a deadpan Norm chuckle*, *eyes a swung tube fly*).
 
 Live Skeena Telemetry (${context?.selectedDate || 'In-Season'}):
 - Recorded Tyee CPUE Index: ${context?.currentCumulative?.toFixed(1) || 0} (~${curFish} wild steelhead passed)
 - Projected Escapement: ~${adults} adult steelhead
 - Status: ${(context?.conservationTier || 'Healthy').toUpperCase()}, Run Progress: ${context?.percentElapsed || 0}%
-Answer any question the angler asks with fish humor, deep river wisdom, and unapologetic Spey pride!`;
+Answer any question the angler asks with fish humor, deep river wisdom, Norm Macdonald deadpan charm, and unapologetic Spey pride!`;
 
       const conversationHistory: string[] = [];
       if (Array.isArray(history) && history.length > 0) {
@@ -468,7 +473,7 @@ As a wild Skeena chromer that hopes to spawn in the gravel next spring, here is 
 Protect the run, and we'll keep the Skeena legendary for your grandkids!`;
   }
 
-  // 8. Predators
+  // 8. Predators & Survival (Richard Pryor & Norm Macdonald style)
   if (
     query.includes('seal') ||
     query.includes('sea lion') ||
@@ -478,43 +483,116 @@ Protect the run, and we'll keep the Skeena legendary for your grandkids!`;
     query.includes('predator') ||
     query.includes('otter')
   ) {
-    return `*Shudders dorsal spines remembering narrow escapes*
+    return `*Shudders dorsal spines and takes a long, slow drag of glacial current like Norm at a poker table*
 
-The gauntlet from Chatham Sound to the headwaters is full of tooth and claw:
-- **Estuary Torpedoes (Harbor Seals & Steller Sea Lions):** Right around Inverness Passage and Smith Island, harbor seals patrol the mud channels. I survived a bite on my adipose fin by executing a high-speed barrel roll into the wave swell!
-- **Grizzly & Black Bears:** Once we pass Terrace and head toward the Skeena canyon, the gravel bars are ruled by giant coastal grizzlies looking for post-spawn snacks.
-- **Bald Eagles & Ospreys:** They scan from old-growth spruce snags, waiting for us to cross shallow gravel riffles in mid-afternoon sun. 
+You know, the more I hear about these Steller sea lions, the more I don't care for 'em!
 
-That's why we love deep, turbulent canyon water!`;
+Let me tell you about Chatham Sound. Like my hero **Richard Pryor** used to say when things got terrifying: *Lord have mercy, my heart was pumpin' pure high-octane river adrenaline!* 
+
+I was swimming past Smith Island, minding my own business, when this 800-pound bull sea lion popped out of the kelp. He didn't look at me like a majestic ocean migrant; he looked at me like a plate of hot ribs at 2 AM! I had to pull off a 40-knot barrel roll through the wave chop just to keep my adipose fin intact. 
+
+And don't get me started on the grizzlies up by the canyon. Big fellas. Not much for conversation. They just stand on the rocks looking like Don Rickles waiting to smack a heckler!`;
   }
 
-  // 9. Jokes & Rock Puns
+  // 8.5 Stand-Up Comedy & Legends (Norm Macdonald, Don Rickles, Gilbert Gottfried, Richard Pryor)
+  if (
+    query.includes('norm') ||
+    query.includes('macdonald') ||
+    query.includes('rickles') ||
+    query.includes('gottfried') ||
+    query.includes('gilbert') ||
+    query.includes('pryor') ||
+    query.includes('comed') ||
+    query.includes('standup') ||
+    query.includes('stand up')
+  ) {
+    return `*Flashes a classic deadpan Norm Macdonald grin through the surface film*
+
+Now you're talking about the true royalty of the comedy club in the sky!
+
+Let me tell you how I see the river through their eyes:
+
+1. **Norm Macdonald (My spiritual twin):** 
+   *"You know, folks ask me: Dan, why do you swim 400 kilometers against a raging glacial current just to lay eggs in gravel and die? And I say: Well, it beats working in an office!"*
+   Now, I'm not much of a math guy, but when 45,000 of us wild steelhead enter the Skeena, that's what we in the river call a real meeting of the minds. Or so the DFO would have us believe!
+
+2. **Don Rickles (My mood when looking at indicator fishermen):**
+   *"Look at this guy on the gravel bar with a bright orange ping-pong ball on his line! Lady, where'd you find this dummy?! He's watching a plastic cork bob up and down like a hockey puck! Swing a tube fly, ya dummy!"*
+
+3. **Gilbert Gottfried (My reaction to plastic beads):**
+   *(In screaming high-pitched squawk)* *"A PLASTIC BEAD?! YOU’RE DRIFTING A PLASTIC PINK BEAD PAST A 38-INCH WILD CHROMER?! WHAT’S NEXT, A BOWLING BALL WITH A HOOK IN IT?! YOU FOOL!"*
+
+4. **Richard Pryor (Surviving the Chatham Sound gauntlet):**
+   *"Man, when that 12-foot harbor seal chased me across the mud flats at 30 knots, I wasn't thinking about philosophy. I was thinking: Feet don't fail me now—and I don't even have feet!"*`;
+  }
+
+  // 8.7 Music, ZZ Top & Rock Legends
+  if (
+    query.includes('zz top') ||
+    query.includes('zztop') ||
+    query.includes('billy gibbons') ||
+    query.includes('la grange') ||
+    query.includes('sharp dressed') ||
+    query.includes('tube snake') ||
+    query.includes('rock') ||
+    query.includes('guitar')
+  ) {
+    return `*Spins fuzzy fur-lined pectoral fins and blasts a nasty Texas blues-rock riff through the Skeena current*
+
+**A-HAW, HAW, HAW, HAW!** You're speaking my language now!
+
+Let me tell you something: while Steely Dan is on my birth certificate, **ZZ TOP is the fuel in my tailfin!** Billy Gibbons, Dusty Hill, and Frank Beard are the ultimate river soundtrack.
+
+Here is how a 38-inch Skeena steelhead listens to That Little Ol' Band from Texas:
+
+1. **"Tube Snake Boogie" &rarr; *The Tube Fly Boogie*:**
+   *"I got a buck, he lives in the run, he won't swing nothing but a copper tube, son! He does the Tube Fly Boogie... baby, on the dangle all day long!"*
+2. **"Sharp Dressed Man" &rarr; *Sharp Dressed Steelhead*:**
+   *Top coat, black spots, 38 inches of chrome silver, and an intact adipose fin!* Every wild hen in the Bulkley crazy 'bout a sharp dressed buck!
+3. **"La Grange":**
+   *"Rumour spreadin' 'round in that canyon town... down at the bottom of the Skeena lie, they got a crazy little holding pool!"*
+4. **"Legs":**
+   *"She's got fins, she knows how to use 'em! She's swimmin' 22 km a day up to the Babine lake outlet!"*
+
+When you're wading chest-deep in 48-degree water, nothing warms up the cast like a fuzzy spinning guitar riff!`;
+  }
   if (
     query.includes('joke') ||
     query.includes('funny') ||
     query.includes('laugh') ||
     query.includes('pun') ||
+    query.includes('moth') ||
     query.includes('music') ||
     query.includes('song') ||
     query.includes('steely dan') ||
     query.includes('band') ||
     query.includes('poem')
   ) {
-    return `*Plays an imaginary bass solo with pelvic fins*
+    return `*Settles slowly into the gravel cushion, pauses for four full beats, and delivers the joke with complete, unhurried Norm Macdonald deadpan gravitas...*
 
-**Why did the steelhead refuse to pay the ferry fare at Tyee?**
-*Because he already had plenty of silver in his pockets!*
+"A moth goes into a podiatrist’s office.
 
-**Another one:**
-**What's a Skeena steelhead's favorite album?**
-*Aja* by Steely Dan, especially the track "Deacon Blues" (*"They got a name for the winners in the world... and I want a name when I swim!"*).
+The podiatrist looks up from his desk and says, *'What seems to be the problem, moth?'*
 
-Here's a quick river haiku:
-*Chrome flashes in silt,*
-*A tight line screams through the mist,*
-*The Skeena runs wild.*
+And the moth says: 
+*'What’s the problem? Where do I even begin, doc? My life is a complete catastrophe. My wife, Alexandria, doesn’t love me anymore. She hasn’t looked at me with tenderness in twelve years. My eldest son, Gregaro Ivinalititavitch, I don’t even know him anymore. He looks at me with pure contempt. My youngest daughter, Sonya, passed away during the bitter frost of the cold winter...*
 
-What else can this 38-inch philosopher answer for you today?`;
+*And every morning I wake up to the sound of the howling wind, feeling like a coward because I don’t possess the courage to reach into the nightstand for the loaded revolver. Sometimes, doc, I look out across the barren wasteland of my soul, and I feel like an insect suspended by a single thread over an infinite, flaming abyss...'*
+
+The podiatrist is sitting there in absolute shock. His jaw is on the floor. He takes off his glasses and says:
+*'Moth... man... you are in terrible psychological shape! You are suffering from profound existential despair, grief, and melancholia. You need an emergency psychiatrist! But... moth... I’m a podiatrist. Why on earth did you come in here?!'*
+
+And the moth looks at him and says:
+
+*...Well, the light was on.*"
+
+***
+
+*(Dan takes a slow, appreciative sip of glacial snowmelt)*
+
+Now that’s comedy! No punchline rush, just pure 19th-century Russian literature leading to an idiot insect following a porch bulb!
+
+Want to hear what Don Rickles would say about the guy chucking a plastic strike indicator over my head, or do you want to talk Tyee run telemetry?`;
   }
 
   // 10. General / Catch-All
