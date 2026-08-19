@@ -3,7 +3,7 @@ declare global {
   const __BUILD_TIMESTAMP__: string | undefined;
 }
 
-export const APP_VERSION = '2.4.1';
+export const APP_VERSION = '2.5.0';
 
 // Build timestamp injected via Vite define at build/bundle time, or ISO fallback
 export const BUILD_TIMESTAMP: string =

@@ -10,6 +10,8 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  HelpCircle,
+  Scale,
 } from 'lucide-react';
 import { ProjectionModelResult, YearRunData } from '../types/steelhead';
 import {
@@ -18,6 +20,7 @@ import {
   CURRENT_YEAR,
   ALL_YEARS_DATA,
 } from '../data/historicalData';
+import { MultiplierMode } from './MultiplierDebateModal';
 
 interface KeyMetricsBarProps {
   projection: ProjectionModelResult;
@@ -26,6 +29,10 @@ interface KeyMetricsBarProps {
   onToggleMetricMode?: () => void;
   allYears?: YearRunData[];
   currentDayIndex?: number;
+  multiplierMode?: MultiplierMode;
+  multiplierValue?: number;
+  onSelectMultiplierMode?: (mode: MultiplierMode) => void;
+  onOpenMultiplierDebate?: () => void;
 }
 
 export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
@@ -33,6 +40,10 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   selectedMonthDay,
   allYears = ALL_YEARS_DATA,
   currentDayIndex = projection.dayIndex,
+  multiplierMode = 'four_year',
+  multiplierValue = 214,
+  onSelectMultiplierMode,
+  onOpenMultiplierDebate,
 }) => {
   const [showDetailedCards, setShowDetailedCards] = useState<boolean>(false);
   const dayIdx = Math.max(0, Math.min(HISTORICAL_AVERAGE_CURVE.length - 1, currentDayIndex));
@@ -64,12 +75,12 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
     ? (trajectoryItem?.projectedCumulative ?? projection.currentCumulative)
     : (currentYearData?.data[dayIdx]?.cumulativeIndex ?? projection.currentCumulative);
 
-  const activeCumAdults = Math.round(activeCumulative * ADULT_EXPANSION_FACTOR);
+  const activeCumAdults = Math.round(activeCumulative * multiplierValue);
 
   const projectedTotal = projection.projectedBaselineIndex;
-  const projectedAdults = Math.round(projectedTotal * ADULT_EXPANSION_FACTOR);
-  const lowCIAdults = Math.round(projection.projectedLowCI * ADULT_EXPANSION_FACTOR);
-  const highCIAdults = Math.round(projection.projectedHighCI * ADULT_EXPANSION_FACTOR);
+  const projectedAdults = Math.round(projectedTotal * multiplierValue);
+  const lowCIAdults = Math.round(projection.projectedLowCI * multiplierValue);
+  const highCIAdults = Math.round(projection.projectedHighCI * multiplierValue);
 
   // Delta calculations against historical 10-year mean on this day
   const deltaVsAvgPct =
@@ -93,7 +104,7 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
     rolling3DayPace = trajectoryItem.projectedDaily;
   }
 
-  const rollingAdultsPace = Math.round(rolling3DayPace * ADULT_EXPANSION_FACTOR);
+  const rollingAdultsPace = Math.round(rolling3DayPace * multiplierValue);
   const peakDailyIndex = currentYearData?.peakDailyIndex || 9.35;
   const peakDate = currentYearData?.peakDate || 'Aug 5';
 
@@ -102,13 +113,55 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
       {/* Glanceable Hero Snapshot */}
       <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-sm transition-colors duration-200">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--border-main)] pb-2.5 mb-3.5 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse" />
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--accent-amber)] flex items-center gap-1.5">
               <span>Field Escapement Telemetry</span>
               <span>&bull;</span>
               <span className="font-bold text-sm text-[var(--text-main)] normal-case tracking-normal">{selectedMonthDay}</span>
             </span>
+
+            {/* Prominent Multiplier Mode Pill with Info Trigger */}
+            <div className="flex items-center gap-1 ml-1 sm:ml-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg p-0.5">
+              <button
+                onClick={() => onSelectMultiplierMode?.('four_year')}
+                title="4-Year Dynamic Rolling Ratio (Derived from recent brood cycles)"
+                className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-md transition ${
+                  multiplierMode === 'four_year'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                4-Yr Roll (~{multiplierMode === 'four_year' ? multiplierValue : '214'}x)
+              </button>
+              <button
+                onClick={() => onSelectMultiplierMode?.('baseline_220')}
+                title="Historical 220x Baseline Benchmark"
+                className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-md transition ${
+                  multiplierMode === 'baseline_220'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                220x Base
+              </button>
+              {multiplierMode === 'custom' && (
+                <button
+                  onClick={() => onSelectMultiplierMode?.('custom')}
+                  title="Custom Multiplier"
+                  className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-md bg-[var(--accent-spruce)] text-white shadow-xs"
+                >
+                  {multiplierValue}x Custom
+                </button>
+              )}
+              <button
+                onClick={onOpenMultiplierDebate}
+                title="Explain the Skeena Multiplier & Escapement Debate"
+                className="px-1.5 py-0.5 text-[11px] font-bold text-[var(--accent-amber)] hover:text-[var(--accent-amber-hover)] hover:bg-[var(--bg-card)] rounded transition flex items-center gap-0.5"
+              >
+                <HelpCircle className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -264,11 +317,25 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
               <span className="uppercase tracking-wider">Expansion Standard</span>
-              <Compass className="w-4 h-4 text-[var(--accent-teal)]" />
+              <button
+                onClick={onOpenMultiplierDebate}
+                className="text-[var(--accent-amber)] hover:underline flex items-center gap-1 text-[11px]"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>Debate (?)</span>
+              </button>
             </div>
             <div className="my-2">
-              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">1.0 ≈ 220</div>
-              <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">Adult Steelhead per pt</div>
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">
+                1.0 ≈ {multiplierValue}
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">
+                {multiplierMode === 'four_year'
+                  ? 'Dynamic 4-Yr Rolling Ratio'
+                  : multiplierMode === 'baseline_220'
+                  ? 'Historical 220 Baseline'
+                  : 'Custom Sandbox Ratio'}
+              </div>
             </div>
             <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">
               <span className="font-medium">Model Confidence:</span>

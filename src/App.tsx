@@ -32,6 +32,7 @@ import { FieldNotesView } from './components/FieldNotesView';
 import { AuthModal } from './components/AuthModal';
 import { AuthGate } from './components/AuthGate';
 import { AdminUserbaseModal } from './components/AdminUserbaseModal';
+import { MultiplierDebateModal, MultiplierMode } from './components/MultiplierDebateModal';
 import { useAuth } from './context/AuthContext';
 import { Footer } from './components/Footer';
 import {
@@ -96,6 +97,17 @@ export default function App() {
   // What-If Sandbox multiplier
   const [customMultiplier, setCustomMultiplier] = useState<number>(1.0);
 
+  // Escapement Multiplier State (Dynamic 4-Year Rolling vs 220 Baseline vs Custom)
+  const [multiplierMode, setMultiplierMode] = useState<MultiplierMode>('four_year');
+  const [customExpansionFactor, setCustomExpansionFactor] = useState<number>(214);
+  const [isMultiplierModalOpen, setIsMultiplierModalOpen] = useState<boolean>(false);
+
+  const activeExpansionFactor = useMemo(() => {
+    if (multiplierMode === 'four_year') return 214;
+    if (multiplierMode === 'baseline_220') return 220;
+    return customExpansionFactor;
+  }, [multiplierMode, customExpansionFactor]);
+
   // Display Units: Tyee Index points vs Estimated Adult Steelhead
   const [isMetricInAdults, setIsMetricInAdults] = useState<boolean>(false);
 
@@ -138,17 +150,17 @@ export default function App() {
   const isToday = currentDayIndex === TODAY_DAY_INDEX;
 
   const projection = useMemo(
-    () => calculateProjection(currentDayIndex, customMultiplier, undefined, effectiveAllYears),
-    [currentDayIndex, customMultiplier, effectiveAllYears]
+    () => calculateProjection(currentDayIndex, customMultiplier, undefined, effectiveAllYears, activeExpansionFactor),
+    [currentDayIndex, customMultiplier, effectiveAllYears, activeExpansionFactor]
   );
 
   const tributaries = useMemo(
     () =>
       getTributaryBreakdown(
         projection.projectedBaselineAdults,
-        Math.round(projection.currentCumulative * ADULT_EXPANSION_FACTOR)
+        Math.round(projection.currentCumulative * activeExpansionFactor)
       ),
-    [projection]
+    [projection, activeExpansionFactor]
   );
 
   // Auto-synchronize slider to latest recorded date on dataset load if user hasn't manually scrubbed
@@ -428,6 +440,10 @@ export default function App() {
               onToggleMetricMode={() => setIsMetricInAdults(!isMetricInAdults)}
               allYears={effectiveAllYears}
               currentDayIndex={currentDayIndex}
+              multiplierMode={multiplierMode}
+              multiplierValue={activeExpansionFactor}
+              onSelectMultiplierMode={(m) => setMultiplierMode(m)}
+              onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
             />
 
             {/* Primary Cumulative Run Line Chart */}
@@ -459,6 +475,10 @@ export default function App() {
               projection={projection}
               selectedMonthDay={selectedMonthDay}
               isMetricInAdults={isMetricInAdults}
+              multiplierMode={multiplierMode}
+              multiplierValue={activeExpansionFactor}
+              onSelectMultiplierMode={(m) => setMultiplierMode(m)}
+              onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
             />
 
             {/* Trajectory comparison on cumulative chart */}
@@ -590,6 +610,18 @@ export default function App() {
       <AboutTyeeModal
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
+      />
+
+      {/* The Multiplier & Escapement Debate Modal */}
+      <MultiplierDebateModal
+        isOpen={isMultiplierModalOpen}
+        onClose={() => setIsMultiplierModalOpen(false)}
+        multiplierMode={multiplierMode}
+        onSelectMode={(m) => setMultiplierMode(m)}
+        currentMultiplierValue={activeExpansionFactor}
+        customMultiplierValue={customExpansionFactor}
+        onCustomMultiplierChange={(v) => setCustomExpansionFactor(v)}
+        fourYearValue={214}
       />
 
       {/* Mobile Fixed Bottom Navigation Bar (5 full-width tabs) */}
