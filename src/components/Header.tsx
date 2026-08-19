@@ -15,6 +15,7 @@ import {
   ArrowRightLeft,
   MapPin,
   Bot,
+  Lock,
   Fish,
 } from 'lucide-react';
 import { UserProfileMenu } from './UserProfileMenu';
@@ -65,6 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'forecast' as MainTabType, label: 'Forecast & Projections', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'compare' as MainTabType, label: 'Historical Comparison', icon: <ArrowRightLeft className="w-4 h-4" /> },
     { id: 'tributaries' as MainTabType, label: 'Tributary Escapement', icon: <MapPin className="w-4 h-4" /> },
+    { id: 'field-notes' as MainTabType, label: 'Field Notes 🔒', icon: <Lock className="w-4 h-4" /> },
   ];
 
   return (

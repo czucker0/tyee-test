@@ -28,6 +28,7 @@ import { HistoricalYearArchiveSearch } from './components/HistoricalYearArchiveS
 import { WhatIfSandbox } from './components/WhatIfSandbox';
 import { AIAnalystModal } from './components/AIAnalystModal';
 import { AboutTyeeModal } from './components/AboutTyeeModal';
+import { FieldNotesView } from './components/FieldNotesView';
 import { AuthModal } from './components/AuthModal';
 import { AuthGate } from './components/AuthGate';
 import { AdminUserbaseModal } from './components/AdminUserbaseModal';
@@ -41,11 +42,12 @@ import {
   Waves,
   ArrowRightLeft,
   Bot,
+  Lock,
   Fish,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
+export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist' | 'field-notes';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -279,6 +281,13 @@ export default function App() {
       icon: <MapPin className="w-4 h-4" />,
       badge: '7 Rivers',
     },
+    {
+      id: 'field-notes' as MainTabType,
+      label: 'Field Notes 🔒',
+      shortLabel: 'Field Notes',
+      icon: <Lock className="w-4 h-4" />,
+      badge: 'Encrypted',
+    },
   ];
 
   // Auth Protection Gate
@@ -341,8 +350,8 @@ export default function App() {
             isCondensed={isScrolled}
           />
 
-          {/* Segmented Tab Navigation - Full Width 4-Column Grid on sm+ screens */}
-          <div className="hidden sm:grid grid-cols-4 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
+          {/* Segmented Tab Navigation - Full Width 5-Column Grid on sm+ screens */}
+          <div className="hidden sm:grid grid-cols-5 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -542,6 +551,13 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* 5. PRIVATE FIELD NOTES & RIVER VAULT TAB */}
+        {activeTab === 'field-notes' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <FieldNotesView />
+          </div>
+        )}
       </main>
 
       {/* Application Footer with Build Timestamp & Metadata */}
@@ -576,9 +592,9 @@ export default function App() {
         onClose={() => setIsAboutModalOpen(false)}
       />
 
-      {/* Mobile Fixed Bottom Navigation Bar (4 full-width tabs) */}
+      {/* Mobile Fixed Bottom Navigation Bar (5 full-width tabs) */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)]/95 border-t border-[var(--border-main)] backdrop-blur-md shadow-lg transition-colors duration-200">
-        <div className="grid grid-cols-4 h-14">
+        <div className="grid grid-cols-5 h-14">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (

@@ -8,12 +8,10 @@ import {
   TrendingUp, 
   Database, 
   ArrowRight, 
-  Globe, 
   Mail, 
   UserPlus, 
   LogIn, 
-  HardDrive, 
-  CheckCircle2, 
+  KeyRound,
   AlertCircle,
 } from 'lucide-react';
 import { useAuth, BOOTSTRAP_ADMIN_EMAIL } from '../context/AuthContext';
@@ -36,31 +34,18 @@ const TRIBUTARY_OPTIONS = [
 export const AuthGate: React.FC = () => {
   const { 
     signInWithGoogle, 
-    signInWithApple, 
-    signInWithFacebook, 
     signInWithEmail, 
     signUpWithEmail, 
-    signInLocal, 
     loading, 
-    authNotice, 
-    setAuthNotice 
+    authNotice 
   } = useAuth();
 
-  const [activeMode, setActiveMode] = useState<'social' | 'email' | 'local'>('social');
-  
-  // Email Form
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<RiverRole>('angler');
   const [tributary, setTributary] = useState(TRIBUTARY_OPTIONS[0]);
-
-  // Local Form
-  const [localName, setLocalName] = useState('');
-  const [localRole, setLocalRole] = useState<RiverRole>('angler');
-  const [localTributary, setLocalTributary] = useState(TRIBUTARY_OPTIONS[0]);
-  const [localEmail, setLocalEmail] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleGoogle = async () => {
@@ -68,25 +53,7 @@ export const AuthGate: React.FC = () => {
     try {
       await signInWithGoogle();
     } catch {
-      // handled
-    }
-  };
-
-  const handleApple = async () => {
-    setFormError(null);
-    try {
-      await signInWithApple();
-    } catch {
-      // handled
-    }
-  };
-
-  const handleFacebook = async () => {
-    setFormError(null);
-    try {
-      await signInWithFacebook();
-    } catch {
-      // handled
+      // handled in context
     }
   };
 
@@ -101,7 +68,7 @@ export const AuthGate: React.FC = () => {
     try {
       if (isSignUp) {
         if (!displayName.trim()) {
-          setFormError('Please provide a name or handle.');
+          setFormError('Please provide an angler name or handle.');
           return;
         }
         await signUpWithEmail({
@@ -117,20 +84,6 @@ export const AuthGate: React.FC = () => {
     } catch {
       // handled in context
     }
-  };
-
-  const handleLocalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!localName.trim()) {
-      setFormError('Please enter your name or handle.');
-      return;
-    }
-    signInLocal({
-      displayName: localName.trim(),
-      riverRole: localRole,
-      preferredTributary: localTributary,
-      email: localEmail.trim() || undefined
-    });
   };
 
   return (
@@ -169,7 +122,7 @@ export const AuthGate: React.FC = () => {
         <div className="flex-1 space-y-6 text-left">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)] text-xs font-mono">
             <Lock className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-            <span>Sign-in required to access live run models &amp; escapement analytics</span>
+            <span>Sign in to access real-time run models &amp; escapement analytics</span>
           </div>
 
           <div className="space-y-3">
@@ -237,50 +190,8 @@ export const AuthGate: React.FC = () => {
         <div className="w-full lg:max-w-md bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-6 sm:p-7 shadow-xl relative">
           <div className="space-y-4">
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)]">Sign In to Enter Portal</h3>
-              <p className="text-xs text-[var(--text-muted)] font-mono">Choose your preferred sign-in or registration method:</p>
-            </div>
-
-            {/* Method Tabs */}
-            <div className="grid grid-cols-3 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-main)] text-xs font-mono font-semibold">
-              <button
-                type="button"
-                onClick={() => { setActiveMode('social'); setFormError(null); setAuthNotice(null); }}
-                className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                  activeMode === 'social'
-                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>Social</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setActiveMode('email'); setFormError(null); setAuthNotice(null); }}
-                className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                  activeMode === 'email'
-                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Email</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setActiveMode('local'); setFormError(null); setAuthNotice(null); }}
-                className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                  activeMode === 'local'
-                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                <HardDrive className="w-3.5 h-3.5" />
-                <span>Local</span>
-              </button>
+              <h3 className="text-xl font-heading font-extrabold text-[var(--text-main)]">Sign in to the tracker</h3>
+              <p className="text-xs text-[var(--text-muted)] font-mono">Sign in with Google or email to access live run data</p>
             </div>
 
             {/* Notifications */}
@@ -289,22 +200,6 @@ export const AuthGate: React.FC = () => {
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-[var(--accent-amber)] shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{authNotice}</span>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveMode('email')}
-                    className="px-2.5 py-1 bg-[var(--bg-surface)] text-[var(--accent-amber)] rounded-lg font-semibold text-[11px] border border-[var(--accent-amber-border)] transition"
-                  >
-                    Switch to Email
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMode('local')}
-                    className="px-2.5 py-1 bg-[var(--accent-amber)] text-white rounded-lg font-semibold text-[11px] transition"
-                  >
-                    Fast Local Setup
-                  </button>
                 </div>
               </div>
             )}
@@ -316,93 +211,86 @@ export const AuthGate: React.FC = () => {
               </div>
             )}
 
-            {/* Mode 1: Social Buttons */}
-            {activeMode === 'social' && (
-              <div className="space-y-3 pt-1 font-mono">
+            {/* Google 1-Click Button */}
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm font-mono"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                </svg>
+                <span className="font-heading font-bold">Continue with Google</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-amber)] transition" />
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-[var(--border-main)]"></div>
+              <span className="flex-shrink mx-3 text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-mono font-bold">
+                or with email
+              </span>
+              <div className="flex-grow border-t border-[var(--border-main)]"></div>
+            </div>
+
+            {/* Direct Email / Password Form */}
+            <form onSubmit={handleEmailSubmit} className="space-y-3 font-mono">
+              {/* Sign In vs Register Toggle */}
+              <div className="grid grid-cols-2 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-main)] text-xs font-mono font-semibold">
                 <button
                   type="button"
-                  onClick={handleGoogle}
-                  disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
+                  onClick={() => { setIsSignUp(false); setFormError(null); }}
+                  className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
+                    !isSignUp
+                      ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                    </svg>
-                    <span>Sign In with Google</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-amber)] transition" />
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleApple}
-                  disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
+                  onClick={() => { setIsSignUp(true); setFormError(null); }}
+                  className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
+                    isSignUp
+                      ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-2 .6-2.65 1.35-.58.66-1.09 1.73-.95 2.76 1.01.08 2.05-.51 2.68-1.26z" />
-                    </svg>
-                    <span>Sign In with Apple</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleFacebook}
-                  disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 fill-[#1877F2]" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                    </svg>
-                    <span>Sign In with Facebook</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition" />
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Register</span>
                 </button>
               </div>
-            )}
 
-            {/* Mode 2: Direct Email / Password */}
-            {activeMode === 'email' && (
-              <form onSubmit={handleEmailSubmit} className="space-y-3 pt-1 font-mono">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[var(--text-main)]">
-                    {isSignUp ? 'Create Direct Account' : 'Direct Email Sign In'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
-                    className="text-xs text-[var(--accent-amber)] hover:underline font-semibold"
-                  >
-                    {isSignUp ? 'Already registered? Sign in' : 'Create new account'}
-                  </button>
-                </div>
-
-                {isSignUp && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
-                      Your Name or Angler Handle
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Bulkley Angler"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                    />
-                  </div>
-                )}
-
+              {isSignUp && (
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">Email Address</label>
+                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                    Angler Name or Handle <span className="text-[var(--accent-amber)]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Bulkley Steelheader"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                  Email Address <span className="text-[var(--accent-amber)]">*</span>
+                </label>
+                <div className="relative">
                   <input
                     type="email"
                     required
@@ -411,10 +299,15 @@ export const AuthGate: React.FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
+                  <Mail className="w-4 h-4 text-[var(--text-muted)] absolute right-3 top-2.5 pointer-events-none" />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">Password</label>
+              <div>
+                <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                  Password <span className="text-[var(--accent-amber)]">*</span>
+                </label>
+                <div className="relative">
                   <input
                     type="password"
                     required
@@ -423,78 +316,17 @@ export const AuthGate: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
+                  <KeyRound className="w-4 h-4 text-[var(--text-muted)] absolute right-3 top-2.5 pointer-events-none" />
                 </div>
+              </div>
 
-                {isSignUp && (
-                  <div className="grid grid-cols-2 gap-2 pt-0.5">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">River Role</label>
-                      <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as RiverRole)}
-                        className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                      >
-                        <option value="angler">🎣 Angler</option>
-                        <option value="guide">🛶 Guide</option>
-                        <option value="biologist">🔬 Biologist</option>
-                        <option value="conservationist">🌲 Conservation</option>
-                        <option value="resident">🏡 Resident</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Focus Tributary</label>
-                      <select
-                        value={tributary}
-                        onChange={(e) => setTributary(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)] truncate"
-                      >
-                        {TRIBUTARY_OPTIONS.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 px-4 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-                >
-                  {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-                  <span>{isSignUp ? 'Create Free Account' : 'Sign In'}</span>
-                </button>
-              </form>
-            )}
-
-            {/* Mode 3: Local Fast Setup */}
-            {activeMode === 'local' && (
-              <form onSubmit={handleLocalSubmit} className="space-y-3 pt-1 font-mono">
-                <p className="text-xs text-[var(--text-muted)] font-sans">
-                  Instant profile stored locally in your browser. No social logins or passwords required:
-                </p>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
-                    Your Name or Handle <span className="text-[var(--accent-amber)]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Sustut Watcher, Skeena Angler"
-                    value={localName}
-                    onChange={(e) => setLocalName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
+              {isSignUp && (
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
                   <div>
                     <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">River Role</label>
                     <select
-                      value={localRole}
-                      onChange={(e) => setLocalRole(e.target.value as RiverRole)}
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as RiverRole)}
                       className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                     >
                       <option value="angler">🎣 Angler</option>
@@ -508,8 +340,8 @@ export const AuthGate: React.FC = () => {
                   <div>
                     <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Focus Tributary</label>
                     <select
-                      value={localTributary}
-                      onChange={(e) => setLocalTributary(e.target.value)}
+                      value={tributary}
+                      onChange={(e) => setTributary(e.target.value)}
                       className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)] truncate"
                     >
                       {TRIBUTARY_OPTIONS.map((t) => (
@@ -518,29 +350,17 @@ export const AuthGate: React.FC = () => {
                     </select>
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">
-                    Email Address (Optional)
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="name@example.com"
-                    value={localEmail}
-                    onChange={(e) => setLocalEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 px-4 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--accent-amber)] font-bold text-xs sm:text-sm rounded-xl border border-[var(--border-main)] shadow-sm transition flex items-center justify-center gap-2 mt-2"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[var(--accent-amber)]" />
-                  <span>Enter with Local Profile</span>
-                </button>
-              </form>
-            )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              >
+                {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                <span>{isSignUp ? 'Create Direct Account' : 'Sign In to Tracker'}</span>
+              </button>
+            </form>
 
             <div className="pt-2 text-center">
               <span className="text-[10px] text-[var(--text-muted)] flex items-center justify-center gap-1 font-mono">
