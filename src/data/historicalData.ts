@@ -74,11 +74,11 @@ export function getLatestRecordedSeasonDayIndex(yearsList?: YearRunData[]): numb
       }
     }
   }
-  return 68; // Default Aug 17
+  return 69; // Default Aug 18 (Day 69)
 }
 
-export const LATEST_RECORDED_DAY_INDEX = 68; // Aug 17 (Day 68)
-export const LATEST_RECORDED_MONTH_DAY = 'Aug 17';
+export const LATEST_RECORDED_DAY_INDEX = 69; // Aug 18 (Day 69)
+export const LATEST_RECORDED_MONTH_DAY = 'Aug 18';
 
 // Helper to compute previous 10 completed seasons relative to any current season
 export const getPreviousDecadeYears = (currentYear: number = CURRENT_YEAR): number[] => {

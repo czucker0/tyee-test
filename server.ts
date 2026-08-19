@@ -47,6 +47,38 @@ const ai = apiKey
 // DFO TYEE DATABASE & SCRAPER API ENDPOINTS
 // ==========================================
 
+// Scraper background scheduler state tracking
+let lastScrapeExecutionTime: string | null = null;
+let lastScrapeStatus: 'SUCCESS' | 'ERROR' | 'PARTIAL' | 'IDLE' = 'IDLE';
+let lastScrapeMessage: string = 'Scheduler initialized. Waiting for first automated cycle.';
+let lastScrapeRecordsUpdated: number = 0;
+let nextScheduledScrapeTime: string | null = null;
+const HOURLY_POLL_MS = 60 * 60 * 1000;
+
+// 1b. GET Live Scraper Scheduler Status & Telemetry Audit
+app.get('/api/tyee/scraper/status', (req, res) => {
+  try {
+    const db = loadDatabase();
+    res.json({
+      success: true,
+      scheduler: {
+        intervalMs: HOURLY_POLL_MS,
+        intervalDescription: 'Every 60 minutes (Hourly)',
+        lastExecutionTime: lastScrapeExecutionTime,
+        nextScheduledTime: nextScheduledScrapeTime,
+        lastStatus: lastScrapeStatus,
+        lastMessage: lastScrapeMessage,
+        recordsUpdated: lastScrapeRecordsUpdated,
+      },
+      activeSeasonMetadata: db.activeSeasonMetadata,
+      lastUpdated: db.lastUpdated,
+      recentAuditLogs: db.scrapeLogs?.slice(0, 30) || [],
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 1. GET Relative Baseline Dataset (Current Year + Past Decade + Computed Average)
 app.get('/api/tyee/dataset', (req, res) => {
   try {
@@ -441,11 +473,19 @@ app.listen(PORT, () => {
 
   // Automated background polling: Initial startup sync + recurring 1-hour interval
   const runBackgroundDailySync = async () => {
+    lastScrapeExecutionTime = new Date().toISOString();
+    nextScheduledScrapeTime = new Date(Date.now() + HOURLY_POLL_MS).toISOString();
     try {
       console.log('[DFO Scraper Service] Executing scheduled hourly DFO sync...');
       const result = await syncDFODailyRecords({ year: 2026 });
-      console.log(`[DFO Scraper Service] Sync result: ${result.message} (Updated: ${result.updatedRecordsCount})`);
+      lastScrapeStatus = result.success ? (result.updatedRecordsCount > 0 ? 'SUCCESS' : 'PARTIAL') : 'ERROR';
+      lastScrapeMessage = result.message;
+      lastScrapeRecordsUpdated = result.updatedRecordsCount;
+      console.log(`[DFO Scraper Service] Sync result [${lastScrapeStatus}]: ${result.message} (Updated: ${result.updatedRecordsCount})`);
     } catch (err: any) {
+      lastScrapeStatus = 'ERROR';
+      lastScrapeMessage = `Background sync exception: ${err.message}`;
+      lastScrapeRecordsUpdated = 0;
       console.error('[DFO Scraper Service] Background sync failed:', err.message);
     }
   };
@@ -453,8 +493,7 @@ app.listen(PORT, () => {
   // Run initial sync 2.5s after boot
   setTimeout(runBackgroundDailySync, 2500);
 
-  // Recurring 1-hour polling interval (3600000 ms)
-  const HOURLY_POLL_MS = 60 * 60 * 1000;
+  // Recurring 1-hour polling interval (3600000 ms = 60 minutes)
   setInterval(runBackgroundDailySync, HOURLY_POLL_MS);
 });
 

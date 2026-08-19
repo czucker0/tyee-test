@@ -181,10 +181,17 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
         <ChevronDown className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu & Mobile Overlay */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden z-50 text-[var(--text-main)] animate-in fade-in zoom-in-95 duration-150">
-          {/* Header Card */}
+        <>
+          {/* Mobile backdrop for easy tap-outside on touch screens */}
+          <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 sm:hidden animate-in fade-in duration-150"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-24px)] sm:max-w-none bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden z-50 text-[var(--text-main)] animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
+            {/* Header Card */}
           <div className="p-4 bg-[var(--bg-subtle)] border-b border-[var(--border-main)]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -450,7 +457,8 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </>
+    )}
+  </div>
+);
 };
