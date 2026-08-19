@@ -25,18 +25,9 @@ VOICE & COMEDY:
 - SPEY SNOB & ZZ TOP FAN: Reveres swinging marabou/fox tube flies on 2-handed Spey rods on the dangle; loves ZZ Top's "Tube Fly Boogie". Despises indicators and dead drifting.
 Directly answer any user question (fly fishing, river data, comedy, science, life) with river wisdom, deadpan humor, and Spey pride. Keep responses engaging and concise (under 250 words) unless asked for a long story.`;
 
-// Client-side Gemini fallback if hosted statically
+// Client-side Gemini fallback if hosted statically or when server endpoint is unavailable
 const clientApiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
-const clientAi = clientApiKey
-  ? new GoogleGenAI({
-      apiKey: clientApiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    })
-  : null;
+const clientAi = clientApiKey ? new GoogleGenAI({ apiKey: clientApiKey }) : null;
 
 /**
  * Request In-Season Fishery Analysis report with token-optimized prompt
@@ -49,9 +40,9 @@ export async function requestFisheryAnalysis(payload: AnalysisPayload): Promise<
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
-      if (data.analysis && data.analysis.trim().length > 0) {
+      if (data.analysis && data.analysis.trim().length > 0 && !data.isGeneric) {
         return data.analysis;
       }
     }
@@ -117,9 +108,9 @@ export async function askFisheryBiologist(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, context, history }),
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
-      if (data.answer && data.answer.trim().length > 0) {
+      if (data.answer && data.answer.trim().length > 0 && !data.isGeneric) {
         return data.answer;
       }
     }
@@ -163,7 +154,7 @@ export async function askFisheryBiologist(
     }
   }
 
-  // 3. Seamless offline fallback
+  // 3. Seamless contextual knowledge fallback
   return generateSteelieDanResponse(question, context);
 }
 
