@@ -39,14 +39,6 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export const appleProvider = new OAuthProvider('apple.com');
-appleProvider.addScope('email');
-appleProvider.addScope('name');
-
-export const facebookProvider = new FacebookAuthProvider();
-facebookProvider.addScope('email');
-facebookProvider.addScope('public_profile');
-
 // Operation Types for error reporting
 export enum OperationType {
   CREATE = 'create',

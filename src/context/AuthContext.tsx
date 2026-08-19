@@ -23,8 +23,6 @@ import {
   auth, 
   db, 
   googleProvider, 
-  appleProvider, 
-  facebookProvider,
   handleFirestoreError,
   OperationType 
 } from '../firebase/config';
@@ -44,8 +42,6 @@ interface AuthContextType {
   openAdminModal: () => void;
   closeAdminModal: () => void;
   signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  signInWithFacebook: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (params: { email: string; pass: string; displayName: string; riverRole: RiverRole; preferredTributary: string }) => Promise<void>;
   signInLocal: (data: { displayName: string; riverRole: RiverRole; preferredTributary: string; email?: string }) => void;
@@ -379,42 +375,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Apple Sign In
-  const signInWithApple = async () => {
-    setLoading(true);
-    setAuthNotice(null);
-    try {
-      const result = await signInWithPopup(auth, appleProvider);
-      const cloudUser = await syncFirebaseUserProfile(result.user, 'apple');
-      setUser(cloudUser);
-      localStorage.removeItem(LOCAL_USER_STORAGE_KEY);
-      closeAuthModal();
-    } catch (err: any) {
-      handleOAuthError(err, 'Apple');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Facebook Sign In
-  const signInWithFacebook = async () => {
-    setLoading(true);
-    setAuthNotice(null);
-    try {
-      const result = await signInWithPopup(auth, facebookProvider);
-      const cloudUser = await syncFirebaseUserProfile(result.user, 'facebook');
-      setUser(cloudUser);
-      localStorage.removeItem(LOCAL_USER_STORAGE_KEY);
-      closeAuthModal();
-    } catch (err: any) {
-      handleOAuthError(err, 'Facebook');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Email & Password Sign In
   const signInWithEmail = async (email: string, pass: string) => {
     setLoading(true);
@@ -428,7 +388,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (err: any) {
       console.error('Email sign in error:', err);
       let msg = err.message;
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+      if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Email/Password sign-in is currently disabled in your Firebase Console. Please enable the "Email/Password" provider in your Firebase Authentication settings, or sign in with Google or Local Profile.';
+      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
         msg = 'Invalid email or password. Please verify your credentials or create a new account.';
       } else if (err.code === 'auth/unauthorized-domain') {
         msg = 'Domain authorization notice: You can also use Local Profile to enter immediately.';
@@ -463,7 +425,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (err: any) {
       console.error('Email sign up error:', err);
       let msg = err.message;
-      if (err.code === 'auth/email-already-in-use') {
+      if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Email/Password accounts are currently disabled in your Firebase Console. Please enable "Email/Password" in your Firebase Authentication settings, or sign in with Google or Local Profile.';
+      } else if (err.code === 'auth/email-already-in-use') {
         msg = 'This email is already registered. Please sign in or use another email.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'Password must be at least 6 characters.';
@@ -717,8 +681,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         openAdminModal,
         closeAdminModal,
         signInWithGoogle,
-        signInWithApple,
-        signInWithFacebook,
         signInWithEmail,
         signUpWithEmail,
         signInLocal,

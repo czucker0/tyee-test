@@ -73,12 +73,54 @@ export interface TributaryScientificProfile {
   monitoringMethodology: string;
 }
 
+export interface RiverAccessPoint {
+  id: string;
+  name: string;
+  type: 'put-in' | 'take-out' | 'walk-in' | 'hazard-canyon' | 'bridge-access' | 'bushwhack' | 'crown-land' | 'railway-easement' | 'tribal-access';
+  description: string;
+  lat: number;
+  lng: number;
+  googleMapsUrl: string;
+  roadAccess: string;
+  vesselSuitability?: string;
+  bushwhackDifficulty?: string;
+  landTenure?: string;
+}
+
+export interface TribalAccessProtocol {
+  nation: string;
+  permitRequired: boolean;
+  permitDetails: string;
+  officeLocation: string;
+  costInfo?: string;
+  etiquette: string;
+}
+
+export interface FloatSafetyProfile {
+  rating: 'Personal Raft Friendly' | 'Intermediate Float with Hazards' | 'Extreme Whitewater Canyon' | 'Walk-In / Jetboat Only';
+  whitewaterClass: string;
+  suitableCraft: string;
+  hazardWarnings: string[];
+  typicalFloatTimes: string;
+}
+
+export interface WadeSafetyProfile {
+  difficulty: 'Easy' | 'Moderate' | 'Challenging / Treacherous';
+  footwearRecommendation: string;
+  bankAccessibility: string;
+  wadingStaffAdvice: string;
+}
+
 export interface TributaryAdminTacticalIntel {
   keyReaches: string;
   tacticalBiteTriggers: string;
   waterClarityDynamics: string;
   estuaryPassageNotes: string;
   historicalGuideNotes?: string;
+  floatSafety?: FloatSafetyProfile;
+  wadeSafety?: WadeSafetyProfile;
+  accessPoints?: RiverAccessPoint[];
+  tribalProtocols?: TribalAccessProtocol;
 }
 
 export interface TributaryEscapement {
@@ -92,6 +134,10 @@ export interface TributaryEscapement {
   status: 'Critical' | 'Concern' | 'Fair' | 'Strong';
   scientificProfile: TributaryScientificProfile;
   adminTacticalIntel?: TributaryAdminTacticalIntel;
+  floatSafety?: FloatSafetyProfile;
+  wadeSafety?: WadeSafetyProfile;
+  accessPoints?: RiverAccessPoint[];
+  tribalProtocols?: TribalAccessProtocol;
   timingTips?: {
     estuaryPassage: string;
     travelTimeFromTyee: string;
@@ -113,5 +159,5 @@ export interface ComparisonMetric {
   rankOnDate: number;
 }
 
-export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
+export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist' | 'field-notes';
 

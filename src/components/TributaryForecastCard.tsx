@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TributaryEscapement } from '../types/steelhead';
+import { TributaryEscapement, RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile } from '../types/steelhead';
 import { useAuth } from '../context/AuthContext';
 import {
   MapPin,
@@ -22,7 +22,15 @@ import {
   Activity,
   Binary,
   Microscope,
+  LifeBuoy,
+  Footprints,
+  Anchor,
+  Navigation,
+  AlertTriangle,
+  ExternalLink,
+  Map,
 } from 'lucide-react';
+import { RiverAccessMapModal } from './RiverAccessMapModal';
 
 interface TributaryForecastCardProps {
   tributaries: TributaryEscapement[];
@@ -89,6 +97,16 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
   // Admin tactical mode toggle (only togglable if user is admin)
   const [showAdminTacticalIntel, setShowAdminTacticalIntel] = useState<boolean>(true);
 
+  // River Access & Map Modal State
+  const [mapModalData, setMapModalData] = useState<{
+    riverName: string;
+    accessPoints: RiverAccessPoint[];
+    floatSafety?: FloatSafetyProfile;
+    wadeSafety?: WadeSafetyProfile;
+    tribalProtocols?: any;
+    initialPointId?: string;
+  } | null>(null);
+
   const toggleTrib = (name: string) => {
     setExpandedTribs((prev) => ({
       ...prev,
@@ -118,6 +136,54 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
         return 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700';
       default:
         return 'text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700';
+    }
+  };
+
+  const getWaypointIcon = (type: string) => {
+    switch (type) {
+      case 'put-in':
+        return <Anchor className="w-3.5 h-3.5 text-emerald-400" />;
+      case 'take-out':
+        return <Navigation className="w-3.5 h-3.5 text-cyan-400" />;
+      case 'hazard-canyon':
+        return <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />;
+      case 'bushwhack':
+        return <Compass className="w-3.5 h-3.5 text-amber-400" />;
+      case 'crown-land':
+        return <Trees className="w-3.5 h-3.5 text-emerald-400" />;
+      case 'railway-easement':
+        return <Activity className="w-3.5 h-3.5 text-indigo-400" />;
+      case 'tribal-access':
+        return <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />;
+      case 'bridge-access':
+        return <Waves className="w-3.5 h-3.5 text-sky-400" />;
+      case 'walk-in':
+      default:
+        return <Footprints className="w-3.5 h-3.5 text-amber-400" />;
+    }
+  };
+
+  const getWaypointBadgeClass = (type: string) => {
+    switch (type) {
+      case 'put-in':
+        return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+      case 'take-out':
+        return 'border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300';
+      case 'hazard-canyon':
+        return 'border-rose-500/50 bg-rose-500/20 text-rose-700 dark:text-rose-300';
+      case 'bushwhack':
+        return 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300';
+      case 'crown-land':
+        return 'border-emerald-600/40 bg-emerald-600/15 text-emerald-700 dark:text-emerald-300';
+      case 'railway-easement':
+        return 'border-indigo-500/40 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300';
+      case 'tribal-access':
+        return 'border-purple-500/40 bg-purple-500/15 text-purple-700 dark:text-purple-300';
+      case 'bridge-access':
+        return 'border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300';
+      case 'walk-in':
+      default:
+        return 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300';
     }
   };
 
@@ -408,56 +474,292 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                     </div>
                   )}
 
-                  {/* 6. ADMIN CONFIDENTIAL SECTION (Only accessible to authenticated admins) */}
-                  {isAdmin && showAdminTacticalIntel && adminIntel && (
-                    <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/5 space-y-3 font-mono text-xs">
-                      <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
-                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase tracking-wider">
-                          <Lock className="w-4 h-4" />
-                          <span>Admin Confidential &bull; Beat Intel &amp; Tactical Dossier</span>
+                  {/* 6. ADMIN CONFIDENTIAL SECTION (Restricted to authenticated admins) */}
+                  {isAdmin ? (
+                    showAdminTacticalIntel && (
+                      <div className="p-4 sm:p-5 rounded-2xl border-2 border-dashed border-red-500 dark:border-white bg-[var(--bg-card)] space-y-4 font-mono text-xs shadow-sm">
+                        {/* Section Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--border-main)] pb-3">
+                          <div className="flex items-center gap-2 text-[var(--text-main)] font-heading font-extrabold text-xs sm:text-sm uppercase tracking-wide">
+                            <Lock className="w-4 h-4 shrink-0 text-[var(--accent-teal)]" />
+                            <span>Admin Confidential Dossier</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] whitespace-nowrap">
+                              Admin Intel
+                            </span>
+                            {t.accessPoints && t.accessPoints.length > 0 && (
+                              <button
+                                onClick={() =>
+                                  setMapModalData({
+                                    riverName: t.name,
+                                    accessPoints: t.accessPoints || [],
+                                    floatSafety: t.floatSafety,
+                                    wadeSafety: t.wadeSafety,
+                                    tribalProtocols: t.tribalProtocols,
+                                  })
+                                }
+                                className="px-3 py-1 rounded-lg bg-[var(--accent-teal)] hover:opacity-90 text-white font-bold transition-all shadow-sm flex items-center gap-1.5 text-xs whitespace-nowrap"
+                              >
+                                <Map className="w-3.5 h-3.5" />
+                                <span>River Map ({t.accessPoints.length})</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 font-bold">
-                          INTERNAL ONLY
-                        </span>
+
+                        {/* First Nations Tribal Protocols & Access Permitting */}
+                        {t.tribalProtocols && (
+                          <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2.5 text-xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-main)] pb-2">
+                              <div className="flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-[var(--accent-teal)]" />
+                                <span className="font-heading font-bold text-xs sm:text-sm text-[var(--text-main)]">
+                                  First Nations Territory: {t.tribalProtocols.nation}
+                                </span>
+                              </div>
+                              <span
+                                className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border whitespace-nowrap ${
+                                  t.tribalProtocols.permitRequired
+                                    ? 'bg-rose-500/15 border-rose-500/40 text-rose-500'
+                                    : 'bg-teal-500/15 border-teal-500/40 text-[var(--accent-teal)]'
+                                }`}
+                              >
+                                {t.tribalProtocols.permitRequired ? 'Permit Required' : 'Standard Crown Access'}
+                              </span>
+                            </div>
+
+                            <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
+                              {t.tribalProtocols.permitDetails}
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[var(--border-main)] text-[11px] font-mono">
+                              <div>
+                                <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">Permit Office:</span>
+                                <span className="text-[var(--text-main)] font-medium">{t.tribalProtocols.officeLocation}</span>
+                              </div>
+                              {t.tribalProtocols.costInfo && (
+                                <div>
+                                  <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">Access / Stewardship Fee:</span>
+                                  <span className="text-[var(--text-main)] font-semibold">{t.tribalProtocols.costInfo}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-sans">
+                              <span className="font-mono font-bold text-[var(--text-muted)] uppercase text-[10px] block mb-0.5">Etiquette &amp; River Guidelines:</span>
+                              <p className="italic text-[var(--text-secondary)]">{t.tribalProtocols.etiquette}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tactical Reach Intel Grid */}
+                        {adminIntel && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                            <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1">
+                              <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                                Sensitive Holding Reaches &amp; Pools:
+                              </span>
+                              <span className="text-[var(--text-main)] leading-relaxed block font-sans text-xs font-semibold">
+                                {adminIntel.keyReaches}
+                              </span>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1">
+                              <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                                Tactical Swing &amp; Bite Triggers:
+                              </span>
+                              <span className="text-[var(--text-secondary)] leading-relaxed block font-sans text-xs">
+                                {adminIntel.tacticalBiteTriggers}
+                              </span>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1">
+                              <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                                Water Clarity &amp; Drop Dynamic:
+                              </span>
+                              <span className="text-[var(--text-secondary)] leading-relaxed block font-sans text-xs">
+                                {adminIntel.waterClarityDynamics}
+                              </span>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1">
+                              <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                                Historical Guide &amp; Season Timing:
+                              </span>
+                              <span className="text-[var(--text-secondary)] leading-relaxed block font-sans text-xs">
+                                {adminIntel.historicalGuideNotes || adminIntel.estuaryPassageNotes}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Float & Wade Safety Profiles - Theme-consistent Design */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {t.floatSafety && (
+                            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2 text-xs">
+                              <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-2">
+                                <div className="flex items-center gap-1.5 text-[var(--text-main)] font-bold uppercase tracking-wider text-[11px]">
+                                  <LifeBuoy className="w-4 h-4 text-[var(--accent-teal)]" />
+                                  <span>Raft &amp; Float Profile</span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)]">
+                                  {t.floatSafety.rating}
+                                </span>
+                              </div>
+                              <div className="text-xs text-[var(--text-secondary)] space-y-1 font-sans">
+                                <p><strong className="text-[var(--text-main)] font-mono">Suitable Craft:</strong> {t.floatSafety.suitableCraft}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Whitewater Class:</strong> {t.floatSafety.whitewaterClass}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Typical Float Times:</strong> {t.floatSafety.typicalFloatTimes}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {t.wadeSafety && (
+                            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2 text-xs">
+                              <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-2">
+                                <div className="flex items-center gap-1.5 text-[var(--text-main)] font-bold uppercase tracking-wider text-[11px]">
+                                  <Footprints className="w-4 h-4 text-[var(--accent-teal)]" />
+                                  <span>Wade Friendliness</span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)]">
+                                  {t.wadeSafety.difficulty}
+                                </span>
+                              </div>
+                              <div className="text-xs text-[var(--text-secondary)] space-y-1 font-sans">
+                                <p><strong className="text-[var(--text-main)] font-mono">Footwear:</strong> {t.wadeSafety.footwearRecommendation}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Bank Access:</strong> {t.wadeSafety.bankAccessibility}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Wading Staff:</strong> {t.wadeSafety.wadingStaffAdvice}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Critical Float & Navigation Hazards Card */}
+                        {t.floatSafety?.hazardWarnings && t.floatSafety.hazardWarnings.length > 0 && (
+                          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs">
+                            <div className="flex items-center gap-1.5 font-bold uppercase text-[11px] text-rose-500">
+                              <AlertTriangle className="w-4 h-4 shrink-0" />
+                              <span>Navigational &amp; Safety Hazards:</span>
+                            </div>
+                            <ul className="list-disc pl-5 space-y-1 font-sans text-xs text-[var(--text-secondary)]">
+                              {t.floatSafety.hazardWarnings.map((hz, i) => (
+                                <li key={i}>{hz}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Verified Access Points & Bushwhacking Routes Grid */}
+                        {t.accessPoints && t.accessPoints.length > 0 && (
+                          <div className="space-y-2.5 pt-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-[var(--text-main)] uppercase font-bold tracking-wider block">
+                                Access Points, Informal Trails &amp; Crown Land:
+                              </span>
+                              <span className="text-xs text-[var(--accent-teal)] font-mono font-bold">
+                                {t.accessPoints.length} Points
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {t.accessPoints.map((pt) => (
+                                <div
+                                  key={pt.id}
+                                  className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-[var(--accent-teal)] transition-all flex flex-col justify-between gap-2.5 shadow-sm"
+                                >
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className={`p-1.5 rounded-md border text-xs font-bold ${getWaypointBadgeClass(pt.type)}`}>
+                                          {getWaypointIcon(pt.type)}
+                                        </span>
+                                        <span className="font-heading font-bold text-xs text-[var(--text-main)] truncate max-w-[180px]">
+                                          {pt.name}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Land Tenure and Bushwhack badges */}
+                                    <div className="flex flex-wrap gap-1 text-[10px] font-mono">
+                                      {pt.landTenure && (
+                                        <span className="px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)] font-medium">
+                                          🏛️ {pt.landTenure}
+                                        </span>
+                                      )}
+                                      {pt.bushwhackDifficulty && (
+                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold">
+                                          {pt.bushwhackDifficulty}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
+                                      {pt.description}
+                                    </p>
+                                    <p className="text-[10px] text-[var(--text-muted)] font-mono">
+                                      📍 {pt.roadAccess}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between pt-2 border-t border-[var(--border-main)] text-[10px] gap-1 flex-wrap">
+                                    <button
+                                      onClick={() =>
+                                        setMapModalData({
+                                          riverName: t.name,
+                                          accessPoints: t.accessPoints || [],
+                                          floatSafety: t.floatSafety,
+                                          wadeSafety: t.wadeSafety,
+                                          tribalProtocols: t.tribalProtocols,
+                                          initialPointId: pt.id,
+                                        })
+                                      }
+                                      className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] font-semibold flex items-center gap-1 transition-colors text-[10px]"
+                                    >
+                                      <Map className="w-3 h-3 text-[var(--accent-teal)]" />
+                                      <span>Map</span>
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                      <a
+                                        href={`https://maps.apple.com/?q=${encodeURIComponent(pt.name)}&ll=${pt.lat},${pt.lng}&t=m`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] font-semibold flex items-center gap-0.5 transition-colors text-[10px]"
+                                        title="Open in Apple Maps"
+                                      >
+                                        <span>Apple</span>
+                                        <ExternalLink className="w-2.5 h-2.5 text-sky-500" />
+                                      </a>
+
+                                      <a
+                                        href={pt.googleMapsUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-2 py-0.5 rounded-md bg-[var(--accent-teal)] hover:opacity-90 text-white font-semibold flex items-center gap-0.5 transition-opacity text-[10px]"
+                                        title="Open in Google Maps"
+                                      >
+                                        <span>Google</span>
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
-                        <div className="space-y-1">
-                          <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
-                            Sensitive Holding Reaches &amp; Pools:
-                          </span>
-                          <span className="text-[var(--text-main)] leading-relaxed block font-sans text-xs">
-                            {adminIntel.keyReaches}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
-                            Tactical Swing &amp; Bite Triggers:
-                          </span>
-                          <span className="text-[var(--text-secondary)] leading-relaxed block">
-                            {adminIntel.tacticalBiteTriggers}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
-                            Water Clarity &amp; Drop Dynamic:
-                          </span>
-                          <span className="text-[var(--text-secondary)] leading-relaxed block">
-                            {adminIntel.waterClarityDynamics}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
-                            Historical Guide &amp; Season Notes:
-                          </span>
-                          <span className="text-[var(--text-secondary)] leading-relaxed block">
-                            {adminIntel.historicalGuideNotes || adminIntel.estuaryPassageNotes}
-                          </span>
-                        </div>
+                    )
+                  ) : (
+                    <div className="p-3.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)]/50 flex items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)]">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-amber-500/70" />
+                        <span>Admin Beat Intel, Tribal Access, Raft Safety &amp; Access Waypoints (Protected for Authorized Admins)</span>
                       </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)] font-bold">
+                        ADMIN ONLY
+                      </span>
                     </div>
                   )}
 
@@ -477,6 +779,19 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
           );
         })}
       </div>
+
+      {/* River Access & Interactive Map Modal (Option C) */}
+      {mapModalData && (
+        <RiverAccessMapModal
+          isOpen={true}
+          onClose={() => setMapModalData(null)}
+          riverName={mapModalData.riverName}
+          accessPoints={mapModalData.accessPoints}
+          floatSafety={mapModalData.floatSafety}
+          wadeSafety={mapModalData.wadeSafety}
+          initialSelectedPointId={mapModalData.initialPointId}
+        />
+      )}
     </div>
   );
 };
