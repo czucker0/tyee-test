@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   BookOpen,
@@ -18,6 +18,7 @@ import {
   HelpCircle,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   Printer,
   CheckCircle2,
   Info,
@@ -60,6 +61,14 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 }) => {
   const [activeChapter, setActiveChapter] = useState<ChapterId>('tyee_mechanics');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectChapter = (chapId: ChapterId) => {
+    setActiveChapter(chapId);
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -192,8 +201,28 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
         {/* Main Body: Sidebar + Content */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-[var(--border-main)] bg-[var(--bg-subtle)]/50 flex flex-col shrink-0">
+          {/* Mobile Chapter Selector (Compact dropdown on small screens) */}
+          <div className="md:hidden p-3 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] uppercase shrink-0">
+                Chapter:
+              </span>
+              <select
+                value={activeChapter}
+                onChange={(e) => handleSelectChapter(e.target.value as ChapterId)}
+                className="w-full text-xs font-mono font-bold bg-[var(--bg-card)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[var(--accent-teal)] truncate"
+              >
+                {chapters.map((chap) => (
+                  <option key={chap.id} value={chap.id}>
+                    Ch {chap.number}: {chap.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop Sidebar (Hidden on mobile) */}
+          <div className="hidden md:flex w-80 border-r border-[var(--border-main)] bg-[var(--bg-subtle)]/50 flex-col shrink-0">
             {/* Search Input */}
             <div className="p-3 border-b border-[var(--border-main)]">
               <div className="relative">
@@ -217,7 +246,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 return (
                   <button
                     key={chap.id}
-                    onClick={() => setActiveChapter(chap.id)}
+                    onClick={() => handleSelectChapter(chap.id)}
                     className={`w-full text-left p-2.5 rounded-xl transition flex items-start gap-2.5 ${
                       isActive
                         ? 'bg-[var(--accent-teal)] text-white shadow-sm font-semibold'
@@ -273,7 +302,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           </div>
 
           {/* Chapter Content View */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
+          <div ref={contentRef} className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 overscroll-contain">
             {/* CHAPTER 1: TYEE MECHANICS */}
             {activeChapter === 'tyee_mechanics' && (
               <div className="space-y-6 animate-in fade-in duration-200">

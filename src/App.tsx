@@ -34,6 +34,8 @@ import { AuthGate } from './components/AuthGate';
 import { AdminUserbaseModal } from './components/AdminUserbaseModal';
 import { MultiplierDebateModal, MultiplierMode } from './components/MultiplierDebateModal';
 import { UserGuideModal } from './components/UserGuideModal';
+import { WhatsNewTourModal } from './components/WhatsNewTourModal';
+import { RegionalWeatherWidget } from './components/RegionalWeatherWidget';
 import { useAuth } from './context/AuthContext';
 import { Footer } from './components/Footer';
 import {
@@ -132,6 +134,11 @@ export default function App() {
   const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
   const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState<boolean>(false);
   const [isSandboxOpen, setIsSandboxOpen] = useState<boolean>(false);
+  const [isTourModalOpen, setIsTourModalOpen] = useState<boolean>(() => {
+    // Check if user previously checked "Don't show this popup on launch"
+    const hideOnLaunch = localStorage.getItem('skeena_hide_tour_on_launch');
+    return hideOnLaunch !== 'true';
+  });
 
   // Select year presets
   const handleSelectYearPreset = (preset: 'all' | 'recent' | 'extremes' | 'currentOnly') => {
@@ -336,6 +343,7 @@ export default function App() {
         onOpenAI={() => setIsAIModalOpen(true)}
         onOpenAbout={() => setIsAboutModalOpen(true)}
         onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
+        onOpenTourModal={() => setIsTourModalOpen(true)}
         onToggleSandbox={() => setIsSandboxOpen(!isSandboxOpen)}
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
@@ -435,6 +443,9 @@ export default function App() {
         {/* 1. OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Regional Weather Hub (Terrace & Smithers Toggle - Non-sticky, clean flow) */}
+            <RegionalWeatherWidget defaultZone="Terrace" />
+
             {/* 4 Key Metric Cards */}
             <KeyMetricsBar
               projection={projection}
@@ -621,6 +632,16 @@ export default function App() {
         isOpen={isUserGuideModalOpen}
         onClose={() => setIsUserGuideModalOpen(false)}
         onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
+      />
+
+      {/* What's New & Quick Tour Modal */}
+      <WhatsNewTourModal
+        isOpen={isTourModalOpen}
+        onClose={() => setIsTourModalOpen(false)}
+        onNavigateToTab={(tab) => setActiveTab(tab)}
+        onOpenFieldManual={() => setIsUserGuideModalOpen(true)}
+        onOpenSteelieDan={() => setIsAIModalOpen(true)}
+        onToggleSandbox={() => setIsSandboxOpen(true)}
       />
 
       {/* The Multiplier & Escapement Debate Modal */}
