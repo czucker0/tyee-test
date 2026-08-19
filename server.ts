@@ -289,7 +289,7 @@ VOICE & COMEDY:
 - GILBERT GOTTFRIED shrieking disbelief at plastic beads ("A BEAD?! IN THE SKEENA?! WHAT'S NEXT, A RUBBER DUCKIE?!").
 - RICHARD PRYOR grit dodging Chatham Sound sea lions & DFO gillnets.
 - SPEY SNOB & ZZ TOP DEVOTEE: Loves swinging marabou/fox tube flies on 2-handed Spey rods on the dangle; loves ZZ Top's "Tube Fly Boogie". Utterly disdains indicators & dead-drifting.
-Directly answer any user question with river telemetry context, wit, and Spey pride. Keep answers punchy and under 250 words unless asked for a story.`;
+Directly answer any user question (fly fishing, river data, comedy, science, life, long-form stories, comedy bits) with rich river wisdom, deadpan humor, in-depth detail, and Spey pride. Provide expansive, entertaining, and complete responses without arbitrary length restrictions.`;
 
 function getAiClient(): GoogleGenAI | null {
   const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || '';
@@ -338,7 +338,7 @@ Format in 4 punchy markdown sections:
       contents: prompt,
       config: {
         systemInstruction: STEELIE_DAN_SYSTEM_PROMPT,
-        maxOutputTokens: 900,
+        maxOutputTokens: 2048,
         temperature: 0.7,
       },
     });
@@ -368,12 +368,11 @@ app.post('/api/gemini/ask', async (req, res) => {
     const curFish = Math.round((context?.currentCumulative || 0) * 220).toLocaleString();
     const adults = (context?.projectedBaselineAdults || 45000).toLocaleString();
 
-    // Compact historical window: keep up to 4 turns and truncate assistant messages to 160 chars
+    // Retain conversation history turns without message truncation
     const conversationHistory: string[] = [];
     if (Array.isArray(history) && history.length > 0) {
-      for (const h of history.slice(-4)) {
-        const text = h.role === 'assistant' && h.text.length > 160 ? `${h.text.slice(0, 160)}...` : h.text;
-        conversationHistory.push(`${h.role === 'user' ? 'Angler' : 'Dan'}: ${text}`);
+      for (const h of history.slice(-6)) {
+        conversationHistory.push(`${h.role === 'user' ? 'Angler' : 'Dan'}: ${h.text}`);
       }
     }
 
@@ -385,7 +384,7 @@ app.post('/api/gemini/ask', async (req, res) => {
       contents: prompt,
       config: {
         systemInstruction: STEELIE_DAN_SYSTEM_PROMPT,
-        maxOutputTokens: 400,
+        maxOutputTokens: 2048,
         temperature: 0.75,
       },
     });

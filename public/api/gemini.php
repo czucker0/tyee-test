@@ -136,7 +136,7 @@ Format your report in clean, charismatic Markdown:
             ['parts' => [['text' => $prompt]]]
         ],
         'generationConfig' => [
-            'maxOutputTokens' => 850,
+            'maxOutputTokens' => 2048,
             'temperature' => 0.7
         ]
     ];
@@ -166,17 +166,14 @@ Live Skeena Telemetry ({$date}):
 - Recorded Tyee CPUE Index: " . round($context['currentCumulative'] ?? 0, 1) . " (~{$curFish} wild steelhead passed)
 - Projected Escapement: ~{$adults} adult steelhead
 - Status: {$tier}, Run Progress: {$elapsed}%
-Answer any question the angler asks with fish humor, deep river wisdom, Norm Macdonald deadpan charm, and unapologetic Spey pride! Keep answers punchy and under 250 words.";
+Answer any question the angler asks with fish humor, deep river wisdom, Norm Macdonald deadpan charm, in-depth detail, and unapologetic Spey pride! Provide expansive, entertaining, and complete responses without arbitrary length restrictions.";
 
     $history = $input['history'] ?? [];
     $conversationParts = [];
     if (is_array($history) && count($history) > 0) {
-        foreach (array_slice($history, -4) as $h) {
+        foreach (array_slice($history, -6) as $h) {
             $role = ($h['role'] ?? 'user') === 'user' ? 'Angler' : 'Dan';
             $t = $h['text'] ?? '';
-            if ($role === 'Dan' && strlen($t) > 160) {
-                $t = substr($t, 0, 160) . '...';
-            }
             $conversationParts[] = "{$role}: {$t}";
         }
     }
@@ -191,7 +188,7 @@ Answer any question the angler asks with fish humor, deep river wisdom, Norm Mac
             ['parts' => [['text' => $fullPrompt]]]
         ],
         'generationConfig' => [
-            'maxOutputTokens' => 450,
+            'maxOutputTokens' => 2048,
             'temperature' => 0.75
         ]
     ];
