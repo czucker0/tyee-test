@@ -58,42 +58,68 @@ export const DFO_FOS_REPORT_URL = 'https://www-ops2.pac.dfo-mpo.gc.ca/fos2_Inter
  * Executes a two-phase ColdFusion session request to retrieve the authentic DFO FOS test fishery table for any year
  */
 export async function fetchDFOFOSReport(year: number): Promise<string> {
-  const initRes = await fetch(DFO_FOS_PARM_URL, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SkeenaTyeeResearch/3.0',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+  };
 
-  const cookieHeader = initRes.headers.get('set-cookie') || '';
+  try {
+    const initRes = await fetch(DFO_FOS_PARM_URL, {
+      headers: browserHeaders,
+      signal: AbortSignal.timeout(20000),
+    });
 
-  const params = new URLSearchParams();
-  params.append('lboFromMonth', 'Jun');
-  params.append('lboFromDay', '10');
-  params.append('lboToMonth', 'Dec');
-  params.append('lboToDay', '31');
-  params.append('year', String(year));
-  params.append('lboFsub', '585');
-  params.append('cmdRunReport', 'Run Report');
+    const cookieHeader = initRes.headers.get('set-cookie') || '';
 
-  const reportRes = await fetch(DFO_FOS_REPORT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SkeenaTyeeResearch/3.0',
-      'Referer': DFO_FOS_PARM_URL,
-      'Cookie': cookieHeader,
-    },
-    body: params.toString(),
-    signal: AbortSignal.timeout(15000),
-  });
+    const params = new URLSearchParams();
+    params.append('lboFromMonth', 'Jun');
+    params.append('lboFromDay', '10');
+    params.append('lboToMonth', 'Dec');
+    params.append('lboToDay', '31');
+    params.append('year', String(year));
+    params.append('lboFsub', '585');
+    params.append('cmdRunReport', 'Run Report');
 
-  if (!reportRes.ok) {
-    throw new Error(`DFO FOS Server returned HTTP ${reportRes.status}: ${reportRes.statusText}`);
+    const reportRes = await fetch(DFO_FOS_REPORT_URL, {
+      method: 'POST',
+      headers: {
+        ...browserHeaders,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Referer': DFO_FOS_PARM_URL,
+        'Origin': 'https://www-ops2.pac.dfo-mpo.gc.ca',
+        'Cookie': cookieHeader,
+      },
+      body: params.toString(),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!reportRes.ok) {
+      throw new Error(`DFO FOS Server returned HTTP ${reportRes.status}: ${reportRes.statusText}`);
+    }
+
+    const html = await reportRes.text();
+    if (html.length > 500) {
+      return html;
+    }
+  } catch (err: any) {
+    console.warn(`[DFO Scraper] ColdFusion session request failed (${err.message}). Attempting direct fallback URL...`);
   }
 
-  return await reportRes.text();
+  // Direct fallback query attempt
+  const directUrl = `https://www-ops2.pac.dfo-mpo.gc.ca/fos2_Internet/Testfish/rptDTFDTyee.cfm?fsub_id=585&year=${year}`;
+  const directRes = await fetch(directUrl, {
+    headers: browserHeaders,
+    signal: AbortSignal.timeout(25000),
+  });
+
+  if (!directRes.ok) {
+    throw new Error(`Direct DFO report fetch failed with HTTP ${directRes.status}: ${directRes.statusText}`);
+  }
+
+  return await directRes.text();
 }
 
 // Month names lookup
@@ -661,7 +687,9 @@ export async function syncDFODailyRecords(options?: {
       year: targetYear,
     });
 
+    let newCount = 0;
     let updatedCount = 0;
+    let unchangedCount = 0;
     let latestRecDate = db.activeSeasonMetadata?.lastRecordedDate || '2026-08-16';
     let latestRecCum = db.activeSeasonMetadata?.lastRecordedIndex || 161.93;
 
@@ -672,31 +700,29 @@ export async function syncDFODailyRecords(options?: {
         );
 
         if (record) {
+          const isNewlyRecorded = !record.isRecorded;
+          const isChanged = Math.abs(record.dailyIndex - parsed.dailyIndex) > 0.01 || Math.abs(record.cumulativeIndex - parsed.cumulativeIndex) > 0.01;
+
           record.dailyIndex = parsed.dailyIndex;
           record.cumulativeIndex = parsed.cumulativeIndex;
-          if (parsed.driftSets) record.driftSets = parsed.driftSets;
-          if (parsed.waterTempC) record.waterTempC = parsed.waterTempC;
-          if (parsed.sockeyeDaily) record.sockeyeDaily = parsed.sockeyeDaily;
+          if (parsed.driftSets !== undefined) record.driftSets = parsed.driftSets;
+          if (parsed.waterTempC !== undefined) record.waterTempC = parsed.waterTempC;
+          if (parsed.sockeyeDaily !== undefined) record.sockeyeDaily = parsed.sockeyeDaily;
           record.isRecorded = true;
-          updatedCount++;
+
+          if (isNewlyRecorded) {
+            newCount++;
+          } else if (isChanged) {
+            updatedCount++;
+          } else {
+            unchangedCount++;
+          }
 
           if (parsed.cumulativeIndex >= latestRecCum) {
             latestRecCum = parsed.cumulativeIndex;
             latestRecDate = parsed.dateStr;
           }
         }
-      }
-    } else {
-      // If remote returned 0 rows, increment by authentic next daily drift step
-      const nextDayIdx = 68; // Aug 17
-      if (currentYearRun.daily[nextDayIdx]) {
-        const record = currentYearRun.daily[nextDayIdx];
-        record.dailyIndex = 2.65;
-        record.cumulativeIndex = 164.58;
-        record.isRecorded = true;
-        latestRecDate = record.dateStr;
-        latestRecCum = record.cumulativeIndex;
-        updatedCount = 1;
       }
     }
 
@@ -711,12 +737,25 @@ export async function syncDFODailyRecords(options?: {
     };
     db.lastUpdated = new Date().toISOString();
 
-    const successMessage = `Successfully synchronized with DFO Skeena Tyee Test Fishery. Latest recorded index is ${latestRecCum.toFixed(2)} on ${latestRecDate}.`;
+    const totalModified = newCount + updatedCount;
+    let status: 'SUCCESS' | 'PARTIAL' = 'SUCCESS';
+    let successMessage = '';
+
+    if (preview.parsedRows.length === 0) {
+      status = 'PARTIAL';
+      successMessage = `Polled DFO portal (0 new rows published upstream). Database is current as of ${latestRecDate} (Tyee Index: ${latestRecCum.toFixed(2)}).`;
+    } else if (totalModified > 0) {
+      status = 'SUCCESS';
+      successMessage = `Scraped DFO Skeena Tyee Test Fishery: ${newCount} new rows added, ${updatedCount} rows updated. Latest recorded date: ${latestRecDate} (Cumulative: ${latestRecCum.toFixed(2)}).`;
+    } else {
+      status = 'SUCCESS';
+      successMessage = `Scraped DFO: All ${unchangedCount} rows verified up to date. Latest recorded: ${latestRecDate} (${latestRecCum.toFixed(2)} points).`;
+    }
 
     addScrapeAuditLog(db, {
-      status: 'SUCCESS',
+      status,
       source: targetUrl,
-      recordsUpdated: updatedCount,
+      recordsUpdated: totalModified,
       latestRecordedDate: latestRecDate,
       latestRecordedIndex: latestRecCum,
       message: successMessage,
@@ -728,7 +767,7 @@ export async function syncDFODailyRecords(options?: {
     return {
       success: true,
       message: successMessage,
-      updatedRecordsCount: updatedCount,
+      updatedRecordsCount: totalModified,
       lastRecordedDate: latestRecDate,
       lastRecordedIndex: latestRecCum,
       sourceUrl: targetUrl,
@@ -741,6 +780,7 @@ export async function syncDFODailyRecords(options?: {
       source: targetUrl,
       recordsUpdated: 0,
       message: errorMsg,
+      details: `Exception caught during DFO scrape: ${err.stack || err.message}`,
     });
     saveDatabase(db);
     return {

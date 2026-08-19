@@ -118,6 +118,15 @@ export function useTyeeData() {
 
   useEffect(() => {
     fetchDataset();
+
+    const handleGlobalRefresh = () => {
+      fetchDataset();
+    };
+
+    window.addEventListener('skeena-dataset-refreshed', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('skeena-dataset-refreshed', handleGlobalRefresh);
+    };
   }, [fetchDataset]);
 
   // Daily sync trigger (hybrid: tries server, falls back to client-side storage)

@@ -84,6 +84,13 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playSpeed, setPlaySpeed] = useState<number>(1);
 
+  // Automatically advance to latest recorded DFO day when fresh data arrives if user has not scrubbed backwards
+  useEffect(() => {
+    if (!hasUserScrubbed && latestRecordedDayIndex !== undefined && latestRecordedDayIndex >= 0) {
+      setCurrentDayIndex(latestRecordedDayIndex);
+    }
+  }, [latestRecordedDayIndex, hasUserScrubbed]);
+
   // What-If Sandbox multiplier
   const [customMultiplier, setCustomMultiplier] = useState<number>(1.0);
 

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-17T22:20:22.015Z",
+  "lastUpdated": "2026-08-18T13:46:34.888Z",
   "currentYear": 2026,
   "defaultDecadeYears": [
     2016,
@@ -28,8 +28,8 @@
   ],
   "activeSeasonMetadata": {
     "year": 2026,
-    "lastRecordedDate": "2026-08-16",
-    "lastRecordedIndex": 161.93,
+    "lastRecordedDate": "2026-08-17",
+    "lastRecordedIndex": 164.32,
     "isLive": true
   },
   "years": {
@@ -13669,7 +13669,7 @@
     "2026": {
       "year": 2026,
       "isCurrent": true,
-      "totalCumulative": 161.9,
+      "totalCumulative": 164.3,
       "peakDailyIndex": 9.35,
       "peakDayIndex": 56,
       "peakDate": "Aug 05",
@@ -14563,11 +14563,13 @@
           "dayIndex": 68,
           "dateStr": "2026-08-17",
           "monthDay": "Aug 17",
-          "dailyIndex": 0,
-          "cumulativeIndex": 161.93,
+          "dailyIndex": 2.39,
+          "cumulativeIndex": 164.32,
           "waterTempC": 12,
           "dischargeM3s": 1769,
-          "isRecorded": false
+          "isRecorded": true,
+          "driftSets": 4,
+          "sockeyeDaily": 4.37
         },
         {
           "year": 2026,
@@ -15057,6 +15059,17 @@
     }
   },
   "scrapeLogs": [
+    {
+      "id": "log-1787060794889-462",
+      "timestamp": "2026-08-18T13:46:34.889Z",
+      "status": "SUCCESS",
+      "source": "https://www-ops2.pac.dfo-mpo.gc.ca/fos2_Internet/Testfish/rptDTFDTyee.cfm?fsub_id=585",
+      "recordsUpdated": 68,
+      "latestRecordedDate": "2026-08-17",
+      "latestRecordedIndex": 164.32,
+      "message": "Successfully synchronized with DFO Skeena Tyee Test Fishery. Latest recorded index is 164.32 on 2026-08-17.",
+      "details": "Connecting to DFO FOS endpoint: https://www-ops2.pac.dfo-mpo.gc.ca/fos2_Internet/Testfish/rptDTFDTyee.cfm?fsub_id=585 for year 2026... | Successfully retrieved 50816 bytes from DFO FOS Server. | Detected HTML format with 3 <table> elements."
+    },
     {
       "id": "log-1787005222016-338",
       "timestamp": "2026-08-17T22:20:22.016Z",

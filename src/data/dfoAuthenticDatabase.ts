@@ -24967,11 +24967,13 @@ Object.assign(RAW_DFO_DATA, {
       "dayIndex": 69,
       "dateStr": "2026-08-18",
       "monthDay": "Aug 18",
-      "dailyIndex": 0,
-      "cumulativeIndex": 161.93,
+      "dailyIndex": 1.72,
+      "cumulativeIndex": 166.04,
       "waterTempC": 12,
       "dischargeM3s": 1754,
-      "isRecorded": false
+      "driftSets": 4,
+      "sockeyeDaily": 1.47,
+      "isRecorded": true
     },
     {
       "year": 2026,
@@ -25503,11 +25505,11 @@ export function getAuthenticDFODatabase(): {
     availableYears,
     activeSeasonMetadata: {
       year: 2026,
-      latestRecordedDate: '2026-08-17',
-      latestRecordedCumulative: 164.32,
-      latestDailyIndex: 2.39,
+      latestRecordedDate: '2026-08-18',
+      latestRecordedCumulative: 166.04,
+      latestDailyIndex: 1.72,
       conservationStatus: 'Healthy',
-      driftSetsRecorded: 68,
+      driftSetsRecorded: 69,
       lastScrapeStatus: 'SUCCESS',
       lastScrapeTimestamp: new Date().toISOString(),
       sourceUrl: 'https://www-ops2.pac.dfo-mpo.gc.ca/fos2_Internet/Testfish/rptDTFDTyee.cfm?fsub_id=585',
