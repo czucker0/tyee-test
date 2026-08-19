@@ -12,6 +12,7 @@ import {
   FileText,
   HelpCircle,
   Waves,
+  RotateCcw,
 } from 'lucide-react';
 import { ProjectionModelResult, TributaryEscapement } from '../types/steelhead';
 import { requestFisheryAnalysis, askFisheryBiologist } from '../api/gemini';
@@ -125,11 +126,22 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
     }
   };
 
+  const handleResetChat = () => {
+    setMessages([
+      {
+        role: 'assistant',
+        text: `*Flicks dorsal fin in the Skeena current* Fresh start! I am resting in a nice deep tailout below the canyon as of **${selectedMonthDay}**. What's on your mind?`,
+      },
+    ]);
+  };
+
   const promptSuggestions = [
+    'How are you dodging the Tyee test nets this year?',
     'What fly patterns do you actually look at in clear vs glacial water?',
+    'Are you heading for the Babine, Kispiox, or Bulkley?',
     'What is the best Spey casting tip for casting into an upstream wind?',
-    'Why do you travel up to the Babine and Kispiox rivers?',
-    'Explain the physics of a Skagit head and sink tip from a fish perspective',
+    'How does 2026 feel compared to the 2018 record year?',
+    'What is your advice for catch-and-release anglers?',
   ];
 
   if (!isOpen) return null;
@@ -185,6 +197,17 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
                 <span>Dispatch</span>
               </button>
             </div>
+
+            {activeTab === 'chat' && (
+              <button
+                onClick={handleResetChat}
+                title="Reset conversation"
+                className="p-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition text-xs font-mono flex items-center gap-1 shrink-0"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
 
             <button
               onClick={onClose}

@@ -56,19 +56,23 @@ What do you want to ask a real Skeena steelhead? Ask me about dodging the Tyee t
     setIsAsking(true);
 
     try {
-      const answer = await askFisheryBiologist(q, {
-        selectedDate: selectedMonthDay,
-        dayIndex: projection.dayIndex,
-        percentElapsed: projection.percentElapsedHistorical,
-        currentCumulative: projection.currentCumulative,
-        projectedBaselineIndex: projection.projectedBaselineIndex,
-        projectedBaselineAdults: projection.projectedBaselineAdults,
-        projectedLowCI: projection.projectedLowCI,
-        projectedHighCI: projection.projectedHighCI,
-        bestFitYear: projection.bestFitAnalogYear,
-        conservationTier: projection.conservationTier,
-        tributaries,
-      });
+      const answer = await askFisheryBiologist(
+        q,
+        {
+          selectedDate: selectedMonthDay,
+          dayIndex: projection.dayIndex,
+          percentElapsed: projection.percentElapsedHistorical,
+          currentCumulative: projection.currentCumulative,
+          projectedBaselineIndex: projection.projectedBaselineIndex,
+          projectedBaselineAdults: projection.projectedBaselineAdults,
+          projectedLowCI: projection.projectedLowCI,
+          projectedHighCI: projection.projectedHighCI,
+          bestFitYear: projection.bestFitAnalogYear,
+          conservationTier: projection.conservationTier,
+          tributaries,
+        },
+        newMessages
+      );
 
       setMessages([...newMessages, { role: 'assistant', text: answer }]);
     } catch (e) {
