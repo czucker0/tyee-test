@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import { ProjectionModelResult, TributaryEscapement } from '../types/steelhead';
 
 export interface AnalysisPayload {
@@ -14,65 +15,145 @@ export interface AnalysisPayload {
   tributaries: TributaryEscapement[];
 }
 
+// Client-side Gemini fallback if hosted statically on Hostinger without a Node daemon
+const clientApiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+const clientAi = clientApiKey
+  ? new GoogleGenAI({
+      apiKey: clientApiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    })
+  : null;
+
 /**
- * Request comprehensive In-Season Fishery Analysis report
+ * Request comprehensive In-Season Fishery Analysis report from the Gemini Fisheries API
  */
 export async function requestFisheryAnalysis(payload: AnalysisPayload): Promise<string> {
+  // 1. Try server backend endpoint
   try {
     const res = await fetch('/api/gemini/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    const contentType = res.headers.get('content-type') || '';
-    if (res.ok && contentType.includes('application/json')) {
+    if (res.ok) {
       const data = await res.json();
-      if (data.analysis) {
+      if (data.analysis && data.analysis.trim().length > 0) {
         return data.analysis;
       }
     }
   } catch (err) {
-    // Falls through to fallback dispatch generator
+    // Server endpoint not available on static hosting
   }
 
+  // 2. Direct client-side Gemini if VITE_GEMINI_API_KEY is configured
+  if (clientAi) {
+    try {
+      const prompt = `You are a Senior Skeena River Fisheries Biologist. Generate an authoritative in-season steelhead escapement assessment for the Skeena River based on these metrics:
+- Evaluation Date: ${payload.selectedDate} (Day ${payload.dayIndex + 1} of 113)
+- Run Completed: ${payload.percentElapsed}%
+- Recorded Cumulative Tyee Index: ${payload.currentCumulative.toFixed(1)} (~${Math.round(payload.currentCumulative * 220).toLocaleString()} wild adults)
+- Baseline Projected Season: ${payload.projectedBaselineIndex.toFixed(1)} index points (~${payload.projectedBaselineAdults.toLocaleString()} adult steelhead)
+- 80% CI: ${payload.projectedLowCI.toFixed(1)} - ${payload.projectedHighCI.toFixed(1)} index points
+- Closest Analog Year: ${payload.bestFitYear}
+- Conservation Status: ${payload.conservationTier.toUpperCase()}
+
+Format in clean Markdown:
+1. 🐟 Executive Summary & Migration Trajectory
+2. 🌊 River Conditions & Migration Dynamics
+3. 🗺️ Tributary Breakdown (Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz)
+4. 🎣 Angler Advice & Conservation Priority`;
+
+      const response = await clientAi.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+
+      if (response.text && response.text.trim().length > 0) {
+        return response.text.trim();
+      }
+    } catch (clientErr) {
+      console.warn('Client-side Gemini call failed:', clientErr);
+    }
+  }
+
+  // 3. Fallback to built-in biological knowledge engine
   return generateFallbackDispatch(payload);
 }
 
 /**
- * Interactive Q&A with Steelie Dan
+ * Interactive Q&A with Steelie Dan via server-side or client-side Gemini
  */
 export async function askFisheryBiologist(
   question: string,
   context: AnalysisPayload,
-  history?: Array<{ role: 'user' | 'assistant'; text: string }>
+  history?: Array<{ role: 'user' | 'assistant'; text: string }>,
+  _onTokenChunk?: (delta: string, fullText: string) => void
 ): Promise<string> {
-  // 1. First attempt: call backend API route /api/gemini/ask
+  // 1. Try server backend endpoint
   try {
     const res = await fetch('/api/gemini/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, context, history }),
     });
-
-    const contentType = res.headers.get('content-type') || '';
-    if (res.ok && contentType.includes('application/json')) {
+    if (res.ok) {
       const data = await res.json();
-      if (data.answer && typeof data.answer === 'string' && data.answer.trim().length > 0) {
+      if (data.answer && data.answer.trim().length > 0) {
         return data.answer;
       }
     }
   } catch (err) {
-    // Network error or static hosting (e.g. Hostinger LiteSpeed returning index.html)
+    // Server endpoint not available on static hosting
   }
 
-  // 2. Second fallback: Advanced contextual Steelie Dan intelligence engine
+  // 2. Direct client-side Gemini if VITE_GEMINI_API_KEY is configured
+  if (clientAi) {
+    try {
+      const curFish = Math.round((context?.currentCumulative || 0) * 220).toLocaleString();
+      const adults = (context?.projectedBaselineAdults || 45000).toLocaleString();
+      const systemInstruction = `You are "Steelie Dan" — a legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
+You speak in first-person as a wild fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*).
+Live Skeena Telemetry (${context?.selectedDate || 'In-Season'}):
+- Recorded Tyee CPUE Index: ${context?.currentCumulative?.toFixed(1) || 0} (~${curFish} wild steelhead passed)
+- Projected Escapement: ~${adults} adult steelhead
+- Status: ${(context?.conservationTier || 'Healthy').toUpperCase()}, Run Progress: ${context?.percentElapsed || 0}%
+Answer any question the angler asks with fish humor and authentic river wisdom!`;
+
+      const conversationHistory: string[] = [];
+      if (Array.isArray(history) && history.length > 0) {
+        for (const h of history.slice(-6)) {
+          conversationHistory.push(`${h.role === 'user' ? 'Angler' : 'Dan'}: ${h.text}`);
+        }
+      }
+
+      const prompt = `${conversationHistory.length > 0 ? `PREVIOUS CHAT:\n${conversationHistory.join('\n')}\n\n` : ''}NEW QUESTION: "${question}"`;
+
+      const response = await clientAi.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction,
+        },
+      });
+
+      if (response.text && response.text.trim().length > 0) {
+        return response.text.trim();
+      }
+    } catch (clientErr) {
+      console.warn('Client-side Gemini Q&A failed:', clientErr);
+    }
+  }
+
+  // 3. Seamless offline fallback
   return generateSteelieDanResponse(question, context, history);
 }
 
 /**
- * High-IQ Natural Language & Knowledge Engine for Steelie Dan
- * Ensures Steelie Dan is charismatic, articulate, deeply knowledgeable, and never repeats a dumb template.
+ * Built-In Contextual Knowledge Engine for Steelie Dan (Offline Fallback)
  */
 function generateSteelieDanResponse(
   q: string,
@@ -86,7 +167,6 @@ function generateSteelieDanResponse(
   const lowFish = Math.round(ctx.projectedLowCI * 220).toLocaleString();
   const highFish = Math.round(ctx.projectedHighCI * 220).toLocaleString();
 
-  // Helper for tributary percentage lookup
   const getTribPct = (name: string, fallback: number) => {
     const found = ctx.tributaries?.find((t) => t.name.toLowerCase().includes(name.toLowerCase()));
     return found ? found.sharePct : fallback;
@@ -96,7 +176,46 @@ function generateSteelieDanResponse(
     return found ? found.projectedAdults.toLocaleString() : fallback.toLocaleString();
   };
 
-  // 1. Steelie Dan Identity, Name & Bio
+  // 0. Greetings & Small Talk
+  if (
+    /^(hi|hello|hey|howdy|greetings|yo|good\s+morning|good\s+afternoon|good\s+evening|morning|evening)(\s|$|!|\?|,|\.)/i.test(
+      query
+    ) ||
+    query === 'dan' ||
+    query === 'hi dan' ||
+    query === 'hello dan' ||
+    query === 'hey dan'
+  ) {
+    return `*Splashes tailfin and flashes a broadside of iridescent silver in the current*
+
+Well hey there, two-legger! Great to see you swinging by the Skeena today. 
+
+I'm holding right in the sweet hydraulic cushion behind a glacial boulder below the canyon, resting up before we make our run for the Babine and Bulkley. As of **${ctx.selectedDate}**, the river is alive and we've got **${ctx.currentCumulative.toFixed(1)} Tyee points** (~${curFish} wild chromers) safely past the test nets!
+
+What can this 38-inch philosopher help you with today? Want to talk fly patterns, check river temps, or hear how we dodge the Tyee nets?`;
+  }
+
+  // 0.1 How are you / River check-in
+  if (
+    query.includes('how are you') ||
+    query.includes('how are things') ||
+    query.includes("how's it going") ||
+    query.includes('hows it going') ||
+    query.includes("what's up") ||
+    query.includes('what up') ||
+    query.includes("how's the river") ||
+    query.includes("how's the water") ||
+    query.includes("how's fishing") ||
+    query.includes('how is fishing')
+  ) {
+    return `*Flicks dorsal fin happily and inhales cold glacial oxygen*
+
+I'm feeling chrome-bright and full of river energy! The water is running clean, the hydraulic seam is holding steady, and the run is tracking in the **${ctx.conservationTier.toUpperCase()}** tier with projected season escapement of **~${adults} wild steelhead**.
+
+Our pods are moving on every high tide. Are you gearing up to swing some flies on the Skeena or just checking the latest telemetry?`;
+  }
+
+  // 1. Identity
   if (
     query.includes('who are you') ||
     query.includes('what are you') ||
@@ -118,7 +237,7 @@ Here's my tale:
 What river secrets or telemetry numbers are you itching to know, my friend?`;
   }
 
-  // 2. Tyee Test Fishery, Gillnets, DFO mechanics
+  // 2. Tyee Test Fishery
   if (
     query.includes('net') ||
     query.includes('tyee') ||
@@ -141,7 +260,7 @@ Ah, the legendary **Tyee Test Fishery** at the mouth of the Skeena! Let me give 
 - **Current Status (${ctx.selectedDate}):** We've recorded **${ctx.currentCumulative.toFixed(1)} Tyee points** (~${curFish} wild chromers safely past the nets). Keep watching the daily pulse!`;
   }
 
-  // 3. Fly Fishing, Spey Casting, Tackle, Flies, Lines & Sink Tips
+  // 3. Flies & Spey
   if (
     query.includes('fly') ||
     query.includes('pattern') ||
@@ -177,7 +296,7 @@ You want the unvarnished truth from the fish at the other end of the swing? Here
 3. **The Golden Rule:** Don't rush the swing! 90% of our grabs happen on the gentle deceleration right at the "hang-down" as the fly turns straight downstream. Keep that rod tip low and wait for the reel to scream before setting!`;
   }
 
-  // 4. Tributaries: Babine, Bulkley, Morice, Kispiox, Sustut, Zymoetz, Kalum
+  // 4. Tributaries
   if (
     query.includes('babine') ||
     query.includes('bulkley') ||
@@ -204,7 +323,7 @@ The Skeena is a sacred superhighway, and each tributary has its own tribe of wil
 Right now, pods are staging at the mouths of the Zymoetz and Kitwanga, waiting for cool river plumes!`;
   }
 
-  // 5. Water Temperatures, Flows, CFS, Climate, Weather
+  // 5. Water Temperatures & Flows
   if (
     query.includes('temp') ||
     query.includes('temperature') ||
@@ -228,7 +347,7 @@ Water temperature is life or death for cold-blooded migratory salmonids! Here is
 - **Ethics for Anglers:** If river water climbs above 18°C / 65°F, please restrict your fishing to first light in the early mornings, land us quickly with heavy tippet (15-20 lb), and never lift us out of the water!`;
   }
 
-  // 6. Historical Year Comparison, 2018 Record, 2021 Low, Trends
+  // 6. Historical Runs & Comparisons
   if (
     query.includes('compare') ||
     query.includes('record') ||
@@ -257,7 +376,7 @@ Let's review the historical run records:
 - **Conservation Tier:** **${ctx.conservationTier.toUpperCase()}** (${ctx.percentElapsed}% of summer migration completed). This is a heartening, resilient rebound for Skeena wild steelhead!`;
   }
 
-  // 7. Catch and Release Ethics & Fish Handling
+  // 7. Ethics
   if (
     query.includes('release') ||
     query.includes('handle') ||
@@ -281,7 +400,7 @@ As a wild Skeena chromer that hopes to spawn in the gravel next spring, here is 
 Protect the run, and we'll keep the Skeena legendary for your grandkids!`;
   }
 
-  // 8. Predators: Seals, Sea Lions, Bears, Eagles
+  // 8. Predators
   if (
     query.includes('seal') ||
     query.includes('sea lion') ||
@@ -301,29 +420,7 @@ The gauntlet from Chatham Sound to the headwaters is full of tooth and claw:
 That's why we love deep, turbulent canyon water!`;
   }
 
-  // 9. Steelhead Biology, Life History, Salmon vs Steelhead
-  if (
-    query.includes('salmon') ||
-    query.includes('difference') ||
-    query.includes('rainbow') ||
-    query.includes('trout') ||
-    query.includes('ocean') ||
-    query.includes('life cycle') ||
-    query.includes('spawn') ||
-    query.includes('iteropar') ||
-    query.includes('die') ||
-    query.includes('saltwater') ||
-    query.includes('freshwater')
-  ) {
-    return `*Puffs out shiny silver operculum with pride*
-
-Here is the wonder of our biology:
-- **Rainbow Trout vs Steelhead:** We are genetically identical (*Oncorhynchus mykiss*), but while resident rainbows stay in the river eating caddisflies, steelhead make the daring trek thousands of miles into the open North Pacific Ocean to feast on squid and herring.
-- **Steelhead vs Pacific Salmon (Chinook, Coho, Sockeye):** Pacific salmon spawn once and die (*semelparity*). Steelhead are **iteroparous** — meaning healthy wild steelhead can spawn, return to the ocean to feed and re-silver, and return to spawn a second (or even third) time!
-- **Do We Eat in Freshwater?** We fast upon entering the Skeena, living off stored ocean lipids. But our predatory reflexes, aggression, and curiosity remain razor sharp — which is why we still hammer a well-swung fly!`;
-  }
-
-  // 10. Jokes, Humor, Fun, Music & 70s Rock Puns
+  // 9. Jokes & Rock Puns
   if (
     query.includes('joke') ||
     query.includes('funny') ||
@@ -352,38 +449,19 @@ Here's a quick river haiku:
 What else can this 38-inch philosopher answer for you today?`;
   }
 
-  // 11. Advice for fishing or visiting the Skeena region
-  if (
-    query.includes('trip') ||
-    query.includes('travel') ||
-    query.includes('visit') ||
-    query.includes('smithers') ||
-    query.includes('terrace') ||
-    query.includes('hazelton') ||
-    query.includes('guide') ||
-    query.includes('license') ||
-    query.includes('regulation') ||
-    query.includes('classified')
-  ) {
-    return `*Twitches whiskers knowingly*
+  // 10. General / Catch-All
+  return `*Flares silver gill plates and glances up through the emerald surface film*
 
-Planning a pilgrimage to the Skeena River country? Here are the golden tips:
-- **Town Hubs:** **Terrace** is the gateway to the lower mainstem, Kalum, and Zymoetz. **Smithers** is the heartbeat of the Bulkley/Morice world with the best fly shops and craft breweries. **Hazelton** sits right at the confluence of the Skeena and Bulkley canyons.
-- **Prime Timing:** Late August through October is prime time for summer steelhead on dry flies and traditional swung wet flies.
-- **Regulations:** Respect BC Classified Waters licensing rules, non-resident alien booking windows, First Nations territories (Gitxsan, Wet'suwet'en, Tsimshian, Haisla), and single barbless hook mandates.
-- **Support Local Conservation:** Check out the Skeena Fisheries Commission, SkeenaWild, and Bulkley Valley rod & gun clubs!`;
-  }
+That's a thoughtful question, my friend! 
 
-  // 12. General AI / Reasoning / Direct Question Handling
-  return `*Swishes tail with keen intelligence in the Skeena current*
+Here in the Skeena as of **${ctx.selectedDate}**, our pods are swimming strong with **${ctx.currentCumulative.toFixed(1)} Tyee points** (~${curFish} wild adult steelhead past the test nets) and a projected **~${adults} adult run** in the **${ctx.conservationTier.toUpperCase()}** tier.
 
-Regarding your question: **"${raw}"**
+Whether you're wondering about:
+- **Spey tactics & fly selection** (like the *Lady Caroline* or *Prom Dress*),
+- **River conditions & water temps** across the Bulkley, Babine, and Kispiox,
+- Or **how we dodge the Tyee gillnets** on the incoming tide...
 
-From the depths of the Skeena River:
-- **Run Telemetry Context:** As of **${ctx.selectedDate}**, our Tyee cumulative index is sitting at **${ctx.currentCumulative.toFixed(1)} points** (~${curFish} wild steelhead past the test nets). We are projecting approximately **~${adults} adult steelhead** (${lowFish} – ${highFish} range) across the entire watershed in the **${ctx.conservationTier.toUpperCase()}** tier.
-- **Fish Perspective:** Whether you're curious about our migration mechanics, swinging Spey flies, water temperatures, or river secrets in the Babine or Bulkley, the river is alive and flowing strong this season!
-
-Feel free to ask me about specific tributaries, favorite fly patterns, dodging the Tyee test nets, or water temperatures!`;
+Ask away, and I'll share what this 38-inch wild buck knows from three ocean voyages!`;
 }
 
 /**

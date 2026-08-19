@@ -112,7 +112,7 @@ What do you want to ask a real Skeena steelhead? Ask me about dodging the Tyee t
               </h2>
               <span className="stamp-badge stamp-amber font-mono text-[10px] px-2 py-0.5">
                 <Sparkles className="w-2.5 h-2.5 text-[var(--accent-amber)]" />
-                Gemini 3.7 Flash
+                Live AI
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] font-mono truncate mt-0.5">
