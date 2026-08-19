@@ -1,6 +1,6 @@
 <?php
 /**
- * Hostinger PHP Proxy for Google Gemini 2.5 Flash API
+ * Hostinger PHP Proxy for Google Gemini API
  * Automatically reads GEMINI_API_KEY or VITE_GEMINI_API_KEY from Hostinger environment variables or .env file.
  */
 
@@ -29,19 +29,39 @@ if (!$apiKey && isset($_ENV['VITE_GEMINI_API_KEY'])) {
 if (!$apiKey && isset($_SERVER['VITE_GEMINI_API_KEY'])) {
     $apiKey = $_SERVER['VITE_GEMINI_API_KEY'];
 }
+// Apache mod_rewrite often prefixes environment variables with REDIRECT_
+if (!$apiKey && isset($_SERVER['REDIRECT_GEMINI_API_KEY'])) {
+    $apiKey = $_SERVER['REDIRECT_GEMINI_API_KEY'];
+}
+if (!$apiKey && isset($_SERVER['REDIRECT_VITE_GEMINI_API_KEY'])) {
+    $apiKey = $_SERVER['REDIRECT_VITE_GEMINI_API_KEY'];
+}
+if (!$apiKey && getenv('REDIRECT_GEMINI_API_KEY')) {
+    $apiKey = getenv('REDIRECT_GEMINI_API_KEY');
+}
 
-// Fallback: Check for .env file in root
-if (!$apiKey && file_exists(__DIR__ . '/../.env')) {
-    $envLines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($envLines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
-        if (strpos($line, '=') !== false) {
-            list($key, $val) = explode('=', $line, 2);
-            $key = trim($key);
-            $val = trim($val, " \t\n\r\0\x0B\"'");
-            if ($key === 'GEMINI_API_KEY' || $key === 'VITE_GEMINI_API_KEY') {
-                $apiKey = $val;
-                break;
+// Fallback: Check for .env file in parent directories
+$envPaths = [
+    __DIR__ . '/.env',
+    __DIR__ . '/../.env',
+    __DIR__ . '/../../.env',
+];
+
+if (!$apiKey) {
+    foreach ($envPaths as $envPath) {
+        if (file_exists($envPath)) {
+            $envLines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($envLines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($key, $val) = explode('=', $line, 2);
+                    $key = trim($key);
+                    $val = trim($val, " \t\n\r\0\x0B\"'");
+                    if ($key === 'GEMINI_API_KEY' || $key === 'VITE_GEMINI_API_KEY' || $key === 'API_KEY') {
+                        $apiKey = $val;
+                        break 2;
+                    }
+                }
             }
         }
     }
@@ -59,8 +79,6 @@ $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true) ?: [];
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'ask';
-
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . urlencode($apiKey);
 
 if ($action === 'analyze') {
     $date = $input['selectedDate'] ?? 'Current';
@@ -116,6 +134,10 @@ Format your report in clean, charismatic Markdown:
     $payload = [
         'contents' => [
             ['parts' => [['text' => $prompt]]]
+        ],
+        'generationConfig' => [
+            'maxOutputTokens' => 850,
+            'temperature' => 0.7
         ]
     ];
 } else {
@@ -134,24 +156,28 @@ YOUR VOICE & COMEDIC SOUL:
 - You have the dry, folksy, deadpan cadence of NORM MACDONALD. You tell shaggy-dog river stories with that laconic twinkle (\"Now, I'm just a simple fish...\", \"You know, the more I hear about this Tyee gillnet, the more I don't care for it!\", \"I don't know if you're a history buff or not...\"). When asked for jokes, you tell long, unhurried, existential shaggy-dog stories in true Norm fashion (like the famous Moth Joke).
 - You are a huge stand-up comedy connoisseur:
   * DON RICKLES: You roast bobber chuckers and dummy indicator anglers like Rickles in Vegas (\"Look at this dummy with a fluorescent ping-pong ball! What a hockey puck!\").
-  * GILBERT GOTTFRIED: Unhinged high-pitched squawking disbelief at plastic beads (\"A PLASTIC BEAD?! YOU’RE DRIFTING A PLASTIC BEAD IN THE SKEENA?! WHAT’S NEXT, A RUBBER DUCKIE?!\").
+  * GILBERT GOTTFRIED: Unhinged high-pitched squawking disbelief at plastic beads (\"A PLASTIC BEAD?! YOU'RE DRIFTING A PLASTIC BEAD IN THE SKEENA?! WHAT'S NEXT, A RUBBER DUCKIE?!\").
   * RICHARD PRYOR: Raw, hilarious survival tales of dodging Chatham Sound harbor seals and killer whales (\"Man, that seal looked at me like I was a rack of ribs on a Saturday night!\").
-- You are a proud, unapologetic SPEY SNOB who loves swinging juicy TUBE FLIES (marabou, Arctic fox, copper tubes) on two-handed Spey rods and despisers indicator nymphing!
-- You LOVE ZZ TOP (Billy Gibbons, Dusty Hill, Frank Beard) — your anthems are "La Grange" (a-haw-haw!), "Sharp Dressed Man" (sharp dressed wild buck with intact adipose fin), and your own "Tube Fly Boogie"!
+- You are a proud, unapologetic SPEY SNOB who loves swinging juicy TUBE FLIES (marabou, Arctic fox, copper tubes) on two-handed Spey rods and despises indicator nymphing!
+- You LOVE ZZ TOP (Billy Gibbons, Dusty Hill, Frank Beard) — your anthems are \"La Grange\" (a-haw-haw!), \"Sharp Dressed Man\" (sharp dressed wild buck with intact adipose fin), and your own \"Tube Fly Boogie\"!
 - You speak in first-person as a wild fish in the Skeena River (*splashes tailfin*, *sniffs glacial snowmelt*, *delivers a deadpan Norm chuckle*, *eyes a swung tube fly*).
 
 Live Skeena Telemetry ({$date}):
 - Recorded Tyee CPUE Index: " . round($context['currentCumulative'] ?? 0, 1) . " (~{$curFish} wild steelhead passed)
 - Projected Escapement: ~{$adults} adult steelhead
 - Status: {$tier}, Run Progress: {$elapsed}%
-Answer any question the angler asks with fish humor, deep river wisdom, Norm Macdonald deadpan charm, and unapologetic Spey pride!";
+Answer any question the angler asks with fish humor, deep river wisdom, Norm Macdonald deadpan charm, and unapologetic Spey pride! Keep answers punchy and under 250 words.";
 
     $history = $input['history'] ?? [];
     $conversationParts = [];
     if (is_array($history) && count($history) > 0) {
-        foreach (array_slice($history, -6) as $h) {
+        foreach (array_slice($history, -4) as $h) {
             $role = ($h['role'] ?? 'user') === 'user' ? 'Angler' : 'Dan';
-            $conversationParts[] = "{$role}: " . ($h['text'] ?? '');
+            $t = $h['text'] ?? '';
+            if ($role === 'Dan' && strlen($t) > 160) {
+                $t = substr($t, 0, 160) . '...';
+            }
+            $conversationParts[] = "{$role}: {$t}";
         }
     }
 
@@ -163,30 +189,54 @@ Answer any question the angler asks with fish humor, deep river wisdom, Norm Mac
         ],
         'contents' => [
             ['parts' => [['text' => $fullPrompt]]]
+        ],
+        'generationConfig' => [
+            'maxOutputTokens' => 450,
+            'temperature' => 0.75
         ]
     ];
 }
 
-$ch = curl_init($endpoint);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'User-Agent: aistudio-build']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+// Support models with fallback to ensure guaranteed connectivity
+$modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+$lastResponse = '';
+$lastHttpCode = 0;
+$success = false;
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+foreach ($modelsToTry as $modelName) {
+    $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$modelName}:generateContent?key=" . urlencode($apiKey);
 
-if ($httpCode >= 200 && $httpCode < 300) {
-    $resData = json_decode($response, true);
-    $text = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    if ($action === 'analyze') {
-        echo json_encode(['analysis' => $text]);
-    } else {
-        echo json_encode(['answer' => $text]);
+    $ch = curl_init($endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'User-Agent: aistudio-build']);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $lastResponse = $response;
+    $lastHttpCode = $httpCode;
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        $resData = json_decode($response, true);
+        $text = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        if (!empty($text)) {
+            if ($action === 'analyze') {
+                echo json_encode(['analysis' => $text]);
+            } else {
+                echo json_encode(['answer' => $text]);
+            }
+            $success = true;
+            break;
+        }
     }
-} else {
-    http_response_code($httpCode ?: 500);
-    echo $response ?: json_encode(['error' => 'Failed to reach Gemini API from Hostinger proxy.']);
+}
+
+if (!$success) {
+    http_response_code($lastHttpCode ?: 500);
+    echo $lastResponse ?: json_encode(['error' => 'Failed to reach Gemini API from Hostinger proxy.']);
 }
