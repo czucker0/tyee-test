@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Play,
   Pause,
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  SlidersHorizontal,
   Flame,
   Fish,
   Calendar,
@@ -35,7 +34,6 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
   latestRecordedDayIndex = LATEST_RECORDED_DAY_INDEX,
   isCondensed = false,
 }) => {
-  const [showMobilePresets, setShowMobilePresets] = useState<boolean>(false);
   const currentDay = SEASON_DAYS[currentDayIndex] || SEASON_DAYS[0];
   const isLatestRecorded = currentDayIndex === latestRecordedDayIndex;
   const isFutureForecast = currentDayIndex > latestRecordedDayIndex;
@@ -53,7 +51,20 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
   const presets = [
     { label: 'Start (Jun 10)', shortLabel: 'Start', index: 0 },
     { label: 'Jul 15', shortLabel: 'Jul 15', index: 35 },
-    { label: 'Peak (Aug 14)', shortLabel: 'Peak', index: 65, icon: <Flame className="w-2.5 h-2.5 text-[var(--accent-amber)]" /> },
+    {
+      label: 'Peak (Aug 14)',
+      shortLabel: 'Peak',
+      index: 65,
+      icon: (
+        <Flame
+          className={`w-2.5 h-2.5 ${
+            currentDayIndex === 65
+              ? 'text-white fill-white/20'
+              : 'text-[var(--accent-amber)]'
+          }`}
+        />
+      ),
+    },
     { label: `Latest (${latestRecordedMonthDay})`, shortLabel: `Latest (${latestRecordedMonthDay})`, index: latestRecordedDayIndex, highlight: true },
     { label: 'Sep 05', shortLabel: 'Sep 05', index: 87 },
     { label: 'Finish (Sep 30)', shortLabel: 'Finish', index: SEASON_DAYS.length - 1 },
@@ -79,7 +90,7 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
             onClick={() => onDayChange(Math.max(0, currentDayIndex - 1))}
             disabled={currentDayIndex === 0}
             title="Previous Day"
-            className="p-1 rounded bg-[var(--bg-card)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] border border-[var(--border-main)] transition"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] border border-[var(--border-main)] transition shrink-0 aspect-square"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
@@ -87,16 +98,16 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
           <button
             onClick={onTogglePlay}
             title={isPlaying ? 'Pause' : 'Play'}
-            className="p-1 rounded bg-[var(--accent-amber)] text-white hover:opacity-90 transition shadow-xs"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--accent-amber)] text-white hover:opacity-90 transition shadow-xs shrink-0 aspect-square"
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 translate-x-0.5" />}
+            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
           </button>
 
           <button
             onClick={() => onDayChange(Math.min(SEASON_DAYS.length - 1, currentDayIndex + 1))}
             disabled={currentDayIndex === SEASON_DAYS.length - 1}
             title="Next Day"
-            className="p-1 rounded bg-[var(--bg-card)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] border border-[var(--border-main)] transition"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--bg-card)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-secondary)] border border-[var(--border-main)] transition shrink-0 aspect-square"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -199,7 +210,7 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
               onClick={() => onDayChange(Math.max(0, currentDayIndex - 1))}
               disabled={currentDayIndex === 0}
               title="Previous Day"
-              className="p-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-main)] transition border border-[var(--border-main)] font-bold"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-main)] transition border border-[var(--border-main)] font-bold shrink-0 aspect-square"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -207,16 +218,16 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
             <button
               onClick={onTogglePlay}
               title={isPlaying ? 'Pause Timeline Animation' : 'Play Timeline Animation'}
-              className="p-1.5 sm:p-2 rounded-lg font-bold flex items-center justify-center transition shadow-sm bg-[var(--accent-amber)] text-white hover:opacity-90"
+              className="w-8 h-8 flex items-center justify-center rounded-lg font-bold transition shadow-sm bg-[var(--accent-amber)] text-white hover:opacity-90 shrink-0 aspect-square"
             >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 translate-x-0.5" />}
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
             </button>
 
             <button
               onClick={() => onDayChange(Math.min(SEASON_DAYS.length - 1, currentDayIndex + 1))}
               disabled={currentDayIndex === SEASON_DAYS.length - 1}
               title="Next Day"
-              className="p-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-main)] transition border border-[var(--border-main)] font-bold"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] disabled:opacity-30 text-[var(--text-main)] transition border border-[var(--border-main)] font-bold shrink-0 aspect-square"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -229,7 +240,7 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
                 onChangeSpeed(nextSpeed);
               }}
               title="Change Playback Speed"
-              className="px-2 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-xs font-mono font-bold text-[var(--text-main)] border border-[var(--border-main)] transition"
+              className="h-8 px-2 flex items-center justify-center rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-xs font-mono font-bold text-[var(--text-main)] border border-[var(--border-main)] transition shrink-0"
             >
               {playSpeed}x
             </button>
@@ -294,10 +305,10 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
           </div>
         </div>
 
-        {/* Preset Chips */}
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mr-1 font-bold">
+        {/* Preset Chips - Always on a single line */}
+        <div className="pt-0.5 w-full min-w-0">
+          <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mr-0.5 font-bold shrink-0 whitespace-nowrap hidden sm:inline">
               Field Milestones:
             </span>
             {presets.map((preset) => {
@@ -306,7 +317,7 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
                 <button
                   key={preset.label}
                   onClick={() => onDayChange(preset.index)}
-                  className={`px-2.5 py-1 rounded text-xs font-editorial transition flex items-center gap-1.5 ${
+                  className={`px-2 sm:px-2.5 py-1 rounded text-[11px] sm:text-xs font-editorial transition flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap ${
                     isSelected
                       ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
                       : preset.highlight
@@ -315,54 +326,13 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
                   }`}
                 >
                   {preset.icon}
-                  <span>{preset.label}</span>
+                  <span className="hidden xs:inline">{preset.label}</span>
+                  <span className="xs:hidden">{preset.shortLabel}</span>
                 </button>
               );
             })}
           </div>
-
-          {/* Mobile Presets Toggle */}
-          <div className="sm:hidden w-full flex items-center justify-between">
-            <button
-              onClick={() => setShowMobilePresets(!showMobilePresets)}
-              className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-main)] text-xs text-[var(--text-main)] font-bold flex items-center gap-1.5 font-mono shadow-xs"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-              <span>{showMobilePresets ? 'Hide Milestones' : 'Milestones'}</span>
-            </button>
-
-            {/* Quick jump to latest on mobile */}
-            <button
-              onClick={() => onDayChange(latestRecordedDayIndex)}
-              className="px-2.5 py-1.5 rounded-lg bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-xs text-[var(--accent-amber)] font-bold flex items-center gap-1.5 font-editorial shadow-xs"
-            >
-              <Fish className="w-3.5 h-3.5" />
-              <span>Latest ({latestRecordedMonthDay})</span>
-            </button>
-          </div>
         </div>
-
-        {/* Mobile dropdown preset chips */}
-        {showMobilePresets && (
-          <div className="sm:hidden grid grid-cols-3 gap-2 pt-2 border-t border-[var(--border-main)] animate-in fade-in duration-150">
-            {presets.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => {
-                  onDayChange(preset.index);
-                  setShowMobilePresets(false);
-                }}
-                className={`px-2 py-1.5 rounded-lg text-xs font-editorial font-bold text-center transition ${
-                  currentDayIndex === preset.index
-                    ? 'bg-[var(--accent-amber)] text-white shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-main)]'
-                }`}
-              >
-                {preset.shortLabel}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

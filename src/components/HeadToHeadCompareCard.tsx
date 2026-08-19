@@ -201,12 +201,12 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         </div>
 
         {/* Benchmark Selector Dropdown */}
-        <div className="flex items-center gap-2 font-mono">
-          <label className="text-xs text-[var(--text-secondary)] font-medium whitespace-nowrap">Benchmark:</label>
+        <div className="flex items-center gap-2 font-mono w-full sm:w-auto min-w-0 max-w-full">
+          <label className="text-xs text-[var(--text-secondary)] font-medium whitespace-nowrap shrink-0">Benchmark:</label>
           <select
             value={benchmarkYear}
             onChange={(e) => setBenchmarkYear(parseInt(e.target.value, 10))}
-            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)]"
+            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] w-full sm:max-w-[280px] md:max-w-xs truncate cursor-pointer shadow-xs"
           >
             <option value={-1}>10-Year DFO Average Baseline</option>
             {allYears
