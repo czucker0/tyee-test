@@ -69,10 +69,10 @@ export const AboutTyeeModal: React.FC<AboutTyeeModalProps> = ({ isOpen, onClose 
               The daily Tyee index is a standardized <strong>Catch-Per-Unit-Effort (CPUE)</strong> measurement. Based on long-term radio-telemetry, acoustic tag tracking, and counting weirs on the Babine and Sustut rivers:
             </p>
             <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-center font-mono font-bold text-[var(--text-main)] text-xs sm:text-sm my-1">
-              1.0 Cumulative Tyee Index Point ≈ {ADULT_EXPANSION_FACTOR} Adult Wild Steelhead
+              1.0 Cumulative Tyee Index Point ≈ 214 (4-Yr Dynamic) to 220 (Decadal Baseline) Adult Steelhead
             </div>
             <p className="text-xs text-[var(--text-muted)] font-mono">
-              For example, a cumulative index of 110 corresponds to approximately 24,200 adult wild steelhead entering the Skeena River system.
+              In-season DFO management computes a dynamic 4-year rolling expansion ratio (calibrated against 4-year generation life cycles and Babine River fence counts), while 220 serves as the long-term benchmark.
             </p>
           </div>
 

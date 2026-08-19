@@ -4,24 +4,35 @@ import {
   Clock,
   Sparkles,
   GitFork,
+  Scale,
+  HelpCircle,
 } from 'lucide-react';
 import { ProjectionModelResult } from '../types/steelhead';
-import { ADULT_EXPANSION_FACTOR, ALL_YEARS_DATA } from '../data/historicalData';
+import { ALL_YEARS_DATA } from '../data/historicalData';
+import { MultiplierMode } from './MultiplierDebateModal';
 
 interface ProjectionDetailsCardProps {
   projection: ProjectionModelResult;
   selectedMonthDay: string;
   isMetricInAdults: boolean;
+  multiplierMode?: MultiplierMode;
+  multiplierValue?: number;
+  onSelectMultiplierMode?: (mode: MultiplierMode) => void;
+  onOpenMultiplierDebate?: () => void;
 }
 
 export const ProjectionDetailsCard: React.FC<ProjectionDetailsCardProps> = ({
   projection,
   selectedMonthDay,
   isMetricInAdults,
+  multiplierMode = 'four_year',
+  multiplierValue = 214,
+  onSelectMultiplierMode,
+  onOpenMultiplierDebate,
 }) => {
   const formatNum = (val: number) => {
     return isMetricInAdults
-      ? Math.round(val * ADULT_EXPANSION_FACTOR).toLocaleString() + ' fish'
+      ? Math.round(val * multiplierValue).toLocaleString() + ' fish'
       : val.toFixed(1) + ' pts';
   };
 
@@ -32,7 +43,7 @@ export const ProjectionDetailsCard: React.FC<ProjectionDetailsCardProps> = ({
       offset: '-6 Days',
       desc: 'Assumes run arrived earlier than average. Higher % already passed Tyee, so remaining pulses will be modest.',
       index: projection.scenarios.earlyPeak.projectedIndex,
-      adults: projection.scenarios.earlyPeak.projectedAdults,
+      adults: Math.round(projection.scenarios.earlyPeak.projectedIndex * multiplierValue),
       color: 'border-orange-300 dark:border-orange-600/40 bg-orange-50 dark:bg-orange-950/30 text-orange-900 dark:text-orange-200',
       badge: 'Conservative Scenario',
     },
@@ -42,7 +53,7 @@ export const ProjectionDetailsCard: React.FC<ProjectionDetailsCardProps> = ({
       offset: '0 Days (Baseline)',
       desc: 'Standard 10-year empirical migration curve based on long-term Tyee test fishery historical records.',
       index: projection.scenarios.averageTiming.projectedIndex,
-      adults: projection.scenarios.averageTiming.projectedAdults,
+      adults: Math.round(projection.scenarios.averageTiming.projectedIndex * multiplierValue),
       color: 'border-[var(--accent-amber-border)] bg-[var(--accent-amber-light)] text-[var(--text-main)] shadow-sm',
       badge: 'Most Likely (Baseline)',
       isPrimary: true,
@@ -53,7 +64,7 @@ export const ProjectionDetailsCard: React.FC<ProjectionDetailsCardProps> = ({
       offset: '+6 Days',
       desc: 'Assumes cool mainstem water or high July discharge delayed migration. Significant late-August/September pulses.',
       index: projection.scenarios.lateRunSurge.projectedIndex,
-      adults: projection.scenarios.lateRunSurge.projectedAdults,
+      adults: Math.round(projection.scenarios.lateRunSurge.projectedIndex * multiplierValue),
       color: 'border-[var(--accent-teal-border)] bg-[var(--accent-teal-light)] text-[var(--text-main)]',
       badge: 'Optimistic Scenario',
     },
@@ -75,10 +86,44 @@ export const ProjectionDetailsCard: React.FC<ProjectionDetailsCardProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] px-3 py-1.5 rounded-lg text-xs font-mono">
-          <Clock className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-          <span className="text-[var(--text-secondary)]">Model Confidence:</span>
-          <span className="text-[var(--accent-amber)] font-bold">{projection.confidenceLevel}%</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Multiplier Quick Switcher */}
+          <div className="flex items-center gap-1 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg p-1 text-xs font-mono">
+            <Scale className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+            <button
+              onClick={() => onSelectMultiplierMode?.('four_year')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                multiplierMode === 'four_year'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              4-Yr Roll (~{multiplierValue}x)
+            </button>
+            <button
+              onClick={() => onSelectMultiplierMode?.('baseline_220')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                multiplierMode === 'baseline_220'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              220x
+            </button>
+            <button
+              onClick={onOpenMultiplierDebate}
+              title="Learn about the Multiplier Debate"
+              className="px-1 text-[var(--accent-amber)] hover:opacity-80"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] px-3 py-1.5 rounded-lg text-xs font-mono">
+            <Clock className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+            <span className="text-[var(--text-secondary)]">Confidence:</span>
+            <span className="text-[var(--accent-amber)] font-bold">{projection.confidenceLevel}%</span>
+          </div>
         </div>
       </div>
 

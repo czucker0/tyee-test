@@ -18,7 +18,8 @@ export function calculateProjection(
   dayIndex: number,
   customMultiplier: number = 1.0,
   overrideCumulative?: number,
-  allYears: YearRunData[] = ALL_YEARS_DATA
+  allYears: YearRunData[] = ALL_YEARS_DATA,
+  adultExpansionFactor: number = ADULT_EXPANSION_FACTOR
 ): ProjectionModelResult {
   const clampedDay = Math.max(0, Math.min(SEASON_DAYS.length - 1, dayIndex));
   const selectedDay = SEASON_DAYS[clampedDay];
@@ -181,7 +182,7 @@ export function calculateProjection(
     percentElapsedHistorical: pctElapsed,
     currentCumulative,
     projectedBaselineIndex: baselineProjected,
-    projectedBaselineAdults: Math.round(baselineProjected * ADULT_EXPANSION_FACTOR),
+    projectedBaselineAdults: Math.round(baselineProjected * adultExpansionFactor),
     projectedLowCI: lowCI,
     projectedHighCI: highCI,
     confidenceLevel: Math.min(95, Math.round(50 + pctElapsed * 0.45)),
@@ -191,7 +192,7 @@ export function calculateProjection(
         name: 'Early Run (Early Peak Passed)',
         description: 'Assumes run peak occurred early. Remaining run will taper quickly.',
         projectedIndex: earlyProjected,
-        projectedAdults: Math.round(earlyProjected * ADULT_EXPANSION_FACTOR),
+        projectedAdults: Math.round(earlyProjected * adultExpansionFactor),
         timingOffsetDays: -5,
         confidencePct: 30,
       },
@@ -199,7 +200,7 @@ export function calculateProjection(
         name: 'Normal 10-Yr Timing Model',
         description: 'Standard timing baseline with migration pulses tracking historical shape.',
         projectedIndex: baselineProjected,
-        projectedAdults: Math.round(baselineProjected * ADULT_EXPANSION_FACTOR),
+        projectedAdults: Math.round(baselineProjected * adultExpansionFactor),
         timingOffsetDays: 0,
         confidencePct: 50,
       },
@@ -207,7 +208,7 @@ export function calculateProjection(
         name: 'Late Run Surge (Delayed Peak)',
         description: 'Assumes cooler water or freshet delayed migration; strong late August/September push expected.',
         projectedIndex: lateProjected,
-        projectedAdults: Math.round(lateProjected * ADULT_EXPANSION_FACTOR),
+        projectedAdults: Math.round(lateProjected * adultExpansionFactor),
         timingOffsetDays: 5,
         confidencePct: 20,
       },
