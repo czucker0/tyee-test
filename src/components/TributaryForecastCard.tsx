@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TributaryEscapement, RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile } from '../types/steelhead';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -29,8 +29,18 @@ import {
   AlertTriangle,
   ExternalLink,
   Map,
+  CloudRain,
+  Sun,
+  Droplets,
+  Gauge,
 } from 'lucide-react';
 import { RiverAccessMapModal } from './RiverAccessMapModal';
+import { TributaryHydroWeatherModal } from './TributaryHydroWeatherModal';
+import {
+  fetchTributaryWeatherAndHydro,
+  TributaryWeatherProfile,
+  SKEENA_HYDRO_STATIONS,
+} from '../services/hydroWeatherService';
 
 interface TributaryForecastCardProps {
   tributaries: TributaryEscapement[];
@@ -104,6 +114,32 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
     tribalProtocols?: any;
     initialPointId?: string;
   } | null>(null);
+
+  // Weather & Hydro Profiles Cache & Modal State
+  const [weatherProfiles, setWeatherProfiles] = useState<{ [riverName: string]: TributaryWeatherProfile }>({});
+  const [selectedHydroModalProfile, setSelectedHydroModalProfile] = useState<TributaryWeatherProfile | null>(null);
+
+  // Load weather and hydro telemetry on mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadAllWeather = async () => {
+      const keys = Object.keys(SKEENA_HYDRO_STATIONS);
+      for (const k of keys) {
+        try {
+          const prof = await fetchTributaryWeatherAndHydro(k);
+          if (isMounted) {
+            setWeatherProfiles((prev) => ({ ...prev, [k]: prof }));
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+    loadAllWeather();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleTrib = (name: string) => {
     setExpandedTribs((prev) => ({
@@ -185,7 +221,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
     }
   };
 
-  const allExpandedState = tributaries.every((t) => expandedTribs[t.name]);
+  const allExpandedState = tributaries.length > 0 && tributaries.every((t) => expandedTribs[t.name]);
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 transition-colors duration-200">
@@ -250,6 +286,65 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
         </div>
       </div>
 
+      {/* Mainstem Quick Telemetry Banner: Lower Skeena & Middle Skeena */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
+        {/* Lower Skeena (Tidewater to Terrace) */}
+        {weatherProfiles['Lower Skeena'] && (
+          <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-500 shrink-0">
+                <Waves className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="font-bold text-[var(--text-main)] text-xs">
+                  Lower Skeena (Tidewater to Terrace)
+                </div>
+                <div className="text-[10px] text-[var(--text-secondary)]">
+                  Estuary Corridor &bull; Transit: 2–6 Days &bull; ~1,450 m³/s
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedHydroModalProfile(weatherProfiles['Lower Skeena'])}
+              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--border-main)] font-bold transition flex items-center gap-1 shrink-0 text-[11px]"
+              title="Open Lower Skeena 5-day weather and hydro outlook"
+            >
+              <Thermometer className="w-3 h-3 text-amber-500" />
+              <span>{weatherProfiles['Lower Skeena'].hydro.waterTempC}°C</span>
+              <span className="text-[10px] text-[var(--text-muted)]">({weatherProfiles['Lower Skeena'].current.tempC}°C Air)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Middle Skeena (Terrace to Hazelton / Usk) */}
+        {weatherProfiles['Middle Skeena'] && (
+          <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-500 shrink-0">
+                <Gauge className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="font-bold text-[var(--text-main)] text-xs">
+                  Middle Skeena (Terrace to Hazelton / Usk)
+                </div>
+                <div className="text-[10px] text-[var(--text-secondary)]">
+                  Station 08EF001 &bull; Transit: 7–16 Days &bull; ~1,120 m³/s
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedHydroModalProfile(weatherProfiles['Middle Skeena'])}
+              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--border-main)] font-bold transition flex items-center gap-1 shrink-0 text-[11px]"
+              title="Open Middle Skeena / Usk 5-day weather and hydro outlook"
+            >
+              <Thermometer className="w-3 h-3 text-amber-500" />
+              <span>{weatherProfiles['Middle Skeena'].hydro.waterTempC}°C</span>
+              <span className="text-[10px] text-[var(--text-muted)]">({weatherProfiles['Middle Skeena'].current.tempC}°C Air)</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* 2. Watershed Proportion Visualizer Bar */}
       <div className="space-y-2 font-mono">
         <div className="flex justify-between items-center text-xs text-[var(--text-muted)]">
@@ -285,7 +380,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
         </div>
       </div>
 
-      {/* 4. List of Interactive Expandable River Cards */}
+      {/* 3. List of Interactive Expandable River Cards */}
       <div className="space-y-3 pt-1">
         {tributaries.map((t) => {
           const isExpanded = !!expandedTribs[t.name];
@@ -297,6 +392,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
           };
           const sci = t.scientificProfile;
           const adminIntel = t.adminTacticalIntel;
+          const hydroProfile = weatherProfiles[t.name];
 
           return (
             <div
@@ -308,12 +404,12 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               }`}
             >
               {/* Clickable Card Header */}
-              <button
-                onClick={() => toggleTrib(t.name)}
-                className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left transition hover:bg-[var(--border-light)]/30"
-              >
+              <div className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left transition hover:bg-[var(--border-light)]/30">
                 {/* Left: River Name, Region, Status Badge */}
-                <div className="flex items-start gap-3">
+                <div
+                  className="flex items-start gap-3 cursor-pointer flex-1"
+                  onClick={() => toggleTrib(t.name)}
+                >
                   <div className="mt-1 flex items-center justify-center">
                     <span className={`w-3.5 h-3.5 rounded-full ${colorMeta.dot} shrink-0 shadow-sm`} />
                   </div>
@@ -336,10 +432,29 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Key Metrics & Expand Toggle */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 border-t sm:border-t-0 border-[var(--border-main)] pt-2.5 sm:pt-0 font-mono">
+                {/* Right: Hydro Pill, Key Metrics & Expand Toggle */}
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-4 border-t sm:border-t-0 border-[var(--border-main)] pt-2.5 sm:pt-0 font-mono flex-wrap sm:flex-nowrap">
+                  {/* Real-Time Hydro & Weather Badge */}
+                  {hydroProfile && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedHydroModalProfile(hydroProfile);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--accent-teal)]/10 text-[var(--text-main)] hover:text-[var(--accent-teal)] border border-[var(--border-main)] transition shadow-xs flex items-center gap-1.5 text-[11px]"
+                      title="Click to open 5-day weather forecast & real-time hydrograph"
+                    >
+                      <Thermometer className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span className="font-bold">{hydroProfile.hydro.waterTempC}°C</span>
+                      <span className="text-[10px] text-[var(--text-muted)] hidden md:inline">
+                        • {hydroProfile.hydro.dischargeM3s} m³/s
+                      </span>
+                      <Sun className="w-3 h-3 text-amber-500 ml-0.5" />
+                    </button>
+                  )}
+
                   {/* Stock Share % */}
-                  <div className="text-left sm:text-right">
+                  <div className="text-left sm:text-right" onClick={() => toggleTrib(t.name)}>
                     <span className="text-xs text-[var(--text-secondary)] font-medium block uppercase tracking-wider">Share</span>
                     <span className="text-sm sm:text-base font-extrabold text-[var(--accent-teal)]">
                       {t.sharePct}%
@@ -347,7 +462,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
 
                   {/* Est Passed to Date */}
-                  <div className="text-left sm:text-right">
+                  <div className="text-left sm:text-right" onClick={() => toggleTrib(t.name)}>
                     <span className="text-xs text-[var(--text-secondary)] font-medium block uppercase tracking-wider">To Date</span>
                     <span className="text-sm sm:text-base font-extrabold text-[var(--text-main)]">
                       {t.estimatedAdults.toLocaleString()} <span className="text-xs text-[var(--text-secondary)] font-normal">fish</span>
@@ -355,7 +470,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
 
                   {/* Projected Total Season */}
-                  <div className="text-left sm:text-right">
+                  <div className="text-left sm:text-right" onClick={() => toggleTrib(t.name)}>
                     <span className="text-xs text-[var(--text-secondary)] font-medium block uppercase tracking-wider">Projected</span>
                     <span className="text-sm sm:text-base font-extrabold text-[var(--accent-amber)]">
                       ~{t.projectedAdults.toLocaleString()}
@@ -363,24 +478,37 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
 
                   {/* Expand Chevron Icon */}
-                  <div className="p-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)]">
+                  <button
+                    onClick={() => toggleTrib(t.name)}
+                    className="p-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)]"
+                  >
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-[var(--accent-teal)]" />
                     ) : (
                       <ChevronDown className="w-4 h-4" />
                     )}
-                  </div>
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {/* Expandable Deep-Dive Scientific Dossier */}
               {isExpanded && (
                 <div className="px-4 sm:px-6 pb-5 pt-3 border-t border-[var(--border-main)] bg-[var(--bg-surface)] space-y-4 animate-in fade-in duration-200">
-                  {/* Sub-Basin Overview */}
-                  <div className="p-3.5 sm:p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--accent-teal)] uppercase tracking-wider font-mono">
-                      <Binary className="w-4 h-4" />
-                      <span>Ecological &amp; Sub-Basin Overview</span>
+                  {/* Sub-Basin Overview & Live Weather Quick Bar */}
+                  <div className="p-3.5 sm:p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--accent-teal)] uppercase tracking-wider font-mono">
+                        <Binary className="w-4 h-4" />
+                        <span>Ecological &amp; Sub-Basin Overview</span>
+                      </div>
+                      {hydroProfile && (
+                        <button
+                          onClick={() => setSelectedHydroModalProfile(hydroProfile)}
+                          className="text-[11px] font-mono text-[var(--accent-teal)] hover:underline font-semibold flex items-center gap-1"
+                        >
+                          <span>5-Day Weather &amp; Discharge &rarr;</span>
+                        </button>
+                      )}
                     </div>
                     <p className="font-sans text-xs sm:text-sm text-[var(--text-secondary)] font-medium leading-relaxed">
                       {t.description}
@@ -788,6 +916,15 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
           floatSafety={mapModalData.floatSafety}
           wadeSafety={mapModalData.wadeSafety}
           initialSelectedPointId={mapModalData.initialPointId}
+        />
+      )}
+
+      {/* Real-time 5-Day Weather & Hydrometric Deep Dive Modal */}
+      {selectedHydroModalProfile && (
+        <TributaryHydroWeatherModal
+          isOpen={true}
+          onClose={() => setSelectedHydroModalProfile(null)}
+          profile={selectedHydroModalProfile}
         />
       )}
     </div>

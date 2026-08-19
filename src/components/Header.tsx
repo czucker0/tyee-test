@@ -27,6 +27,8 @@ import { ClassicSalmonFlyIcon } from './ClassicSalmonFlyIcon';
 interface HeaderProps {
   onOpenAI: () => void;
   onOpenAbout: () => void;
+  onOpenUserGuide?: () => void;
+  onOpenTourModal?: () => void;
   onToggleSandbox: () => void;
   isSandboxOpen: boolean;
   onExportCSV: () => void;
@@ -38,6 +40,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenAI,
   onOpenAbout,
+  onOpenUserGuide,
+  onOpenTourModal,
   onToggleSandbox,
   isSandboxOpen,
   onExportCSV,
@@ -173,6 +177,30 @@ export const Header: React.FC<HeaderProps> = ({
                   <Download className="w-3.5 h-3.5" />
                 </button>
 
+                {/* What's New & Tour Modal Trigger */}
+                {onOpenTourModal && (
+                  <button
+                    onClick={onOpenTourModal}
+                    title="What's New in v3.0 & Quick Feature Tour"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--accent-amber-light)] hover:bg-[var(--accent-amber)] text-[var(--accent-amber)] hover:text-white border border-[var(--accent-amber-border)] text-xs font-mono font-bold transition shrink-0"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="hidden xl:inline">What&apos;s New</span>
+                  </button>
+                )}
+
+                {/* Field Guide & Manual */}
+                {onOpenUserGuide && (
+                  <button
+                    onClick={onOpenUserGuide}
+                    title="Open Skeena Field Manual & Master Reference"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] text-xs font-mono font-bold transition shrink-0"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                    <span className="hidden xl:inline">Field Manual</span>
+                  </button>
+                )}
+
                 {/* About */}
                 <button
                   onClick={onOpenAbout}
@@ -194,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* User Account / Profile - Desktop Only */}
               <div className="hidden lg:block border-l border-[var(--border-main)] pl-1.5 sm:pl-2 ml-0.5">
-                <UserProfileMenu onLoadScenario={onLoadScenario} />
+                <UserProfileMenu onLoadScenario={onLoadScenario} onOpenTourModal={onOpenTourModal} />
               </div>
             </div>
           </div>
@@ -320,6 +348,34 @@ export const Header: React.FC<HeaderProps> = ({
                   <Download className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>Export 10-Yr CSV</span>
                 </button>
+
+                {/* Field Guide & Manual */}
+                {onOpenUserGuide && (
+                  <button
+                    onClick={() => {
+                      onOpenUserGuide();
+                      setIsSidePanelOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono"
+                  >
+                    <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
+                    <span>Field Manual &amp; Reference</span>
+                  </button>
+                )}
+
+                {/* What's New & Tour Trigger */}
+                {onOpenTourModal && (
+                  <button
+                    onClick={() => {
+                      onOpenTourModal();
+                      setIsSidePanelOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--accent-amber)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>What&apos;s New &amp; Quick Tour</span>
+                  </button>
+                )}
 
                 {/* About Tyee */}
                 <button

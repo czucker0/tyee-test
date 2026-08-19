@@ -12,7 +12,10 @@ import {
   Sparkles,
   Trash2,
   Check,
-  Edit3
+  Edit3,
+  HelpCircle,
+  Sparkles,
+  Compass
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RiverRole } from '../types/auth';
@@ -44,9 +47,10 @@ const ROLE_LABELS: Record<RiverRole, { label: string; icon: string; badgeColor: 
 
 interface UserProfileMenuProps {
   onLoadScenario?: (multiplier: number, timingShiftDays: number) => void;
+  onOpenTourModal?: () => void;
 }
 
-export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario }) => {
+export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario, onOpenTourModal }) => {
   const { 
     user, 
     isAdmin,
@@ -60,7 +64,21 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
 
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'scenarios'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'scenarios' | 'settings'>('profile');
+
+  // Tour preference state (true = show on startup, false = hide)
+  const [showTourOnStartup, setShowTourOnStartup] = useState<boolean>(() => {
+    return localStorage.getItem('skeena_hide_tour_on_launch') !== 'true';
+  });
+
+  const handleToggleTourPreference = (checked: boolean) => {
+    setShowTourOnStartup(checked);
+    if (!checked) {
+      localStorage.setItem('skeena_hide_tour_on_launch', 'true');
+    } else {
+      localStorage.removeItem('skeena_hide_tour_on_launch');
+    }
+  };
 
   // Edit form state
   const [editName, setEditName] = useState(user?.displayName || '');
@@ -249,7 +267,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
                   : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
-              Account Details
+              Account
             </button>
             <button
               onClick={() => { setIsEditing(false); setActiveTab('scenarios'); }}
@@ -260,7 +278,18 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
               }`}
             >
               <Sliders className="w-3 h-3" />
-              <span>Saved Runs ({savedScenarios.length})</span>
+              <span>Saved ({savedScenarios.length})</span>
+            </button>
+            <button
+              onClick={() => { setIsEditing(false); setActiveTab('settings'); }}
+              className={`py-2 px-3 font-semibold border-b-2 transition flex items-center gap-1.5 ${
+                activeTab === 'settings'
+                  ? 'border-[var(--accent-amber)] text-[var(--accent-amber)]'
+                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              <Settings className="w-3 h-3" />
+              <span>Tour &amp; Prefs</span>
             </button>
           </div>
 
@@ -370,7 +399,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
                   ))
                 )}
               </div>
-            ) : (
+            ) : activeTab === 'profile' ? (
               <div className="space-y-3 text-xs font-mono">
                 <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
                   <div className="flex justify-between text-[var(--text-muted)]">
@@ -428,6 +457,47 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
                     </button>
                   </div>
                 )}
+              </div>
+            ) : (
+              /* Settings & Tour Tab */
+              <div className="space-y-3 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5">
+                  <div className="flex items-center gap-2 text-[var(--text-main)] font-bold">
+                    <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
+                    <span>What&apos;s New &amp; Tour Preferences</span>
+                  </div>
+
+                  <label className="flex items-start gap-2 text-[11px] font-sans text-[var(--text-secondary)] cursor-pointer select-none pt-1 border-t border-[var(--border-main)]">
+                    <input
+                      type="checkbox"
+                      checked={showTourOnStartup}
+                      onChange={(e) => handleToggleTourPreference(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-[var(--border-main)] text-[var(--accent-amber)] focus:ring-[var(--accent-amber)] bg-[var(--bg-card)] cursor-pointer accent-[var(--accent-amber)]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-bold text-[var(--text-main)] block font-mono">
+                        Show What&apos;s New on startup
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)] block mt-0.5">
+                        Automatically presents the version update and feature tour when opening the app.
+                      </span>
+                    </div>
+                  </label>
+
+                  {onOpenTourModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenTourModal();
+                      }}
+                      className="w-full mt-2 py-2 px-3 rounded-lg bg-[var(--accent-amber-light)] hover:bg-[var(--accent-amber)] text-[var(--accent-amber)] hover:text-white border border-[var(--accent-amber-border)] font-bold text-xs transition flex items-center justify-center gap-2 shadow-xs"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Launch What&apos;s New &amp; Quick Tour</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

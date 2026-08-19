@@ -5,12 +5,14 @@ import { APP_VERSION, getFormattedBuildTimestamp } from '../version';
 interface FooterProps {
   onOpenAbout: () => void;
   onOpenAI: () => void;
+  onOpenUserGuide?: () => void;
   onExportCSV: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAbout,
   onOpenAI,
+  onOpenUserGuide,
   onExportCSV,
 }) => {
   const formattedBuildTime = getFormattedBuildTimestamp();
@@ -58,6 +60,15 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Right Column: Quick Links & Actions */}
           <div className="flex items-center md:justify-end gap-2 flex-wrap text-xs font-mono">
+            {onOpenUserGuide && (
+              <button
+                onClick={onOpenUserGuide}
+                className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition flex items-center gap-1.5 font-bold"
+              >
+                <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                <span>Field Manual</span>
+              </button>
+            )}
             <button
               onClick={onOpenAbout}
               className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition flex items-center gap-1.5"
