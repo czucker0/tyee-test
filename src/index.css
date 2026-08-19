@@ -18,10 +18,10 @@
     --border-highlight: #c7b9a2;
     --border-accent: #c66c28;
 
-    --text-main: #191d1a;
-    --text-secondary: #424c46;
-    --text-muted: #6b776f;
-    --text-faint: #929e96;
+    --text-main: #141715;
+    --text-secondary: #333d37;
+    --text-muted: #57635c;
+    --text-faint: #7f8d84;
 
     --accent-amber: #c56a25;
     --accent-amber-light: #fcf4eb;
@@ -116,6 +116,14 @@
 .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   letter-spacing: -0.015em;
+  font-feature-settings: 'tnum' on, 'zero' on;
+}
+
+/* Enhanced Mobile Readability Utilities */
+@media (max-width: 640px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
 }
 
 /* Clean Journal Card Styles */
@@ -139,15 +147,16 @@
 /* Archival Badges & Stamps */
 .stamp-badge {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 0.25rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  line-height: 1.2;
 }
 
 .stamp-amber {

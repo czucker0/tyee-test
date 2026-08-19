@@ -93,10 +93,10 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Title & Subtitle in two lines, all caps */}
               <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="font-heading text-xs sm:text-base lg:text-lg font-black tracking-wider text-[var(--text-main)] uppercase leading-tight truncate">
+                <h1 className="font-heading text-sm sm:text-base lg:text-lg font-black tracking-wider text-[var(--text-main)] uppercase leading-tight truncate">
                   BKLYNFLY
                 </h1>
-                <p className="text-[9px] sm:text-[11px] lg:text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent-amber)] leading-tight truncate">
+                <p className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent-amber)] leading-tight truncate">
                   Skeena Steelhead Run Tracker
                 </p>
               </div>

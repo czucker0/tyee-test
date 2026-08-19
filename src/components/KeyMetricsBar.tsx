@@ -125,9 +125,9 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
         {/* 3 Core Hero Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
           {/* Hero Metric 1: Escapement to Date / Forecast on Date */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[11px]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">
                 {isBeyondRecordedData ? `Forecast on ${selectedMonthDay}` : `Passage to ${selectedMonthDay}`}
               </span>
               <Fish className="w-4 h-4 text-[var(--accent-teal)]" />
@@ -137,24 +137,24 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
                 <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] font-mono tracking-tight">
                   {activeCumulative.toFixed(1)}
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-[var(--accent-teal)] font-mono">
+                <span className="text-sm font-bold text-[var(--accent-teal)] font-mono">
                   ~{activeCumAdults.toLocaleString()} Adults
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] font-mono">
-              <span className="text-[var(--text-muted)]">vs 10-Yr Mean:</span>
-              <span className={`font-bold flex items-center gap-0.5 ${deltaVsAvgPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                {deltaVsAvgPct >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--border-main)] font-mono">
+              <span className="text-[var(--text-secondary)] font-medium">vs 10-Yr Mean:</span>
+              <span className={`font-bold flex items-center gap-0.5 ${deltaVsAvgPct >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                {deltaVsAvgPct >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {deltaVsAvgPct >= 0 ? `+${deltaVsAvgPct}%` : `${deltaVsAvgPct}%`}
               </span>
             </div>
           </div>
 
           {/* Hero Metric 2: Health & Standing */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[11px]">Escapement Health</span>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">Escapement Health</span>
               <ShieldCheck className="w-4 h-4 text-[var(--accent-spruce)]" />
             </div>
             <div className="my-2">
@@ -162,21 +162,21 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
                 <span className="stamp-badge stamp-spruce">
                   {projection.conservationTier}
                 </span>
-                <span className="text-xs font-mono text-[var(--text-secondary)] font-semibold">
+                <span className="text-xs sm:text-sm font-mono text-[var(--text-main)] font-bold">
                   {projection.escapementTargetPct}% Target
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] font-mono text-[var(--text-muted)]">
-              <span>Analog Season:</span>
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--border-main)] font-mono text-[var(--text-secondary)]">
+              <span className="font-medium">Analog Season:</span>
               <span className="font-bold text-[var(--accent-amber)] font-mono">{projection.bestFitAnalogYear}</span>
             </div>
           </div>
 
           {/* Hero Metric 3: Projected Season Total */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[11px]">Season Total Forecast</span>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">Season Total Forecast</span>
               <Target className="w-4 h-4 text-[var(--accent-amber)]" />
             </div>
             <div className="my-2">
@@ -184,14 +184,14 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
                 <span className="text-2xl sm:text-3xl font-extrabold text-[var(--accent-amber)] font-mono tracking-tight">
                   ~{projectedTotal.toFixed(0)}
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] font-mono">
+                <span className="text-sm font-bold text-[var(--text-secondary)] font-mono">
                   ~{projectedAdults.toLocaleString()} Adults
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] text-[var(--text-muted)] font-mono">
-              <span>80% CI:</span>
-              <span className="font-mono text-[var(--text-secondary)] font-semibold">
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--border-main)] text-[var(--text-secondary)] font-mono">
+              <span className="font-medium">80% CI:</span>
+              <span className="font-mono text-[var(--text-main)] font-bold">
                 ~{lowCIAdults.toLocaleString()} – ~{highCIAdults.toLocaleString()}
               </span>
             </div>
@@ -204,21 +204,21 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Detailed Card 1: To Date Telemetry / Future Forecast */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[10px]">
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">
                 {isBeyondRecordedData ? 'Projected Cumulative' : 'Actual DFO Recorded'}
               </span>
               <Fish className="w-4 h-4 text-[var(--accent-teal)]" />
             </div>
             <div className="my-2">
               <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{activeCumulative.toFixed(2)} pts</div>
-              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
-                Baseline Avg: <span className="text-[var(--text-secondary)] font-semibold">{histAvgCumulative.toFixed(1)} pts</span>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">
+                Baseline Avg: <span className="text-[var(--text-main)] font-bold">{histAvgCumulative.toFixed(1)} pts</span>
               </div>
             </div>
-            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
-              <span>10-Yr Delta:</span>
-              <span className={`font-bold ${deltaVsAvgPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">
+              <span className="font-medium">10-Yr Delta:</span>
+              <span className={`font-bold ${deltaVsAvgPct >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                 {deltaVsAvgPct >= 0 ? `+${deltaVsAvgPct}%` : `${deltaVsAvgPct}%`}
               </span>
             </div>
@@ -226,52 +226,52 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
 
           {/* Detailed Card 2: Migration Velocity */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[10px]">Migration Velocity</span>
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">Migration Velocity</span>
               <Gauge className="w-4 h-4 text-[var(--accent-amber)]" />
             </div>
             <div className="my-2">
               <div className="text-2xl font-bold font-mono text-[var(--text-main)]">+{rolling3DayPace.toFixed(2)} pts/day</div>
-              <div className="text-xs text-[var(--accent-amber)] font-mono mt-0.5">
+              <div className="text-xs text-[var(--accent-amber)] font-mono mt-0.5 font-bold">
                 ~{rollingAdultsPace.toLocaleString()} fish/day (3-Day Roll)
               </div>
             </div>
-            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
-              <span>Single Set ({selectedMonthDay}):</span>
+            <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">
+              <span className="font-medium">Single Set ({selectedMonthDay}):</span>
               <span className="text-[var(--text-main)] font-mono font-bold">{singleDaySet.toFixed(2)} pts</span>
             </div>
           </div>
 
           {/* Detailed Card 3: Season Peak Pulse */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[10px]">Peak Migration Pulse</span>
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">Peak Migration Pulse</span>
               <Activity className="w-4 h-4 text-[var(--accent-amber)]" />
             </div>
             <div className="my-2">
               <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{peakDailyIndex.toFixed(2)} pts</div>
-              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">
                 Recorded on <span className="text-[var(--accent-amber)] font-bold">{peakDate}</span>
               </div>
             </div>
-            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
-              <span>Run Timing Phase:</span>
+            <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">
+              <span className="font-medium">Run Timing Phase:</span>
               <span className="text-[var(--accent-teal)] font-bold">{projection.percentElapsedHistorical}% Elapsed</span>
             </div>
           </div>
 
           {/* Detailed Card 4: Escapement Multipliers */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <span className="uppercase tracking-wider text-[10px]">Expansion Standard</span>
+            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono font-bold">
+              <span className="uppercase tracking-wider">Expansion Standard</span>
               <Compass className="w-4 h-4 text-[var(--accent-teal)]" />
             </div>
             <div className="my-2">
               <div className="text-2xl font-bold font-mono text-[var(--text-main)]">1.0 &approx; 220</div>
-              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">Adult Steelhead per pt</div>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">Adult Steelhead per pt</div>
             </div>
-            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
-              <span>Model Confidence:</span>
+            <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">
+              <span className="font-medium">Model Confidence:</span>
               <span className="text-[var(--accent-amber)] font-bold">{projection.confidenceLevel}%</span>
             </div>
           </div>

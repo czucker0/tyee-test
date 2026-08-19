@@ -61,6 +61,26 @@ export interface ProjectionModelResult {
   escapementTargetPct: number; // vs 45,000 fish target (900 index)
 }
 
+export interface TributaryScientificProfile {
+  basinAreaKm2: string;
+  migrationDistanceKm: string;
+  meanTravelVelocity: string;
+  lakeBuffering: string;
+  thermalRegime: string;
+  conservationPriority: string;
+  habitatEcology: string;
+  provincialRegulations: string;
+  monitoringMethodology: string;
+}
+
+export interface TributaryAdminTacticalIntel {
+  keyReaches: string;
+  tacticalBiteTriggers: string;
+  waterClarityDynamics: string;
+  estuaryPassageNotes: string;
+  historicalGuideNotes?: string;
+}
+
 export interface TributaryEscapement {
   name: string;
   region: string;
@@ -70,6 +90,8 @@ export interface TributaryEscapement {
   description: string;
   peakWindow: string;
   status: 'Critical' | 'Concern' | 'Fair' | 'Strong';
+  scientificProfile: TributaryScientificProfile;
+  adminTacticalIntel?: TributaryAdminTacticalIntel;
   timingTips?: {
     estuaryPassage: string;
     travelTimeFromTyee: string;

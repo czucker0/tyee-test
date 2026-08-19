@@ -534,17 +534,6 @@ export default function App() {
               tributaries={tributaries}
               selectedMonthDay={selectedMonthDay}
             />
-
-            {/* River Run Context & Comparison */}
-            <HistoricalComparisonTable
-              currentDayIndex={currentDayIndex}
-              projection={projection}
-              selectedMonthDay={selectedMonthDay}
-              isMetricInAdults={isMetricInAdults}
-              selectedYears={selectedYears}
-              onToggleYear={toggleYear}
-              allYears={effectiveAllYears}
-            />
           </div>
         )}
       </main>

@@ -240,6 +240,8 @@ export function getTributaryBreakdown(
       description: trib.description,
       peakWindow: trib.peakWindow,
       status,
+      scientificProfile: trib.scientificProfile,
+      adminTacticalIntel: trib.adminTacticalIntel,
       timingTips: trib.timingTips,
     };
   });
