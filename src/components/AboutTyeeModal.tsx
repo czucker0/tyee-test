@@ -69,7 +69,7 @@ export const AboutTyeeModal: React.FC<AboutTyeeModalProps> = ({ isOpen, onClose 
               The daily Tyee index is a standardized <strong>Catch-Per-Unit-Effort (CPUE)</strong> measurement. Based on long-term radio-telemetry, acoustic tag tracking, and counting weirs on the Babine and Sustut rivers:
             </p>
             <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-center font-mono font-bold text-[var(--text-main)] text-xs sm:text-sm my-1">
-              1.0 Cumulative Tyee Index Point &approx; {ADULT_EXPANSION_FACTOR} Adult Wild Steelhead
+              1.0 Cumulative Tyee Index Point ≈ {ADULT_EXPANSION_FACTOR} Adult Wild Steelhead
             </div>
             <p className="text-xs text-[var(--text-muted)] font-mono">
               For example, a cumulative index of 110 corresponds to approximately 24,200 adult wild steelhead entering the Skeena River system.

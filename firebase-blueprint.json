@@ -178,6 +178,170 @@
         }
       },
       "required": ["id", "userId", "date", "tributary", "notes", "createdAt", "updatedAt"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Public angler directory profile with zero PII for username search and friend invitations",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique identifier of the user",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name / handle of the angler",
+          "maxLength": 100
+        },
+        "riverRole": {
+          "type": "string",
+          "description": "River role or affiliation",
+          "enum": ["angler", "guide", "biologist", "conservationist", "resident", "guest"]
+        },
+        "preferredTributary": {
+          "type": "string",
+          "description": "Primary Skeena tributary",
+          "maxLength": 50
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Optional avatar URL",
+          "maxLength": 500
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of profile update",
+          "maxLength": 50
+        }
+      },
+      "required": ["userId", "displayName", "riverRole", "updatedAt"]
+    },
+    "SharedFieldNote": {
+      "title": "SharedFieldNote",
+      "description": "Field note shared privately with selected user IDs",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique note identifier",
+          "maxLength": 128
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the note owner",
+          "maxLength": 128
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the author",
+          "maxLength": 100
+        },
+        "authorRole": {
+          "type": "string",
+          "description": "River role of the author",
+          "maxLength": 50
+        },
+        "authorPhotoURL": {
+          "type": "string",
+          "description": "Author avatar photo",
+          "maxLength": 500
+        },
+        "sharedWithUserIds": {
+          "type": "array",
+          "description": "List of user UIDs granted private access to this note",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title": {
+          "type": "string",
+          "description": "Field log title",
+          "maxLength": 100
+        },
+        "tributary": {
+          "type": "string",
+          "description": "Tributary observed",
+          "maxLength": 50
+        },
+        "date": {
+          "type": "string",
+          "description": "Observation date in YYYY-MM-DD format",
+          "maxLength": 20
+        },
+        "time": {
+          "type": "string",
+          "description": "Observation time",
+          "maxLength": 10
+        },
+        "waterClarity": {
+          "type": "string",
+          "description": "Water clarity category",
+          "maxLength": 50
+        },
+        "waterTempC": {
+          "type": "number",
+          "description": "Water temperature in Celsius"
+        },
+        "waterLevelGauge": {
+          "type": "string",
+          "description": "Water level or gauge observation",
+          "maxLength": 50
+        },
+        "flyPattern": {
+          "type": "string",
+          "description": "Fly patterns or tackle used",
+          "maxLength": 100
+        },
+        "steelheadHooked": {
+          "type": "number",
+          "description": "Number of steelhead hooked"
+        },
+        "steelheadLanded": {
+          "type": "number",
+          "description": "Number of steelhead landed"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Angler notes and river observations",
+          "maxLength": 2000
+        },
+        "photos": {
+          "type": "array",
+          "description": "Attached photos",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isGpsCloaked": {
+          "type": "boolean",
+          "description": "Whether exact GPS coordinates are hidden from shared recipients"
+        },
+        "poolName": {
+          "type": "string",
+          "description": "Specific pool name (if not cloaked)",
+          "maxLength": 100
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude coordinate"
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude coordinate"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 50
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of update",
+          "maxLength": 50
+        }
+      },
+      "required": ["id", "authorId", "authorName", "sharedWithUserIds", "title", "tributary", "date", "notes", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -186,6 +350,18 @@
         "$ref": "#/entities/AdminRecord"
       },
       "description": "Stores administrator authorization records and allowed admin accounts."
+    },
+    "/publicProfiles/{userId}": {
+      "schema": {
+        "$ref": "#/entities/PublicProfile"
+      },
+      "description": "Stores non-PII angler public profiles for username search and friend invitations."
+    },
+    "/sharedFieldNotes/{noteId}": {
+      "schema": {
+        "$ref": "#/entities/SharedFieldNote"
+      },
+      "description": "Stores field notes shared privately with selected user IDs."
     },
     "/users/{userId}": {
       "schema": {

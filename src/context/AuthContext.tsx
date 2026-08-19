@@ -196,6 +196,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
 
+      // Sync non-PII Public Profile for angler username discovery
+      try {
+        const publicDocRef = doc(db, 'publicProfiles', userAccount.uid);
+        await setDoc(publicDocRef, {
+          userId: userAccount.uid,
+          displayName: userAccount.displayName,
+          riverRole: userAccount.riverRole,
+          preferredTributary: userAccount.preferredTributary || 'All Watershed (General)',
+          photoURL: userAccount.photoURL || '',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (pubErr) {
+        console.warn('Could not sync public angler profile:', pubErr);
+      }
+
       // If bootstrapped admin, ensure admin entry exists
       if (isUserAdmin && fbUser.email?.toLowerCase().trim() === BOOTSTRAP_ADMIN_EMAIL.toLowerCase()) {
         try {
@@ -492,6 +507,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           photoURL: updatedUser.photoURL || '',
           updatedAt: updatedUser.updatedAt
         }, { merge: true });
+
+        // Update public angler profile
+        try {
+          const publicDocRef = doc(db, 'publicProfiles', user.uid);
+          await setDoc(publicDocRef, {
+            userId: user.uid,
+            displayName: updatedUser.displayName,
+            riverRole: updatedUser.riverRole,
+            preferredTributary: updatedUser.preferredTributary || 'All Watershed (General)',
+            photoURL: updatedUser.photoURL || '',
+            updatedAt: updatedUser.updatedAt
+          }, { merge: true });
+        } catch (pubErr) {
+          console.warn('Could not update public profile:', pubErr);
+        }
+
         setUser(updatedUser);
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);

@@ -93,10 +93,75 @@ service cloud.firestore {
              data.updatedAt is string && data.updatedAt.size() <= 50;
     }
 
+    // Validation for Public Angler Profile (Zero PII)
+    function isValidPublicProfile(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'riverRole', 'updatedAt']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             data.riverRole is string && data.riverRole in ['angler', 'guide', 'biologist', 'conservationist', 'resident', 'guest'] &&
+             (!('preferredTributary' in data) || (data.preferredTributary is string && data.preferredTributary.size() <= 50)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    // Validation for Shared Field Note
+    function isValidSharedFieldNote(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'sharedWithUserIds', 'title', 'tributary', 'date', 'notes', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.authorId is string && data.authorId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 100 &&
+             data.sharedWithUserIds is list && data.sharedWithUserIds.size() <= 50 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.tributary is string && data.tributary.size() <= 50 &&
+             data.date is string && data.date.size() <= 20 &&
+             data.notes is string && data.notes.size() <= 2000 &&
+             (!('authorRole' in data) || (data.authorRole is string && data.authorRole.size() <= 50)) &&
+             (!('authorPhotoURL' in data) || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 500)) &&
+             (!('time' in data) || (data.time is string && data.time.size() <= 10)) &&
+             (!('waterClarity' in data) || (data.waterClarity is string && data.waterClarity.size() <= 50)) &&
+             (!('waterTempC' in data) || (data.waterTempC is number)) &&
+             (!('waterLevelGauge' in data) || (data.waterLevelGauge is string && data.waterLevelGauge.size() <= 50)) &&
+             (!('flyPattern' in data) || (data.flyPattern is string && data.flyPattern.size() <= 100)) &&
+             (!('steelheadHooked' in data) || (data.steelheadHooked is number)) &&
+             (!('steelheadLanded' in data) || (data.steelheadLanded is number)) &&
+             (!('photos' in data) || (data.photos is list && data.photos.size() <= 5)) &&
+             (!('isGpsCloaked' in data) || (data.isGpsCloaked is bool)) &&
+             (!('poolName' in data) || (data.poolName is string && data.poolName.size() <= 100)) &&
+             (!('lat' in data) || (data.lat is number)) &&
+             (!('lng' in data) || (data.lng is number)) &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
     // Test connection doc (public check without PII)
     match /test/{testId} {
       allow read: if true;
       allow write: if false;
+    }
+
+    // Public Angler Profiles (for directory search by username)
+    match /publicProfiles/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidPublicProfile(incoming());
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Shared Field Notes (Private peer-to-peer sharing among selected user IDs)
+    match /sharedFieldNotes/{noteId} {
+      allow get, list: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid ||
+        request.auth.uid in resource.data.sharedWithUserIds ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && isValidId(noteId) &&
+                       incoming().authorId == request.auth.uid &&
+                       isValidSharedFieldNote(incoming());
+      allow update: if isSignedIn() && isValidId(noteId) &&
+                       (isOwner(existing().authorId) || isAdmin()) &&
+                       isValidSharedFieldNote(incoming()) &&
+                       incoming().authorId == existing().authorId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && (isOwner(existing().authorId) || isAdmin());
     }
 
     // Admins Collection

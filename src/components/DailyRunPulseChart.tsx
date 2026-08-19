@@ -163,7 +163,8 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
               stroke={isDark ? '#475569' : '#a39b8c'}
               tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
               tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
-              interval={10}
+              interval="preserveStartEnd"
+              minTickGap={24}
             />
             <YAxis
               stroke={isDark ? '#475569' : '#a39b8c'}
