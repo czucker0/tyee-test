@@ -33,12 +33,16 @@ export async function requestFisheryAnalysis(payload: AnalysisPayload): Promise<
   }
 }
 
-export async function askFisheryBiologist(question: string, context: AnalysisPayload): Promise<string> {
+export async function askFisheryBiologist(
+  question: string,
+  context: AnalysisPayload,
+  history?: Array<{ role: 'user' | 'assistant'; text: string }>
+): Promise<string> {
   try {
     const res = await fetch('/api/gemini/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, context }),
+      body: JSON.stringify({ question, context, history }),
     });
 
     if (!res.ok) {
