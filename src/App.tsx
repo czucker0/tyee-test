@@ -25,7 +25,6 @@ import { TributaryForecastCard } from './components/TributaryForecastCard';
 import { HistoricalComparisonTable } from './components/HistoricalComparisonTable';
 import { HeadToHeadCompareCard } from './components/HeadToHeadCompareCard';
 import { HistoricalYearArchiveSearch } from './components/HistoricalYearArchiveSearch';
-import { SkeenaAlluvialStream } from './components/SkeenaAlluvialStream';
 import { WhatIfSandbox } from './components/WhatIfSandbox';
 import { AIAnalystModal } from './components/AIAnalystModal';
 import { AboutTyeeModal } from './components/AboutTyeeModal';
@@ -233,7 +232,7 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Tab definitions
+  // 4 Main Mobile-First Tabs
   const tabs = [
     {
       id: 'overview' as MainTabType,
@@ -241,12 +240,6 @@ export default function App() {
       shortLabel: 'Overview',
       icon: <TrendingUp className="w-4 h-4" />,
       badge: 'Live',
-    },
-    {
-      id: 'alluvial' as MainTabType,
-      label: 'Alluvial Flow Stream',
-      shortLabel: 'Streamflow',
-      icon: <Waves className="w-4 h-4" />,
     },
     {
       id: 'forecast' as MainTabType,
@@ -262,9 +255,10 @@ export default function App() {
     },
     {
       id: 'tributaries' as MainTabType,
-      label: 'Tributaries & Rivers',
-      shortLabel: 'Rivers',
+      label: 'Tributary Escapement',
+      shortLabel: 'Tributaries',
       icon: <MapPin className="w-4 h-4" />,
+      badge: '7 Rivers',
     },
   ];
 
@@ -325,8 +319,8 @@ export default function App() {
             latestRecordedDayIndex={latestRecordedDayIndex}
           />
 
-          {/* Segmented Tab Navigation - Full Width 5-Column Grid on sm+ screens */}
-          <div className="hidden sm:grid grid-cols-5 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
+          {/* Segmented Tab Navigation - Full Width 4-Column Grid on sm+ screens */}
+          <div className="hidden sm:grid grid-cols-4 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -424,25 +418,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. ALLUVIAL FLOW STREAM TAB */}
-        {activeTab === 'alluvial' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            <SkeenaAlluvialStream
-              currentDayIndex={currentDayIndex}
-              projection={projection}
-              isMetricInAdults={isMetricInAdults}
-              selectedMonthDay={selectedMonthDay}
-            />
-
-            {/* Tributary System Summaries */}
-            <TributaryForecastCard
-              tributaries={tributaries}
-              selectedMonthDay={selectedMonthDay}
-            />
-          </div>
-        )}
-
-        {/* 3. FORECAST & PROJECTIONS TAB */}
+        {/* 2. FORECAST & PROJECTIONS TAB */}
         {activeTab === 'forecast' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Statistical Projection & Multi-Scenario Models */}
@@ -533,18 +509,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. TRIBUTARIES & RIVERS TAB */}
+        {/* 4. TRIBUTARIES & RIVERS TAB */}
         {activeTab === 'tributaries' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Infographic Alluvial Stream */}
-            <SkeenaAlluvialStream
-              currentDayIndex={currentDayIndex}
-              projection={projection}
-              isMetricInAdults={isMetricInAdults}
-              selectedMonthDay={selectedMonthDay}
-            />
-
-            {/* Watershed Share Breakdown & River Profiles */}
+            {/* Watershed Share Breakdown & Interactive Expandable River Profiles */}
             <TributaryForecastCard
               tributaries={tributaries}
               selectedMonthDay={selectedMonthDay}
@@ -596,9 +564,9 @@ export default function App() {
         onClose={() => setIsAboutModalOpen(false)}
       />
 
-      {/* Mobile Fixed Bottom Navigation Bar (5 full-width tabs) */}
+      {/* Mobile Fixed Bottom Navigation Bar (4 full-width tabs) */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)]/95 border-t border-[var(--border-main)] backdrop-blur-md shadow-lg transition-colors duration-200">
-        <div className="grid grid-cols-5 h-14">
+        <div className="grid grid-cols-4 h-14">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (

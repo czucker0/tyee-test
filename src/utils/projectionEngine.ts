@@ -240,6 +240,7 @@ export function getTributaryBreakdown(
       description: trib.description,
       peakWindow: trib.peakWindow,
       status,
+      timingTips: trib.timingTips,
     };
   });
 }

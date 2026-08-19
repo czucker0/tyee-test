@@ -70,6 +70,15 @@ export interface TributaryEscapement {
   description: string;
   peakWindow: string;
   status: 'Critical' | 'Concern' | 'Fair' | 'Strong';
+  timingTips?: {
+    estuaryPassage: string;
+    travelTimeFromTyee: string;
+    primeHoldingWindow: string;
+    waterClarityNotes: string;
+    weatherTrigger: string;
+    keyReaches: string;
+    regulations: string;
+  };
 }
 
 export interface ComparisonMetric {
@@ -82,5 +91,5 @@ export interface ComparisonMetric {
   rankOnDate: number;
 }
 
-export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries';
+export type MainTabType = 'overview' | 'forecast' | 'compare' | 'tributaries';
 

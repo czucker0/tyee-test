@@ -62,10 +62,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { id: 'overview' as MainTabType, label: 'Overview & Telemetry', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'alluvial' as MainTabType, label: 'Alluvial Flow Stream', icon: <Waves className="w-4 h-4" /> },
     { id: 'forecast' as MainTabType, label: 'Forecast & Projections', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'compare' as MainTabType, label: 'Historical Comparison', icon: <ArrowRightLeft className="w-4 h-4" /> },
-    { id: 'tributaries' as MainTabType, label: 'Tributaries & Rivers', icon: <MapPin className="w-4 h-4" /> },
+    { id: 'tributaries' as MainTabType, label: 'Tributary Escapement', icon: <MapPin className="w-4 h-4" /> },
   ];
 
   return (
