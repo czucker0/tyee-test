@@ -134,9 +134,36 @@ export function compressImageFile(file: File | Blob, maxWidth = 1200, quality = 
   });
 }
 
+const PENDING_DELETES_KEY = 'skeena_pending_remote_deletions';
+
+function getPendingDeletions(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_DELETES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function addPendingDeletion(noteId: string): void {
+  try {
+    const list = getPendingDeletions();
+    if (!list.includes(noteId)) {
+      list.push(noteId);
+      localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(list));
+    }
+  } catch {}
+}
+
+function removePendingDeletion(noteId: string): void {
+  try {
+    const list = getPendingDeletions().filter((id) => id !== noteId);
+    localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(list));
+  } catch {}
+}
+
 /**
  * Encrypts and syncs all pending field notes to the private cloud collection
- * and pulls any cloud records down to local vault.
+ * and pulls any cloud records down to local vault with two-way deletion reconciliation.
  */
 export async function encryptAndSyncFieldNotes(
   userId: string, 
@@ -146,13 +173,25 @@ export async function encryptAndSyncFieldNotes(
   let syncedCount = 0;
 
   try {
-    // 1. Get local notes for user
+    // 1. Process any pending remote deletions queued from offline sessions
+    const pendingDeletions = getPendingDeletions();
+    for (const delId of pendingDeletions) {
+      try {
+        const docRef = doc(db, 'users', userId, 'privateFieldNotes', delId);
+        await deleteDoc(docRef);
+        removePendingDeletion(delId);
+      } catch (err) {
+        // Retry on next sync
+      }
+    }
+
+    // 2. Get local notes for user
     const localNotes = await getAllFieldNotesLocal(userId);
     const pendingNotes = localNotes.filter(
       n => n.storageMode === 'cloud_encrypted' && (n.syncStatus === 'pending_sync' || n.syncStatus === 'sync_error')
     );
 
-    // 2. Encrypt and upload pending notes
+    // 3. Encrypt and upload pending notes
     for (const note of pendingNotes) {
       try {
         const encrypted = await encryptObject(note, encryptionKeySeed);
@@ -183,16 +222,27 @@ export async function encryptAndSyncFieldNotes(
       }
     }
 
-    // 3. Pull down any remote notes that might exist in cloud from another device
+    // 4. Fetch cloud snapshot & reconcile deletions + additions across devices
     try {
       const notesColRef = collection(db, 'users', userId, 'privateFieldNotes');
       const cloudSnapshot = await getDocs(notesColRef);
-      
-      const localIds = new Set(localNotes.map(n => n.id));
+      const cloudDocMap = new Map(cloudSnapshot.docs.map((d) => [d.id, d.data() as EncryptedFieldNoteRecord]));
 
-      for (const docSnap of cloudSnapshot.docs) {
-        const remoteRecord = docSnap.data() as EncryptedFieldNoteRecord;
-        if (!localIds.has(remoteRecord.id)) {
+      // A. Reconcile deletions: Remove local notes that were previously synced but deleted from cloud on another device
+      for (const localNote of localNotes) {
+        if (localNote.storageMode === 'cloud_encrypted' && localNote.syncStatus === 'synced') {
+          if (!cloudDocMap.has(localNote.id)) {
+            await deleteFieldNoteLocal(localNote.id);
+          }
+        }
+      }
+
+      // B. Reconcile additions: Pull down remote notes that do not exist locally
+      const currentLocalNotes = await getAllFieldNotesLocal(userId);
+      const currentLocalIds = new Set(currentLocalNotes.map((n) => n.id));
+
+      for (const [remoteId, remoteRecord] of cloudDocMap.entries()) {
+        if (!currentLocalIds.has(remoteId)) {
           try {
             const decryptedNote = await decryptObject<FieldNote>(
               {
@@ -207,7 +257,7 @@ export async function encryptAndSyncFieldNotes(
             await saveFieldNoteLocal(decryptedNote);
             syncedCount++;
           } catch (decryptErr) {
-            console.warn('Could not decrypt remote cloud note:', remoteRecord.id, decryptErr);
+            console.warn('Could not decrypt remote cloud note:', remoteId, decryptErr);
           }
         }
       }
@@ -223,19 +273,23 @@ export async function encryptAndSyncFieldNotes(
 }
 
 /**
- * Deletes a note both locally and in the private Firestore cloud collection
+ * Deletes a note both locally and in the private Firestore cloud collection with offline queue support
  */
 export async function deleteFieldNoteBoth(userId: string, noteId: string): Promise<void> {
   // Delete locally
   await deleteFieldNoteLocal(noteId);
   
-  // Try deleting from cloud if online
-  if (navigator.onLine) {
+  // Try deleting from cloud if online; otherwise queue for next sync
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
     try {
       const docRef = doc(db, 'users', userId, 'privateFieldNotes', noteId);
       await deleteDoc(docRef);
+      removePendingDeletion(noteId);
     } catch (err) {
-      console.warn('Note deleted locally, cloud deletion queued or pending:', err);
+      addPendingDeletion(noteId);
+      console.warn('Note deleted locally, remote deletion queued:', err);
     }
+  } else {
+    addPendingDeletion(noteId);
   }
 }
