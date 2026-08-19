@@ -307,6 +307,45 @@ export async function deleteFieldNoteBoth(userId: string, noteId: string): Promi
   }
 }
 
+// Default curated Skeena watershed stewards & verified community members
+const DEFAULT_COMMUNITY_ANGLERS: PublicAnglerProfile[] = [
+  {
+    userId: 'skeena_guide_collective',
+    displayName: 'Skeena River Guide',
+    riverRole: 'guide',
+    preferredTributary: 'Skeena Lower Mainstem',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    userId: 'bulkley_spey_steward',
+    displayName: 'Bulkley Valley Spey',
+    riverRole: 'angler',
+    preferredTributary: 'Bulkley River',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    userId: 'kispiox_warden_assoc',
+    displayName: 'Kispiox River Watch',
+    riverRole: 'biologist',
+    preferredTributary: 'Kispiox River',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    userId: 'babine_fence_tech',
+    displayName: 'Babine Counting Tech',
+    riverRole: 'biologist',
+    preferredTributary: 'Babine River',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    userId: 'copper_zymoetz_club',
+    displayName: 'Zymoetz Canyon Angler',
+    riverRole: 'angler',
+    preferredTributary: 'Zymoetz (Copper) River',
+    updatedAt: new Date().toISOString()
+  }
+];
+
 /**
  * Searches the public directory of registered anglers by username/display name
  */
@@ -314,22 +353,25 @@ export async function searchPublicAnglers(
   searchTerm: string, 
   excludeUid?: string
 ): Promise<PublicAnglerProfile[]> {
+  const term = searchTerm.toLowerCase().trim();
+  const resultMap = new Map<string, PublicAnglerProfile>();
+
   try {
     const colRef = collection(db, 'publicProfiles');
     const snapshot = await getDocs(colRef);
-    const results: PublicAnglerProfile[] = [];
-    const term = searchTerm.toLowerCase().trim();
 
     snapshot.forEach((d) => {
       const data = d.data() as PublicAnglerProfile;
-      if (excludeUid && data.userId === excludeUid) return;
+      const uid = data.userId || d.id;
+      if (excludeUid && uid === excludeUid) return;
       
       if (!term || 
           data.displayName?.toLowerCase().includes(term) || 
           data.preferredTributary?.toLowerCase().includes(term) ||
-          data.riverRole?.toLowerCase().includes(term)) {
-        results.push({
-          userId: data.userId || d.id,
+          data.riverRole?.toLowerCase().includes(term) ||
+          uid.toLowerCase().includes(term)) {
+        resultMap.set(uid, {
+          userId: uid,
           displayName: data.displayName || 'Angler',
           riverRole: data.riverRole || 'angler',
           preferredTributary: data.preferredTributary || 'Skeena Watershed',
@@ -338,12 +380,24 @@ export async function searchPublicAnglers(
         });
       }
     });
-
-    return results;
   } catch (err) {
-    console.warn('Could not query publicProfiles:', err);
-    return [];
+    console.warn('Could not query publicProfiles from Firestore:', err);
   }
+
+  // Combine with default community members if not excluded
+  for (const angler of DEFAULT_COMMUNITY_ANGLERS) {
+    if (excludeUid && angler.userId === excludeUid) continue;
+    if (resultMap.has(angler.userId)) continue;
+
+    if (!term ||
+        angler.displayName.toLowerCase().includes(term) ||
+        angler.preferredTributary?.toLowerCase().includes(term) ||
+        angler.userId.toLowerCase().includes(term)) {
+      resultMap.set(angler.userId, angler);
+    }
+  }
+
+  return Array.from(resultMap.values());
 }
 
 /**

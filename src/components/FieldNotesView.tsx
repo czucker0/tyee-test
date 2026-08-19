@@ -107,7 +107,8 @@ export const FieldNotesView: React.FC = () => {
   const [copiedReportId, setCopiedReportId] = useState<string | null>(null);
   const { openAuthModal } = useAuth();
   
-  // New Note Form State
+  // Note Form State (New & Edit Mode)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [formTributary, setFormTributary] = useState<string>('Bulkley River');
   const [formTitle, setFormTitle] = useState<string>('');
   const [formPoolName, setFormPoolName] = useState<string>('');
@@ -249,6 +250,23 @@ export const FieldNotesView: React.FC = () => {
     }
   };
 
+  // Add any angler handle directly by username
+  const handleAddDirectRecipient = (rawName: string) => {
+    const clean = rawName.trim();
+    if (!clean) return;
+    const newRecipient: PublicAnglerProfile = {
+      userId: clean,
+      displayName: clean,
+      riverRole: 'angler',
+      preferredTributary: 'Skeena Watershed',
+      updatedAt: new Date().toISOString()
+    };
+    if (!selectedShareRecipients.some((r) => r.userId.toLowerCase() === clean.toLowerCase())) {
+      setSelectedShareRecipients((prev) => [...prev, newRecipient]);
+    }
+    setShareSearchQuery('');
+  };
+
   // Remove recipient from sharing list
   const handleRemoveRecipient = (userIdToRemove: string) => {
     setSelectedShareRecipients((prev) => prev.filter((r) => r.userId !== userIdToRemove));
@@ -308,6 +326,19 @@ export const FieldNotesView: React.FC = () => {
       alert('Failed to revoke access: ' + (err.message || 'Unknown error'));
     } finally {
       setSavingShare(false);
+    }
+  };
+
+  // 1-Click direct unshare from note card
+  const handleDirectUnshare = async (note: FieldNote) => {
+    if (!confirm(`Revoke all shared access for "${note.title}" and make it private to your vault?`)) return;
+    try {
+      await unshareFieldNote(note);
+      await loadNotes();
+      setSyncNotice(`Field note "${note.title}" is now private (unshared).`);
+      setTimeout(() => setSyncNotice(null), 4000);
+    } catch (err: any) {
+      alert('Failed to unshare note: ' + (err.message || 'Check network'));
     }
   };
 
@@ -479,7 +510,7 @@ export const FieldNotesView: React.FC = () => {
     }
   };
 
-  // Save New Note
+  // Save New or Edited Note
   const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -487,55 +518,163 @@ export const FieldNotesView: React.FC = () => {
       return;
     }
 
-    const noteId = `note_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const nowIso = new Date().toISOString();
 
-    const newNote: FieldNote = {
-      id: noteId,
-      userId: userId,
-      title: formTitle.trim(),
-      tributary: formTributary,
-      location: {
-        lat: formLat,
-        lng: formLng,
-        riverSystem: formTributary,
-        poolName: formPoolName.trim() || undefined
-      },
-      date: formDate,
-      time: formTime,
-      waterClarity: formClarity,
-      waterTempC: formWaterTemp ? Number(formWaterTemp) : undefined,
-      waterLevelGauge: formGauge.trim() || undefined,
-      flyPattern: formFlyPattern.trim() || undefined,
-      steelheadHooked: formHooked,
-      steelheadLanded: formLanded,
-      notes: formNotes.trim(),
-      photos: formPhotos,
-      storageMode: formStorageMode,
-      syncStatus: formStorageMode === 'cloud_encrypted' ? (isOnline ? 'pending_sync' : 'pending_sync') : 'local_only',
-      createdAt: nowIso,
-      updatedAt: nowIso
-    };
+    if (editingNoteId) {
+      // UPDATE EXISTING NOTE
+      const existingNote = notes.find((n) => n.id === editingNoteId);
+      const updatedNote: FieldNote = {
+        id: editingNoteId,
+        userId: userId,
+        title: formTitle.trim(),
+        tributary: formTributary,
+        location: {
+          lat: formLat,
+          lng: formLng,
+          riverSystem: formTributary,
+          poolName: formPoolName.trim() || undefined
+        },
+        date: formDate,
+        time: formTime,
+        waterClarity: formClarity,
+        waterTempC: formWaterTemp ? Number(formWaterTemp) : undefined,
+        waterLevelGauge: formGauge.trim() || undefined,
+        flyPattern: formFlyPattern.trim() || undefined,
+        steelheadHooked: formHooked,
+        steelheadLanded: formLanded,
+        notes: formNotes.trim(),
+        photos: formPhotos,
+        storageMode: formStorageMode,
+        syncStatus: formStorageMode === 'cloud_encrypted' ? (isOnline ? 'pending_sync' : 'pending_sync') : 'local_only',
+        isShared: existingNote ? existingNote.isShared : false,
+        sharedWithUserIds: existingNote?.sharedWithUserIds || [],
+        sharedWithNames: existingNote?.sharedWithNames || {},
+        isGpsCloaked: existingNote?.isGpsCloaked || false,
+        createdAt: existingNote?.createdAt || nowIso,
+        updatedAt: nowIso
+      };
 
-    try {
-      await saveFieldNoteLocal(newNote);
-      setIsModalOpen(false);
-      resetForm();
-      await loadNotes();
+      try {
+        await saveFieldNoteLocal(updatedNote);
 
-      // Trigger automatic Encrypt & Sync if cloud mode & online
-      if (formStorageMode === 'cloud_encrypted' && isOnline) {
-        handleEncryptAndSync();
+        // If this note is already shared with peers, update the public shared record as well
+        if (updatedNote.isShared && user && updatedNote.sharedWithUserIds && updatedNote.sharedWithUserIds.length > 0) {
+          try {
+            await shareFieldNoteWithUsers(
+              updatedNote,
+              updatedNote.sharedWithUserIds,
+              updatedNote.sharedWithNames || {},
+              Boolean(updatedNote.isGpsCloaked),
+              user
+            );
+          } catch (sharedUpdateErr) {
+            console.warn('Could not update shared peer record on edit:', sharedUpdateErr);
+          }
+        }
+
+        setIsModalOpen(false);
+        resetForm();
+        await loadNotes();
+        setSyncNotice(`Updated "${updatedNote.title}" in your field vault.`);
+        setTimeout(() => setSyncNotice(null), 4000);
+
+        if (formStorageMode === 'cloud_encrypted' && isOnline) {
+          handleEncryptAndSync();
+        }
+      } catch (err) {
+        console.error('Failed to update field note:', err);
+        alert('Error updating note in local vault.');
       }
-    } catch (err) {
-      console.error('Failed to save field note:', err);
-      alert('Error saving note to local vault.');
+    } else {
+      // CREATE NEW NOTE
+      const noteId = `note_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const newNote: FieldNote = {
+        id: noteId,
+        userId: userId,
+        title: formTitle.trim(),
+        tributary: formTributary,
+        location: {
+          lat: formLat,
+          lng: formLng,
+          riverSystem: formTributary,
+          poolName: formPoolName.trim() || undefined
+        },
+        date: formDate,
+        time: formTime,
+        waterClarity: formClarity,
+        waterTempC: formWaterTemp ? Number(formWaterTemp) : undefined,
+        waterLevelGauge: formGauge.trim() || undefined,
+        flyPattern: formFlyPattern.trim() || undefined,
+        steelheadHooked: formHooked,
+        steelheadLanded: formLanded,
+        notes: formNotes.trim(),
+        photos: formPhotos,
+        storageMode: formStorageMode,
+        syncStatus: formStorageMode === 'cloud_encrypted' ? (isOnline ? 'pending_sync' : 'pending_sync') : 'local_only',
+        createdAt: nowIso,
+        updatedAt: nowIso
+      };
+
+      try {
+        await saveFieldNoteLocal(newNote);
+        setIsModalOpen(false);
+        resetForm();
+        await loadNotes();
+
+        // Trigger automatic Encrypt & Sync if cloud mode & online
+        if (formStorageMode === 'cloud_encrypted' && isOnline) {
+          handleEncryptAndSync();
+        }
+      } catch (err) {
+        console.error('Failed to save field note:', err);
+        alert('Error saving note to local vault.');
+      }
     }
   };
 
+  // Open edit modal and populate fields
+  const handleOpenEditNote = (note: FieldNote) => {
+    setEditingNoteId(note.id);
+    setFormTributary(note.tributary);
+    setFormTitle(note.title);
+    setFormPoolName(note.location?.poolName || '');
+    setFormDate(note.date);
+    setFormTime(note.time || new Date().toTimeString().slice(0, 5));
+    setFormLat(note.location?.lat ?? TRIBUTARIES_COORDINATES[note.tributary]?.lat ?? 54.78);
+    setFormLng(note.location?.lng ?? TRIBUTARIES_COORDINATES[note.tributary]?.lng ?? -127.17);
+    setFormClarity(note.waterClarity || 'clear_tinted');
+    setFormWaterTemp(note.waterTempC !== undefined ? String(note.waterTempC) : '');
+    setFormGauge(note.waterLevelGauge || '');
+    setFormFlyPattern(note.flyPattern || '');
+    setFormHooked(note.steelheadHooked || 0);
+    setFormLanded(note.steelheadLanded || 0);
+    setFormNotes(note.notes || '');
+    setFormPhotos(note.photos || []);
+    setFormStorageMode(note.storageMode || 'cloud_encrypted');
+    setIsModalOpen(true);
+  };
+
+  // Open create new note modal
+  const handleOpenCreateNote = () => {
+    setEditingNoteId(null);
+    resetForm();
+    setFormTributary(selectedTributaryFilter === 'all' ? 'Bulkley River' : selectedTributaryFilter);
+    const coords = TRIBUTARIES_COORDINATES[selectedTributaryFilter === 'all' ? 'Bulkley River' : selectedTributaryFilter];
+    if (coords) {
+      setFormLat(coords.lat);
+      setFormLng(coords.lng);
+    }
+    setIsModalOpen(true);
+  };
+
   const resetForm = () => {
+    setEditingNoteId(null);
     setFormTitle('');
     setFormPoolName('');
+    setFormDate(new Date().toISOString().split('T')[0]);
+    setFormTime(new Date().toTimeString().slice(0, 5));
+    setFormWaterTemp('9.5');
+    setFormGauge('1.45m');
     setFormNotes('');
     setFormFlyPattern('');
     setFormHooked(0);
@@ -968,10 +1107,7 @@ export const FieldNotesView: React.FC = () => {
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormTributary(selectedTributaryFilter === 'all' ? 'Bulkley River' : selectedTributaryFilter);
-                      setIsModalOpen(true);
-                    }}
+                    onClick={handleOpenCreateNote}
                     className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-bold text-xs font-mono shadow-sm hover:opacity-90 transition inline-flex items-center gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
@@ -1151,46 +1287,70 @@ export const FieldNotesView: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Card Bottom Bar: Sharing Status & Actions */}
-                        <div className="pt-2 border-t border-[var(--border-main)] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                          <div className="flex items-center gap-2">
-                            {note.isShared && sharedCount > 0 ? (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1.5">
-                                <Users className="w-3.5 h-3.5" />
-                                <span>Shared with {sharedCount} Angler{sharedCount > 1 ? 's' : ''}</span>
-                                {note.isGpsCloaked && (
-                                  <span className="text-[10px] text-amber-500 font-normal">(GPS Cloaked)</span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)] text-[11px] flex items-center gap-1">
-                                <Lock className="w-3 h-3" />
-                                <span>Private Vault Only</span>
-                              </span>
-                            )}
-                          </div>
+                          {/* Card Bottom Bar: Sharing Status & Actions */}
+                          <div className="pt-2 border-t border-[var(--border-main)] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                            <div className="flex items-center gap-2">
+                              {note.isShared && sharedCount > 0 ? (
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5" />
+                                  <span>Shared with {sharedCount} Angler{sharedCount > 1 ? 's' : ''}</span>
+                                  {note.isGpsCloaked && (
+                                    <span className="text-[10px] text-amber-500 font-normal">(GPS Cloaked)</span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)] text-[11px] flex items-center gap-1">
+                                  <Lock className="w-3 h-3" />
+                                  <span>Private Vault Only</span>
+                                </span>
+                              )}
+                            </div>
 
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleCopyFormattedReport(note)}
-                              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1 text-[11px]"
-                              title="Copy report text to clipboard"
-                            >
-                              <Copy className="w-3 h-3" />
-                              <span>{copiedReportId === note.id ? 'Copied Log!' : 'Copy Summary'}</span>
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {/* Edit Note Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditNote(note)}
+                                className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1 text-[11px] font-semibold"
+                                title="Edit note details, water conditions, or flies"
+                              >
+                                <Sliders className="w-3 h-3 text-[var(--accent-amber)]" />
+                                <span>Edit Note</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenShareModal(note)}
-                              className="px-3 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 border border-sky-500/30 transition flex items-center gap-1.5 text-[11px] font-bold"
-                            >
-                              <Share2 className="w-3.5 h-3.5" />
-                              <span>{note.isShared ? 'Manage Sharing' : 'Share with Anglers'}</span>
-                            </button>
+                              {/* Direct Unshare Button (if currently shared) */}
+                              {note.isShared && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectUnshare(note)}
+                                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 transition flex items-center gap-1 text-[11px] font-semibold"
+                                  title="Instantly revoke all peer sharing and make this note private"
+                                >
+                                  <EyeOff className="w-3 h-3" />
+                                  <span>Unshare</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleCopyFormattedReport(note)}
+                                className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1 text-[11px]"
+                                title="Copy report text to clipboard"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>{copiedReportId === note.id ? 'Copied Log!' : 'Copy Summary'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenShareModal(note)}
+                                className="px-3 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 border border-sky-500/30 transition flex items-center gap-1.5 text-[11px] font-bold"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                <span>{note.isShared ? 'Manage Sharing' : 'Share with Anglers'}</span>
+                              </button>
+                            </div>
                           </div>
-                        </div>
                       </div>
                     );
                   })}
@@ -1472,7 +1632,7 @@ export const FieldNotesView: React.FC = () => {
               {/* Username Search Input */}
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
-                  Search Registered Anglers by Username
+                  Search Registered Anglers or Add by Username
                 </label>
                 <div className="relative">
                   <input
@@ -1484,6 +1644,27 @@ export const FieldNotesView: React.FC = () => {
                   />
                   <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-3 pointer-events-none" />
                 </div>
+
+                {/* Direct Add Option if user typed a username not already in selected list */}
+                {shareSearchQuery.trim() && !selectedShareRecipients.some(r => r.userId.toLowerCase() === shareSearchQuery.trim().toLowerCase()) && (
+                  <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-between gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-sky-500 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-[var(--text-main)]">Add "{shareSearchQuery.trim()}" directly</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">Share to this angler handle/username immediately</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddDirectRecipient(shareSearchQuery.trim())}
+                      className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 shrink-0"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Angler</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Search Results Dropdown/List */}
@@ -1652,7 +1833,7 @@ export const FieldNotesView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Create New Field Entry */}
+      {/* MODAL: Create or Edit Field Entry */}
       {/* ========================================================================= */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1664,19 +1845,24 @@ export const FieldNotesView: React.FC = () => {
             <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-main)] bg-[var(--bg-subtle)]">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-xl bg-amber-500/10 text-[var(--accent-amber)] border border-amber-500/30">
-                  <Lock className="w-5 h-5" />
+                  {editingNoteId ? <Sliders className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                 </div>
                 <div>
                   <h2 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
-                    New Private Field Note
+                    {editingNoteId ? 'Edit Field Note' : 'New Private Field Note'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] font-mono">
-                    AES-256 Zero-Knowledge Encrypted &bull; 100% Offline Capable
+                    {editingNoteId 
+                      ? 'Update river observations, water clarity, or secret coordinates'
+                      : 'AES-256 Zero-Knowledge Encrypted • 100% Offline Capable'}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingNoteId(null);
+                }}
                 className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition"
               >
                 <X className="w-5 h-5" />
@@ -1981,7 +2167,10 @@ export const FieldNotesView: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-main)]">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingNoteId(null);
+                  }}
                   className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] font-bold text-xs"
                 >
                   Cancel
@@ -1991,7 +2180,7 @@ export const FieldNotesView: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs font-mono shadow-sm flex items-center gap-1.5"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span>Save to Encrypted Vault</span>
+                  <span>{editingNoteId ? 'Update Field Note' : 'Save to Encrypted Vault'}</span>
                 </button>
               </div>
             </form>
