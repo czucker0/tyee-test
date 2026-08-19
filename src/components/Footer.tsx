@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Database, FileSpreadsheet, HelpCircle, Compass } from 'lucide-react';
+import { Clock, Database, FileSpreadsheet, HelpCircle, Compass, Fish } from 'lucide-react';
 import { APP_VERSION, BUILD_INFO, getFormattedBuildTimestamp } from '../version';
 import { CURRENT_YEAR } from '../data/historicalData';
 
@@ -11,6 +11,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAbout,
+  onOpenAI,
   onExportCSV,
 }) => {
   const formattedBuildTime = getFormattedBuildTimestamp();
@@ -58,6 +59,13 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Right Column: Quick Links & Actions */}
           <div className="flex items-center md:justify-end gap-2 flex-wrap text-xs font-mono">
+            <button
+              onClick={onOpenAI}
+              className="px-2.5 py-1.5 rounded-lg bg-[var(--accent-amber-light)] hover:bg-[var(--accent-amber)] hover:text-white text-[var(--accent-amber)] border border-[var(--accent-amber-border)] transition flex items-center gap-1.5 font-bold"
+            >
+              <Fish className="w-3.5 h-3.5" />
+              <span>Ask Steelie Dan</span>
+            </button>
             <button
               onClick={onOpenAbout}
               className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition flex items-center gap-1.5"

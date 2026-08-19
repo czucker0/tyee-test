@@ -24,15 +24,11 @@ import { MainTabType } from '../types/steelhead';
 import { ClassicSalmonFlyIcon } from './ClassicSalmonFlyIcon';
 
 interface HeaderProps {
-  selectedMonthDay: string;
-  isToday: boolean;
-  onResetToToday: () => void;
   onOpenAI: () => void;
   onOpenAbout: () => void;
   onToggleSandbox: () => void;
   isSandboxOpen: boolean;
   onExportCSV: () => void;
-  conservationTier: string;
   onLoadScenario?: (multiplier: number, timingShiftDays: number) => void;
   activeTab?: MainTabType;
   onSelectTab?: (tab: MainTabType) => void;
@@ -115,16 +111,16 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={toggleTheme}
                   title={`Switch to ${theme === 'light' ? 'Night Mode' : 'Day Mode'}`}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] hover:bg-[var(--bg-card)] transition shrink-0 font-bold"
                 >
                   {theme === 'light' ? (
                     <>
-                      <Moon className="w-3.5 h-3.5 text-stone-600 dark:text-blue-400" />
+                      <Moon className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                       <span className="hidden xl:inline">Night</span>
                     </>
                   ) : (
                     <>
-                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <Sun className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                       <span className="hidden xl:inline">Day</span>
                     </>
                   )}
@@ -156,15 +152,15 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="hidden xl:inline">Sandbox</span>
                 </button>
 
-                {/* AI Biologist */}
+                {/* Ask Steelie Dan AI */}
                 <button
                   onClick={onOpenAI}
-                  title="DFO & Skeena AI Biologist Analyst"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent-amber)] hover:opacity-90 text-white text-xs font-bold font-mono uppercase tracking-wider shadow-sm border border-[var(--accent-amber-border)] transition shrink-0"
+                  title="Ask Steelie Dan - The AI Wild Steelhead"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--accent-amber)] hover:opacity-95 text-white text-xs font-bold font-mono uppercase tracking-wider shadow-sm border border-[var(--accent-amber-border)] transition shrink-0"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                  <span className="hidden xl:inline">AI Biologist</span>
-                  <span className="xl:hidden">AI</span>
+                  <Fish className="w-3.5 h-3.5 text-white animate-pulse" />
+                  <span className="hidden xl:inline">Steelie Dan AI</span>
+                  <span className="xl:hidden">Steelie</span>
                 </button>
 
                 {/* Export CSV */}
@@ -277,11 +273,11 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => {
                     toggleTheme();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono mt-1"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono mt-1"
                 >
                   <div className="flex items-center gap-2.5">
-                    {theme === 'light' ? <Moon className="w-4 h-4 text-stone-600" /> : <Sun className="w-4 h-4 text-amber-400" />}
-                    <span>Theme: {theme === 'light' ? 'Day' : 'Night'}</span>
+                    {theme === 'light' ? <Moon className="w-4 h-4 text-blue-500 dark:text-blue-400" /> : <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400" />}
+                    <span>Theme: {theme === 'light' ? 'Night Mode' : 'Day Mode'}</span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-subtle)] border border-[var(--border-main)] font-bold text-[var(--accent-amber)]">
                     Toggle

@@ -297,15 +297,11 @@ export default function App() {
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-main)] flex flex-col font-sans selection:bg-[var(--accent-amber)] selection:text-white pb-16 sm:pb-0 transition-colors duration-200">
       {/* Top Header */}
       <Header
-        selectedMonthDay={selectedMonthDay}
-        isToday={isToday}
-        onResetToToday={handleResetToToday}
-        onOpenAI={() => setActiveTab('biologist')}
+        onOpenAI={() => setIsAIModalOpen(true)}
         onOpenAbout={() => setIsAboutModalOpen(true)}
         onToggleSandbox={() => setIsSandboxOpen(!isSandboxOpen)}
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
-        conservationTier={projection.conservationTier}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
         onLoadScenario={(m) => {
@@ -329,8 +325,8 @@ export default function App() {
             latestRecordedDayIndex={latestRecordedDayIndex}
           />
 
-          {/* Segmented Tab Navigation - Shown on desktop / tablet (hidden on mobile, accessible via slide-out menu) */}
-          <div className="hidden sm:grid grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
+          {/* Segmented Tab Navigation - Full Width 5-Column Grid on sm+ screens */}
+          <div className="hidden sm:grid grid-cols-5 gap-1.5 sm:gap-2 w-full font-mono py-0.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -349,7 +345,7 @@ export default function App() {
                   <span className="truncate">{tab.label}</span>
                   {tab.badge && (
                     <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold uppercase shrink-0 hidden lg:inline ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold uppercase shrink-0 hidden xl:inline ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)]'
@@ -411,6 +407,7 @@ export default function App() {
             <CumulativeRunChart
               currentDayIndex={currentDayIndex}
               projection={projection}
+              selectedMonthDay={selectedMonthDay}
               isMetricInAdults={isMetricInAdults}
               selectedYears={selectedYears}
               onToggleYear={toggleYear}
@@ -598,6 +595,36 @@ export default function App() {
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
       />
+
+      {/* Mobile Fixed Bottom Navigation Bar (5 full-width tabs) */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)]/95 border-t border-[var(--border-main)] backdrop-blur-md shadow-lg transition-colors duration-200">
+        <div className="grid grid-cols-5 h-14">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center justify-center gap-1 transition-colors relative font-mono ${
+                  isActive
+                    ? 'text-[var(--accent-amber)] font-bold'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 inset-x-2 h-0.5 bg-[var(--accent-amber)] rounded-full" />
+                )}
+                <div className={`${isActive ? 'scale-110' : ''} transition-transform`}>
+                  {tab.icon}
+                </div>
+                <span className="text-[10px] tracking-tight truncate max-w-full px-0.5">
+                  {tab.shortLabel}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* User Authentication & Profile Modal */}
       <AuthModal />

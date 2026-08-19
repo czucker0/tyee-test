@@ -28,6 +28,7 @@ import { useTheme } from '../context/ThemeContext';
 interface CumulativeRunChartProps {
   currentDayIndex: number;
   projection: ProjectionModelResult;
+  selectedMonthDay?: string;
   isMetricInAdults: boolean;
   selectedYears: number[];
   onToggleYear: (year: number) => void;
@@ -38,12 +39,14 @@ interface CumulativeRunChartProps {
 export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
   currentDayIndex,
   projection,
+  selectedMonthDay,
   isMetricInAdults,
   selectedYears,
   onSelectPreset,
   allYears = [],
 }) => {
   const { isDark } = useTheme();
+  const dateLabel = selectedMonthDay || SEASON_DAYS[currentDayIndex]?.monthDay || 'Selected Date';
   // Toggle between Horizontal Standings / Benchmark Bars and the S-Curve Line Chart
   const [visualMode, setVisualMode] = useState<'bars' | 'curve'>('bars');
   const [barScope, setBarScope] = useState<'onDate' | 'seasonTotal'>('onDate');
@@ -182,7 +185,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
     if (barScope === 'seasonTotal') {
       currentLabel = `${CURRENT_YEAR} (Forecast Final)`;
     } else if (isDateFuture) {
-      currentLabel = `${CURRENT_YEAR} (Projected on ${selectedMonthDay})`;
+      currentLabel = `${CURRENT_YEAR} (Projected on ${dateLabel})`;
     }
 
     barItems.push({
@@ -247,7 +250,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
 
   // Selected date info
   const selectedDayInfo = SEASON_DAYS[currentDayIndex] || SEASON_DAYS[0];
-  const selectedMonthDay = selectedDayInfo.monthDay;
+  const dateFormatted = selectedMonthDay || selectedDayInfo.monthDay;
 
   // Custom Tooltip for S-Curve Line Chart
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -298,13 +301,13 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
             {isSelectedDateFuture ? (
               <span className="stamp-badge stamp-amber">
                 <Sparkles className="w-3 h-3 text-[var(--accent-amber)]" />
-                Forecasting {selectedMonthDay}
+                Forecasting {dateFormatted}
               </span>
             ) : (
               <span className="stamp-badge stamp-teal">
                 <Fish className="w-3 h-3" />
                 <span>DFO Telemetry</span>
-                <span className="font-bold normal-case">({selectedMonthDay})</span>
+                <span className="font-bold normal-case">({dateFormatted})</span>
               </span>
             )}
           </div>
