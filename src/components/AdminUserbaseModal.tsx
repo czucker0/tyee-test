@@ -46,8 +46,11 @@ import {
   fetchUsageMetricsSummaries, 
   exportTelemetryToCSV, 
   clearTelemetryData, 
+  aggregateUserTelemetryStats,
+  exportUserStatsToCSV,
   TelemetryEvent, 
-  UsageMetricsSummary 
+  UsageMetricsSummary,
+  UserTelemetryStats
 } from '../utils/analytics';
 
 interface ScraperAuditLog {
@@ -162,6 +165,9 @@ export const AdminUserbaseModal: React.FC = () => {
   });
   const [eventCategoryFilter, setEventCategoryFilter] = useState<string>('all');
   const [eventSearchTerm, setEventSearchTerm] = useState('');
+  const [userStatsSearchTerm, setUserStatsSearchTerm] = useState('');
+  const [selectedUserFilterId, setSelectedUserFilterId] = useState<string | null>(null);
+  const [userStatsSortBy, setUserStatsSortBy] = useState<'score' | 'events' | 'queries' | 'lastActive'>('score');
 
   const fetchScraperStatus = useCallback(async () => {
     setIsScraperLoading(true);
@@ -450,13 +456,33 @@ export const AdminUserbaseModal: React.FC = () => {
   // Filtered telemetry events
   const filteredTelemetryEvents = recentEvents.filter(e => {
     const matchesCat = eventCategoryFilter === 'all' || e.category === eventCategoryFilter;
+    const matchesSelectedUser = !selectedUserFilterId || e.userId === selectedUserFilterId || e.userEmail === selectedUserFilterId;
     const matchesSearch = 
       e.action.toLowerCase().includes(eventSearchTerm.toLowerCase()) ||
       (e.userEmail && e.userEmail.toLowerCase().includes(eventSearchTerm.toLowerCase())) ||
       (e.tributary && e.tributary.toLowerCase().includes(eventSearchTerm.toLowerCase())) ||
       e.userRole.toLowerCase().includes(eventSearchTerm.toLowerCase());
-    return matchesCat && matchesSearch;
+    return matchesCat && matchesSelectedUser && matchesSearch;
   });
+
+  // Calculate Aggregated User Stats
+  const rawUserStats = aggregateUserTelemetryStats(recentEvents, allUsers);
+  const filteredUserStats = rawUserStats
+    .filter(u => {
+      const q = userStatsSearchTerm.toLowerCase();
+      return (
+        u.userId.toLowerCase().includes(q) ||
+        (u.userEmail && u.userEmail.toLowerCase().includes(q)) ||
+        u.userRole.toLowerCase().includes(q) ||
+        (u.favoriteTributary && u.favoriteTributary.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      if (userStatsSortBy === 'events') return b.totalEvents - a.totalEvents;
+      if (userStatsSortBy === 'queries') return b.tyeeQueries - a.tyeeQueries;
+      if (userStatsSortBy === 'lastActive') return b.lastActive.localeCompare(a.lastActive);
+      return b.activityScore - a.activityScore;
+    });
 
   // Calculate Sub-Basin Affinity Aggregates
   const subBasinTotals: Record<string, number> = {};
@@ -781,6 +807,204 @@ export const AdminUserbaseModal: React.FC = () => {
                       Anglers and river guides check run escapement curves prior to departure and log observations during evening debriefs.
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Per-User Usage & Activity Breakdown Table */}
+              <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
+                        <Users className="w-4 h-4 text-amber-500" />
+                        <span>Individual Per-User Usage Statistics ({filteredUserStats.length})</span>
+                      </h3>
+                      {selectedUserFilterId && (
+                        <button
+                          onClick={() => setSelectedUserFilterId(null)}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] flex items-center gap-1 font-mono hover:opacity-80"
+                        >
+                          <span>Filtered: {selectedUserFilterId}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      Detailed feature engagement, simulation runs, dossier lookups, and sub-basin affinity per researcher
+                    </p>
+                  </div>
+
+                  {/* Filter & Sorting Controls */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                      <input
+                        type="text"
+                        placeholder="Search user or email..."
+                        value={userStatsSearchTerm}
+                        onChange={(e) => setUserStatsSearchTerm(e.target.value)}
+                        className="pl-8 pr-3 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)] w-36 sm:w-44"
+                      />
+                    </div>
+
+                    <select
+                      value={userStatsSortBy}
+                      onChange={(e) => setUserStatsSortBy(e.target.value as any)}
+                      className="px-2.5 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
+                    >
+                      <option value="score">Sort: Activity Score</option>
+                      <option value="events">Sort: Total Events</option>
+                      <option value="queries">Sort: Tyee Queries</option>
+                      <option value="lastActive">Sort: Most Recent</option>
+                    </select>
+
+                    <button
+                      onClick={() => exportUserStatsToCSV(filteredUserStats)}
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] text-xs flex items-center gap-1 transition"
+                      title="Export Per-User Stats CSV"
+                    >
+                      <Download className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="hidden sm:inline">Export User CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border border-[var(--border-main)] rounded-xl overflow-hidden bg-[var(--bg-surface)] max-h-80 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-main)] text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                        <th className="py-2.5 px-3">User / Identity</th>
+                        <th className="py-2.5 px-3">Role</th>
+                        <th className="py-2.5 px-3 text-center">Score</th>
+                        <th className="py-2.5 px-3">Feature Activity Breakdown</th>
+                        <th className="py-2.5 px-3">Top Sub-Basin</th>
+                        <th className="py-2.5 px-3">Device</th>
+                        <th className="py-2.5 px-3">Last Active</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-main)] text-[11px]">
+                      {filteredUserStats.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-[var(--text-muted)]">
+                            No user activity records matching criteria.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUserStats.map((stat) => {
+                          const isSelected = selectedUserFilterId === stat.userId || selectedUserFilterId === stat.userEmail;
+                          return (
+                            <tr 
+                              key={stat.userId} 
+                              className={`transition ${isSelected ? 'bg-[var(--accent-amber-light)]/40 border-l-2 border-[var(--accent-amber)]' : 'hover:bg-[var(--bg-subtle)]'}`}
+                            >
+                              <td className="py-2.5 px-3">
+                                <div className="font-semibold text-[var(--text-main)] truncate max-w-[180px]">
+                                  {stat.userId}
+                                </div>
+                                <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[180px]">
+                                  {stat.userEmail || 'Guest / Unlinked'}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-mono capitalize ${
+                                  stat.userRole === 'biologist' ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20' :
+                                  stat.userRole === 'guide' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                                  stat.userRole === 'conservationist' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                                  'bg-[var(--border-light)] text-[var(--text-secondary)]'
+                                }`}>
+                                  {stat.userRole}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                <span className="font-bold text-[var(--accent-amber)] bg-[var(--accent-amber-light)] px-2 py-0.5 rounded-full text-[10px] border border-[var(--accent-amber-border)] font-mono">
+                                  {stat.activityScore}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {stat.tyeeQueries > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 font-mono" title="Tyee Queries">
+                                      {stat.tyeeQueries} Tyee
+                                    </span>
+                                  )}
+                                  {stat.simulatorRuns > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 font-mono" title="Simulator Runs">
+                                      {stat.simulatorRuns} Sim
+                                    </span>
+                                  )}
+                                  {stat.dossierDecryptions > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 font-mono" title="Dossier Decryptions">
+                                      {stat.dossierDecryptions} Vault
+                                    </span>
+                                  )}
+                                  {stat.satelliteMapViews > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono" title="Satellite Maps">
+                                      {stat.satelliteMapViews} Map
+                                    </span>
+                                  )}
+                                  {stat.observationsLogged > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-500 font-mono" title="Observations Logged">
+                                      {stat.observationsLogged} Logs
+                                    </span>
+                                  )}
+                                  {stat.reportsExported > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-mono" title="Exports">
+                                      {stat.reportsExported} Export
+                                    </span>
+                                  )}
+                                  {stat.totalEvents === 0 && (
+                                    <span className="text-[10px] text-[var(--text-muted)] italic">
+                                      Registered (Pending logs)
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-[var(--text-main)] truncate max-w-[140px]">
+                                {stat.favoriteTributary ? (
+                                  <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                                    {stat.favoriteTributary.split(' ')[0]}...
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)]">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-[10px] flex items-center gap-1 text-[var(--text-muted)]">
+                                  {stat.primaryDevice === 'Mobile' ? <Smartphone className="w-3 h-3 text-emerald-500" /> :
+                                   stat.primaryDevice === 'Tablet' ? <Tablet className="w-3 h-3 text-purple-500" /> :
+                                   <Monitor className="w-3 h-3 text-sky-500" />}
+                                  {stat.primaryDevice}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-[var(--text-muted)] whitespace-nowrap text-[10px]">
+                                {stat.lastActive ? stat.lastActive.slice(5, 16).replace('T', ' ') : '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedUserFilterId(null);
+                                    } else {
+                                      setSelectedUserFilterId(stat.userEmail || stat.userId);
+                                    }
+                                  }}
+                                  className={`px-2 py-1 rounded text-[10px] font-mono transition border ${
+                                    isSelected 
+                                      ? 'bg-[var(--accent-amber)] text-black border-[var(--accent-amber)] font-bold' 
+                                      : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border-[var(--border-main)]'
+                                  }`}
+                                  title="Filter audit stream by this user"
+                                >
+                                  {isSelected ? 'Clear Filter' : 'Filter Stream'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 

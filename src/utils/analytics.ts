@@ -36,6 +36,26 @@ export interface TelemetryEvent {
   sessionId: string;
 }
 
+export interface UserTelemetryStats {
+  userId: string;
+  userEmail: string | null;
+  userRole: string;
+  totalEvents: number;
+  tyeeQueries: number;
+  simulatorRuns: number;
+  dossierDecryptions: number;
+  satelliteMapViews: number;
+  observationsLogged: number;
+  reportsExported: number;
+  favoriteTributary: string | null;
+  topTributaries: { name: string; count: number }[];
+  primaryDevice: 'Desktop' | 'Mobile' | 'Tablet';
+  deviceCounts: Record<string, number>;
+  lastActive: string;
+  firstActive: string;
+  activityScore: number; // calculated score
+}
+
 export interface UsageMetricsSummary {
   date: string; // YYYY-MM-DD
   totalVisits: number;
@@ -459,6 +479,209 @@ export async function fetchUsageMetricsSummaries(): Promise<{
       peakActivityHour
     }
   };
+}
+
+/**
+ * Aggregates per-user usage statistics across events, combining with the registered allUsers list
+ */
+export function aggregateUserTelemetryStats(
+  events: TelemetryEvent[],
+  registeredUsers?: Array<{ uid: string; email?: string | null; displayName: string; riverRole: string; preferredTributary?: string }>
+): UserTelemetryStats[] {
+  const userMap: Record<string, {
+    userId: string;
+    userEmail: string | null;
+    userRole: string;
+    totalEvents: number;
+    tyeeQueries: number;
+    simulatorRuns: number;
+    dossierDecryptions: number;
+    satelliteMapViews: number;
+    observationsLogged: number;
+    reportsExported: number;
+    tributaries: Record<string, number>;
+    deviceCounts: Record<string, number>;
+    timestamps: string[];
+  }> = {};
+
+  // 1. Initialize registered users into the aggregation map with sensible defaults
+  if (registeredUsers && registeredUsers.length > 0) {
+    registeredUsers.forEach(u => {
+      const idKey = u.uid || u.email || 'unknown';
+      userMap[idKey] = {
+        userId: u.displayName ? `${u.displayName} (${u.uid.slice(0, 6)})` : u.uid,
+        userEmail: u.email || null,
+        userRole: u.riverRole || 'angler',
+        totalEvents: 0,
+        tyeeQueries: 0,
+        simulatorRuns: 0,
+        dossierDecryptions: 0,
+        satelliteMapViews: 0,
+        observationsLogged: 0,
+        reportsExported: 0,
+        tributaries: u.preferredTributary ? { [u.preferredTributary]: 1 } : {},
+        deviceCounts: { Desktop: 0, Mobile: 0, Tablet: 0 },
+        timestamps: []
+      };
+    });
+  }
+
+  // 2. Aggregate each telemetry event
+  events.forEach(evt => {
+    // Find or create user bucket
+    let key = evt.userId;
+    if (!key || key === 'guest_user') {
+      key = evt.userEmail ? evt.userEmail : 'guest_researcher';
+    }
+
+    if (!userMap[key]) {
+      userMap[key] = {
+        userId: evt.userId,
+        userEmail: evt.userEmail || null,
+        userRole: evt.userRole || 'angler',
+        totalEvents: 0,
+        tyeeQueries: 0,
+        simulatorRuns: 0,
+        dossierDecryptions: 0,
+        satelliteMapViews: 0,
+        observationsLogged: 0,
+        reportsExported: 0,
+        tributaries: {},
+        deviceCounts: { Desktop: 0, Mobile: 0, Tablet: 0 },
+        timestamps: []
+      };
+    }
+
+    const u = userMap[key];
+    u.totalEvents += 1;
+    u.timestamps.push(evt.timestamp);
+
+    if (evt.userEmail && !u.userEmail) u.userEmail = evt.userEmail;
+    if (evt.userRole) u.userRole = evt.userRole;
+
+    // Feature action breakdown
+    if (evt.type === 'TYEE_QUERY') u.tyeeQueries += 1;
+    else if (evt.type === 'SIMULATOR_RUN') u.simulatorRuns += 1;
+    else if (evt.type === 'DOSSIER_DECRYPT') u.dossierDecryptions += 1;
+    else if (evt.type === 'SATELLITE_MAP_VIEW') u.satelliteMapViews += 1;
+    else if (evt.type === 'OBSERVATION_LOGGED' || evt.type === 'SHARED_NOTE_CREATED') u.observationsLogged += 1;
+    else if (evt.type === 'REPORT_EXPORT') u.reportsExported += 1;
+
+    // Tributary affinity
+    if (evt.tributary) {
+      u.tributaries[evt.tributary] = (u.tributaries[evt.tributary] || 0) + 1;
+    }
+
+    // Device counts
+    if (evt.device) {
+      u.deviceCounts[evt.device] = (u.deviceCounts[evt.device] || 0) + 1;
+    }
+  });
+
+  // 3. Format into final UserTelemetryStats array
+  const results: UserTelemetryStats[] = Object.entries(userMap).map(([idKey, data]) => {
+    // Sort tributaries
+    const tribEntries = Object.entries(data.tributaries).sort((a, b) => b[1] - a[1]);
+    const topTributaries = tribEntries.map(([name, count]) => ({ name, count }));
+    const favoriteTributary = tribEntries.length > 0 ? tribEntries[0][0] : null;
+
+    // Determine primary device
+    let primaryDevice: 'Desktop' | 'Mobile' | 'Tablet' = 'Desktop';
+    let maxDeviceCount = -1;
+    Object.entries(data.deviceCounts).forEach(([dev, cnt]) => {
+      if (cnt > maxDeviceCount) {
+        maxDeviceCount = cnt;
+        primaryDevice = dev as any;
+      }
+    });
+
+    // Timestamps
+    const sortedTimes = data.timestamps.sort();
+    const firstActive = sortedTimes.length > 0 ? sortedTimes[0] : new Date().toISOString();
+    const lastActive = sortedTimes.length > 0 ? sortedTimes[sortedTimes.length - 1] : new Date().toISOString();
+
+    // Weighted activity score (Tyee=2, Sim=3, Dossier=5, Log=4, Export=3, Base=1)
+    const activityScore = 
+      (data.totalEvents * 1) + 
+      (data.tyeeQueries * 2) + 
+      (data.simulatorRuns * 3) + 
+      (data.dossierDecryptions * 5) + 
+      (data.observationsLogged * 4) + 
+      (data.reportsExported * 3);
+
+    return {
+      userId: data.userId || idKey,
+      userEmail: data.userEmail,
+      userRole: data.userRole,
+      totalEvents: data.totalEvents,
+      tyeeQueries: data.tyeeQueries,
+      simulatorRuns: data.simulatorRuns,
+      dossierDecryptions: data.dossierDecryptions,
+      satelliteMapViews: data.satelliteMapViews,
+      observationsLogged: data.observationsLogged,
+      reportsExported: data.reportsExported,
+      favoriteTributary,
+      topTributaries,
+      primaryDevice,
+      deviceCounts: data.deviceCounts,
+      lastActive,
+      firstActive,
+      activityScore
+    };
+  });
+
+  // Sort by activity score descending
+  return results.sort((a, b) => b.activityScore - a.activityScore);
+}
+
+/**
+ * Export aggregated per-user telemetry stats to CSV
+ */
+export function exportUserStatsToCSV(userStats: UserTelemetryStats[]): void {
+  if (!userStats.length) return;
+  const headers = [
+    'User ID',
+    'Email',
+    'Role',
+    'Total Events',
+    'Activity Score',
+    'Tyee Queries',
+    'Simulator Runs',
+    'Dossier Decryptions',
+    'Satellite Map Views',
+    'Field Observations Logged',
+    'Reports Exported',
+    'Top Sub-Basin Affinity',
+    'Primary Device',
+    'Last Active'
+  ];
+
+  const rows = userStats.map(u => [
+    `"${u.userId}"`,
+    `"${u.userEmail || 'N/A'}"`,
+    `"${u.userRole}"`,
+    u.totalEvents,
+    u.activityScore,
+    u.tyeeQueries,
+    u.simulatorRuns,
+    u.dossierDecryptions,
+    u.satelliteMapViews,
+    u.observationsLogged,
+    u.reportsExported,
+    `"${u.favoriteTributary || 'All Watershed'}"`,
+    `"${u.primaryDevice}"`,
+    `"${u.lastActive}"`
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `skeena_user_usage_stats_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /**
