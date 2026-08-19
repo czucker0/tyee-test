@@ -113,5 +113,5 @@ export interface ComparisonMetric {
   rankOnDate: number;
 }
 
-export type MainTabType = 'overview' | 'forecast' | 'compare' | 'tributaries';
+export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries' | 'biologist';
 

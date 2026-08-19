@@ -13,6 +13,9 @@ import {
   HelpCircle,
   Waves,
   RotateCcw,
+  Search,
+  Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { ProjectionModelResult, TributaryEscapement } from '../types/steelhead';
 import { requestFisheryAnalysis, askFisheryBiologist } from '../api/gemini';
@@ -88,12 +91,13 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
     const q = customPrompt || inputQuestion.trim();
     if (!q || isAsking) return;
 
-    const newMessages = [...messages, { role: 'user' as const, text: q }];
-    setMessages(newMessages);
+    const updatedUserList = [...messages, { role: 'user' as const, text: q }];
+    setMessages(updatedUserList);
     setInputQuestion('');
     setIsAsking(true);
 
     try {
+      let isStreaming = false;
       const answer = await askFisheryBiologist(
         q,
         {
@@ -109,13 +113,19 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
           conservationTier: projection.conservationTier,
           tributaries,
         },
-        newMessages
+        updatedUserList,
+        (_delta, fullText) => {
+          if (!isStreaming) {
+            isStreaming = true;
+          }
+          setMessages([...updatedUserList, { role: 'assistant', text: fullText }]);
+        }
       );
 
-      setMessages([...newMessages, { role: 'assistant', text: answer }]);
+      setMessages([...updatedUserList, { role: 'assistant', text: answer }]);
     } catch (e) {
       setMessages([
-        ...newMessages,
+        ...updatedUserList,
         {
           role: 'assistant',
           text: '*Splashing bubbles* Looks like the communications current got tangled in the weedlines! Ask me again in a second.',
@@ -160,6 +170,10 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
                 <span>Steelie Dan</span>
                 <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] normal-case tracking-normal px-2 py-0.5 rounded-full bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)]">
                   The AI Steelhead
+                </span>
+                <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Connected
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mt-0.5">
@@ -223,6 +237,22 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
           <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-card)]">
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+              {/* Ready / Connected Live Status Badge */}
+              <div className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-[var(--bg-surface)] to-emerald-500/5 border border-emerald-500/25 flex items-center justify-between text-xs font-mono text-emerald-400 shadow-sm">
+                <span className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span>
+                    <strong>Steelie Dan is holding in the sweet spot</strong> — Live Skeena Telemetry Active
+                  </span>
+                </span>
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 hidden sm:inline">
+                  Instant AI
+                </span>
+              </div>
+
               {messages.map((m, idx) => (
                 <div
                   key={idx}

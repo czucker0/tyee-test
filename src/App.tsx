@@ -485,7 +485,6 @@ export default function App() {
             <HeadToHeadCompareCard
               currentDayIndex={currentDayIndex}
               projection={projection}
-              selectedMonthDay={selectedMonthDay}
               isMetricInAdults={isMetricInAdults}
               selectedYears={selectedYears}
               onToggleYear={toggleYear}

@@ -392,7 +392,7 @@ export const AdminUserbaseModal: React.FC = () => {
                 </div>
                 <div className="divide-y divide-[var(--border-main)]">
                   {adminList.map((adm) => (
-                    <div key={adm.id} className="p-3 flex items-center justify-between">
+                    <div key={adm.adminId || adm.id || adm.email} className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-[var(--accent-amber)]" />
                         <div>
@@ -404,7 +404,7 @@ export const AdminUserbaseModal: React.FC = () => {
                       </div>
                       {adm.email.toLowerCase() !== BOOTSTRAP_ADMIN_EMAIL.toLowerCase() && (
                         <button
-                          onClick={() => handleRemoveAdmin(adm.id, adm.email)}
+                          onClick={() => handleRemoveAdmin(adm.adminId || adm.id || '', adm.email)}
                           className="p-1.5 text-[var(--text-muted)] hover:text-red-500 transition"
                           title="Revoke Admin"
                         >

@@ -19,6 +19,7 @@ export interface UserAccount {
 
 export interface AdminRecord {
   adminId: string;
+  id?: string;
   email: string;
   addedBy?: string;
   createdAt: string;

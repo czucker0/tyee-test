@@ -117,8 +117,8 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
 
         if (projItem) {
           row.ciRange = [
-            Math.round(projItem.projectedLowCI * mult * 10) / 10,
-            Math.round(projItem.projectedHighCI * mult * 10) / 10,
+            Math.round(projItem.projectedCumulativeLow * mult * 10) / 10,
+            Math.round(projItem.projectedCumulativeHigh * mult * 10) / 10,
           ];
         }
       }
