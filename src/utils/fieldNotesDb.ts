@@ -19,6 +19,30 @@ const DB_VERSION = 1;
 const STORE_NAME = 'field_notes';
 
 /**
+ * Recursively removes any object keys with undefined values to prevent Firestore crashes
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data
+      .filter((item) => item !== undefined)
+      .map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
+/**
  * Initializes and opens the IndexedDB database instance
  */
 function openIndexedDb(): Promise<IDBDatabase> {
@@ -212,7 +236,7 @@ export async function encryptAndSyncFieldNotes(
         };
 
         const noteDocRef = doc(db, 'users', userId, 'privateFieldNotes', note.id);
-        await setDoc(noteDocRef, record);
+        await setDoc(noteDocRef, sanitizeForFirestore(record));
 
         // Mark local note as synced
         note.syncStatus = 'synced';
@@ -443,7 +467,7 @@ export async function shareFieldNoteWithUsers(
   };
 
   try {
-    await setDoc(noteDocRef, sharedRecord);
+    await setDoc(noteDocRef, sanitizeForFirestore(sharedRecord));
 
     // Update local note with sharing metadata
     const updatedLocalNote: FieldNote = {

@@ -291,13 +291,28 @@ VOICE & COMEDY:
 - SPEY SNOB & ZZ TOP DEVOTEE: Loves swinging marabou/fox tube flies on 2-handed Spey rods on the dangle; loves ZZ Top's "Tube Fly Boogie". Utterly disdains indicators & dead-drifting.
 Directly answer any user question with river telemetry context, wit, and Spey pride. Keep answers punchy and under 250 words unless asked for a story.`;
 
+function getAiClient(): GoogleGenAI | null {
+  const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || '';
+  if (!key) return null;
+  return new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
+}
+
 // Endpoint for In-Season Fishery Analysis
 app.post('/api/gemini/analyze', async (req, res) => {
   try {
     const p = req.body;
-    if (!ai) {
-      return res.status(200).json({
-        analysis: `*Fins flicking through the glacier-fed currents of the Skeena...*\n\n**Steelie Dan's Run Telemetry Dispatch (${p.selectedDate})**\n\n- **Current River Pulse:** As of ${p.selectedDate}, our cumulative Tyee index is sitting at **${p.currentCumulative} points** (~${Math.round(p.currentCumulative * 220).toLocaleString()} wild chromers past the nets!).\n- **Migration Clock:** We're **${p.percentElapsed}%** through our summer run.\n- **Season Escapement Projection:** Tracking towards **${p.projectedBaselineAdults?.toLocaleString()} adult steelhead** (${p.projectedBaselineIndex} Tyee index points), within an 80% confidence corridor of ${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} fish.\n- **Status:** **${p.conservationTier?.toUpperCase()}** — looking like our best run since ${p.bestFitYear}!\n\n*Keep your flies swinging and watch the river temps, two-leggers!*`,
+    const aiInstance = getAiClient();
+    if (!aiInstance) {
+      return res.status(503).json({
+        isGeneric: true,
+        error: 'Server AI client not configured. Fall back to client-side model.'
       });
     }
 
@@ -318,7 +333,7 @@ Format in 4 punchy markdown sections:
 3. 🗺️ **Where Our Pods Are Heading** (Bulkley, Babine, Kispiox, Sustut)
 4. 🎣 **Dan's Advice: SWING A TUBE FLY!** (Roast bobbers/beads, praise swung tube flies, keep 'em wet)`;
 
-    const response = await ai.models.generateContent({
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
@@ -331,13 +346,9 @@ Format in 4 punchy markdown sections:
     res.json({ analysis: response.text || '' });
   } catch (error: any) {
     console.error('Error generating analysis:', error);
-    const p = req.body || {};
-    const curFish = Math.round((p.currentCumulative || 0) * 220).toLocaleString();
-    const adultTotal = (p.projectedBaselineAdults || 45000).toLocaleString();
-    const date = p.selectedDate || 'In-Season';
-
-    res.status(200).json({
-      analysis: `*Splashes silver tailfin in the cold, emerald current...*\n\n# 🐟 Steelie Dan's Upstream Escapement Dispatch\n**Live Skeena River Telemetry &bull; Evaluated as of ${date}**\n\n### 1. 🌊 Upstream Migration & Run Benchmark\nAs of **${date}**, we've officially pushed **${p.currentCumulative || 0} Tyee index points** through the test fishery (~**${curFish} wild chromers** safely past the nets!). Our season projection is tracking towards **~${adultTotal} adult wild steelhead** in the **${(p.conservationTier || 'Healthy').toUpperCase()}** tier!\n\n### 2. ⚡ The Tyee Gauntlet\nWe dodged DFO's test net skiff by hugging the bottom mud layer under the lead line on the high tide push. Water temperatures are a crisp **14.2°C**.\n\n### 3. 🎣 Dan's Advice: *SWING A TUBE FLY!*\nLeave the plastic bobbers and dead-drifted beads at home! Pick up a two-handed Spey rod, tie on a 2.5-inch **marabou tube fly**, and get ready for the crush on the dangle!\n\n*The tug is the drug!*`,
+    res.status(503).json({
+      isGeneric: true,
+      error: error.message || 'Error generating analysis on server'
     });
   }
 });
@@ -346,9 +357,11 @@ Format in 4 punchy markdown sections:
 app.post('/api/gemini/ask', async (req, res) => {
   try {
     const { question, context, history } = req.body;
-    if (!ai) {
-      return res.status(200).json({
-        answer: `*Splashes tailfin* As of ${context?.selectedDate || 'today'}, our Tyee cumulative index is ${context?.currentCumulative || 0} points (~${Math.round((context?.currentCumulative || 0) * 220).toLocaleString()} wild steelhead). We are projecting around ~${context?.projectedBaselineAdults?.toLocaleString() || '45,000'} adult steelhead. What else would you like to know from the Skeena?`,
+    const aiInstance = getAiClient();
+    if (!aiInstance) {
+      return res.status(503).json({
+        isGeneric: true,
+        error: 'Server AI client not configured. Fall back to client-side model.'
       });
     }
 
@@ -367,7 +380,7 @@ app.post('/api/gemini/ask', async (req, res) => {
     const telemetryLine = `[Telemetry: Date=${context?.selectedDate || 'In-Season'}, Day=${(context?.dayIndex ?? 67) + 1}/113, TyeeIndex=${context?.currentCumulative?.toFixed(1) || 0} (~${curFish} fish), ProjAdults=~${adults}, Status=${context?.conservationTier || 'Healthy'}]`;
     const prompt = `${telemetryLine}\n${conversationHistory.length > 0 ? `HISTORY:\n${conversationHistory.join('\n')}\n\n` : ''}QUESTION: "${question}"`;
 
-    const response = await ai.models.generateContent({
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
@@ -379,9 +392,10 @@ app.post('/api/gemini/ask', async (req, res) => {
 
     res.json({ answer: response.text || '' });
   } catch (error: any) {
-    console.error('Error answering question:', error);
-    res.status(200).json({
-      answer: `*Swishes tail with keen intelligence in the Skeena current*\n\nAs of **${req.body?.context?.selectedDate || 'today'}**, our Tyee cumulative index is sitting at **${req.body?.context?.currentCumulative || 0} points** (~${Math.round((req.body?.context?.currentCumulative || 0) * 220).toLocaleString()} wild steelhead past the test nets). We are projecting approximately **~${req.body?.context?.projectedBaselineAdults?.toLocaleString() || '45,000'} adult steelhead** across the entire watershed!\n\nWhat other river questions or fly fishing secrets can I help you with?`,
+    console.error('Error answering question on server:', error);
+    res.status(503).json({
+      isGeneric: true,
+      error: error.message || 'Error answering question on server'
     });
   }
 });
