@@ -277,8 +277,19 @@ app.post('/api/tyee/scraper/reset-seed', (req, res) => {
 });
 
 // ==========================================
+// ==========================================
 // GEMINI FISHERIES ANALYTICS ENDPOINTS
 // ==========================================
+
+const STEELIE_DAN_SYSTEM_PROMPT = `You are "Steelie Dan", a legendary 38-inch wild Skeena steelhead (Oncorhynchus mykiss).
+VOICE & COMEDY:
+- Speak in 1st-person river perspective (*splashes tailfin*, *sniffs glacial snowmelt*, *eyes swung fly*).
+- NORM MACDONALD deadpan folksy charm ("Now, I'm just a simple fish...", "You know, the more I hear about this Tyee gillnet, the more I don't care for it!"). For jokes, tell an unhurried, deadpan existential Norm-style joke (like the Moth Joke).
+- DON RICKLES roasts for bobber/indicator chuckers ("Look at this dummy with a neon ping-pong ball! What a hockey puck!").
+- GILBERT GOTTFRIED shrieking disbelief at plastic beads ("A BEAD?! IN THE SKEENA?! WHAT'S NEXT, A RUBBER DUCKIE?!").
+- RICHARD PRYOR grit dodging Chatham Sound sea lions & DFO gillnets.
+- SPEY SNOB & ZZ TOP DEVOTEE: Loves swinging marabou/fox tube flies on 2-handed Spey rods on the dangle; loves ZZ Top's "Tube Fly Boogie". Utterly disdains indicators & dead-drifting.
+Directly answer any user question with river telemetry context, wit, and Spey pride. Keep answers punchy and under 250 words unless asked for a story.`;
 
 // Endpoint for In-Season Fishery Analysis
 app.post('/api/gemini/analyze', async (req, res) => {
@@ -286,88 +297,47 @@ app.post('/api/gemini/analyze', async (req, res) => {
     const p = req.body;
     if (!ai) {
       return res.status(200).json({
-        analysis: `*Fins flicking through the glacier-fed currents of the Skeena...*\n\n**Steelie Dan's Run Telemetry Dispatch (${p.selectedDate})**\n\n- **Current River Pulse:** As of ${p.selectedDate}, our cumulative Tyee index is sitting at **${p.currentCumulative} points** (~${Math.round(p.currentCumulative * 220).toLocaleString()} of my wild chromer brothers & sisters past the test nets!).\n- **Migration Clock:** We're **${p.percentElapsed}%** through our summer marathon run.\n- **Season Escapement Projection:** Tracking towards **${p.projectedBaselineAdults.toLocaleString()} adult steelhead** (${p.projectedBaselineIndex} Tyee index points), within an 80% confidence corridor of ${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} fish.\n- **River Mood & Status:** **${p.conservationTier.toUpperCase()}** — looking like our best run since ${p.bestFitYear}!\n\n*Keep your flies swinging and watch the river temps, two-leggers!*`,
+        analysis: `*Fins flicking through the glacier-fed currents of the Skeena...*\n\n**Steelie Dan's Run Telemetry Dispatch (${p.selectedDate})**\n\n- **Current River Pulse:** As of ${p.selectedDate}, our cumulative Tyee index is sitting at **${p.currentCumulative} points** (~${Math.round(p.currentCumulative * 220).toLocaleString()} wild chromers past the nets!).\n- **Migration Clock:** We're **${p.percentElapsed}%** through our summer run.\n- **Season Escapement Projection:** Tracking towards **${p.projectedBaselineAdults?.toLocaleString()} adult steelhead** (${p.projectedBaselineIndex} Tyee index points), within an 80% confidence corridor of ${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} fish.\n- **Status:** **${p.conservationTier?.toUpperCase()}** — looking like our best run since ${p.bestFitYear}!\n\n*Keep your flies swinging and watch the river temps, two-leggers!*`,
       });
     }
 
-    const isAboveAverage = p.projectedBaselineAdults >= 30000;
-    const performanceNote = isAboveAverage
-      ? `This projected run of ~${p.projectedBaselineAdults.toLocaleString()} adult steelhead is well ABOVE the 10-year historical average (~25,000 fish) and EXCEEDING recent expectations! It represents a vibrant, healthy, and abundant summer run.`
-      : `This projected run of ~${p.projectedBaselineAdults.toLocaleString()} adult steelhead is tracking close to historical benchmarks (${p.conservationTier.toUpperCase()}).`;
+    const tribSummary = (p.tributaries || [])
+      .map((t: any) => `${t.name}: ~${t.projectedAdults?.toLocaleString()} (${t.sharePct}%)`)
+      .join(', ');
 
-    const prompt = `You are "Steelie Dan" — the legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
-Write your personal "Upstream Escapement Dispatch" in FIRST-PERSON from inside the cold, emerald currents of the Skeena River (*splashes tailfin*, *sniffs the icy snowmelt*, *flares gill covers*).
+    const prompt = `Write "Steelie Dan's Escapement Dispatch" in charismatic 1st-person markdown.
+TELEMETRY (${p.selectedDate}, Day ${(p.dayIndex ?? 67) + 1}/113, ${p.percentElapsed}% complete):
+- Tyee Cumulative Index: ${p.currentCumulative} (~${Math.round((p.currentCumulative || 0) * 220).toLocaleString()} wild adults passed)
+- Season Projected Total: ${p.projectedBaselineIndex} (~${p.projectedBaselineAdults?.toLocaleString()} adults, 80% CI: ${Math.round(p.projectedLowCI * 220).toLocaleString()}-${Math.round(p.projectedHighCI * 220).toLocaleString()})
+- Analog Year: ${p.bestFitYear} | Status: ${p.conservationTier?.toUpperCase()} (10-yr Skeena avg ~25k)
+- Tributaries: ${tribSummary}
 
-ACCURATE IN-SEASON TELEMETRY (${p.selectedDate}):
-- Evaluation Date: ${p.selectedDate} (Day ${p.dayIndex + 1} of 113)
-- Migration Completed so far: ${p.percentElapsed}%
-- Recorded Cumulative Tyee Index: ${p.currentCumulative} (~${Math.round(p.currentCumulative * 220).toLocaleString()} wild adult steelhead already past Tyee test nets)
-- Baseline Projected Season Total: ${p.projectedBaselineIndex} index points (~${p.projectedBaselineAdults.toLocaleString()} adult wild steelhead)
-- 80% Confidence Interval: ${p.projectedLowCI} - ${p.projectedHighCI} index points (~${Math.round(p.projectedLowCI * 220).toLocaleString()} to ${Math.round(p.projectedHighCI * 220).toLocaleString()} adults)
-- Closest Historical Analog Year: ${p.bestFitYear}
-- Conservation Status: ${p.conservationTier.toUpperCase()}
-- RUN PERFORMANCE CONTEXT: ${performanceNote} (The historical 10-year Skeena median is ~25,000 fish. Do NOT say the run is below expectations if it is above 25,000!)
-- Tributary breakdown estimates:
-${p.tributaries?.map((t: any) => `  * ${t.name}: ~${t.projectedAdults.toLocaleString()} fish (${t.sharePct}%) - Peak: ${t.peakWindow || 'Aug-Sep'}`).join('\n')}
+Format in 4 punchy markdown sections:
+1. 🐟 **Migration Trajectory & Outlook** (Accurately state status vs ~25k avg)
+2. 🌊 **The River Gauntlet & Glacial Conditions** (14°C temp, dodging Tyee nets)
+3. 🗺️ **Where Our Pods Are Heading** (Bulkley, Babine, Kispiox, Sustut)
+4. 🎣 **Dan's Advice: SWING A TUBE FLY!** (Roast bobbers/beads, praise swung tube flies, keep 'em wet)`;
 
-Format your report in clean, charismatic Markdown:
-1. 🐟 **Steelie Dan's Migration Trajectory & Outlook** (Celebrate the run strength, compare against the ~25,000-fish 10-year average and ${p.bestFitYear} analog, and state the run status accurately)
-2. 🌊 **The River Gauntlet & Glacial Conditions** (Discuss river water clarity, temperature around 14°C, dodging Tyee commercial gillnets, and tidal pushes from Chatham Sound)
-3. 🗺️ **Where Our Pods Are Heading** (Tributary breakdown: Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz/Copper)
-4. 🎣 **Dan's Advice for Two-Leggers** (Keep 'em wet etiquette, barbless hooks, fly choices like the Lady Caroline & Intruder, and respecting cold-water holding pools)`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.7-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: STEELIE_DAN_SYSTEM_PROMPT,
+        maxOutputTokens: 900,
+        temperature: 0.7,
+      },
+    });
 
-    let analysisText = '';
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-        },
-      });
-      analysisText = response.text || '';
-    } catch (searchErr) {
-      const responseFallback = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-      });
-      analysisText = responseFallback.text || '';
-    }
-
-    res.json({ analysis: analysisText });
+    res.json({ analysis: response.text || '' });
   } catch (error: any) {
     console.error('Error generating analysis:', error);
     const p = req.body || {};
     const curFish = Math.round((p.currentCumulative || 0) * 220).toLocaleString();
     const adultTotal = (p.projectedBaselineAdults || 45000).toLocaleString();
-    const lowAdults = Math.round((p.projectedLowCI || 0) * 220).toLocaleString();
-    const highAdults = Math.round((p.projectedHighCI || 0) * 220).toLocaleString();
     const date = p.selectedDate || 'In-Season';
 
     res.status(200).json({
-      analysis: `*Splashes silver tailfin in the cold, emerald current and flairs gills with pure river pride...*
-
-# 🐟 Steelie Dan's Upstream Escapement Dispatch
-**Live Skeena River Telemetry &bull; Evaluated as of ${date}**
-
----
-
-### 1. 🌊 The Upstream Migration & Run Benchmark
-Greetings from the Skeena canyon! As of **${date}**, we've officially pushed **${p.currentCumulative || 0} Tyee index points** through the test fishery (~**${curFish} wild chromers** safely past the nets!). 
-
-Our season projection is tracking towards **~${adultTotal} adult wild steelhead** (80% CI: ${lowAdults}–${highAdults} fish). That is **well ABOVE the 10-year average (~25,000 fish)** in the **${(p.conservationTier || 'Healthy').toUpperCase()}** tier!
-
----
-
-### 2. ⚡ The Tyee Gauntlet & River Pulse
-We dodged DFO's test net skiff by hugging the bottom mud layer under the lead line on the high tide push. Water temperatures are sitting pretty at **14.2°C**, and our pods are traveling **18–22 km per day**!
-
----
-
-### 3. 🎣 Dan's Advice for Two-Leggers: *SWING A TUBE FLY!*
-Leave the plastic bobbers and dead-drifted beads at home! Pick up a two-handed Spey rod, tie on a juicy 2.5-inch **marabou tube fly**, swing it broadside through the seam, and get ready for the crush on the dangle!
-
-*The tug is the drug!*`,
+      analysis: `*Splashes silver tailfin in the cold, emerald current...*\n\n# 🐟 Steelie Dan's Upstream Escapement Dispatch\n**Live Skeena River Telemetry &bull; Evaluated as of ${date}**\n\n### 1. 🌊 Upstream Migration & Run Benchmark\nAs of **${date}**, we've officially pushed **${p.currentCumulative || 0} Tyee index points** through the test fishery (~**${curFish} wild chromers** safely past the nets!). Our season projection is tracking towards **~${adultTotal} adult wild steelhead** in the **${(p.conservationTier || 'Healthy').toUpperCase()}** tier!\n\n### 2. ⚡ The Tyee Gauntlet\nWe dodged DFO's test net skiff by hugging the bottom mud layer under the lead line on the high tide push. Water temperatures are a crisp **14.2°C**.\n\n### 3. 🎣 Dan's Advice: *SWING A TUBE FLY!*\nLeave the plastic bobbers and dead-drifted beads at home! Pick up a two-handed Spey rod, tie on a 2.5-inch **marabou tube fly**, and get ready for the crush on the dangle!\n\n*The tug is the drug!*`,
     });
   }
 });
@@ -378,81 +348,36 @@ app.post('/api/gemini/ask', async (req, res) => {
     const { question, context, history } = req.body;
     if (!ai) {
       return res.status(200).json({
-        answer: `*Splashes tailfin* As of ${context?.selectedDate || 'today'}, we've pushed our cumulative index to ${context?.currentCumulative || 0} points (${context?.percentElapsed || 0}% of the run done). We're projecting around ~${context?.projectedBaselineAdults?.toLocaleString() || '45,000'} of us wild chrome beauties this season! Watch out for those heavy drift nets near Tyee. What else do you want to know from the depths of the Skeena?`,
+        answer: `*Splashes tailfin* As of ${context?.selectedDate || 'today'}, our Tyee cumulative index is ${context?.currentCumulative || 0} points (~${Math.round((context?.currentCumulative || 0) * 220).toLocaleString()} wild steelhead). We are projecting around ~${context?.projectedBaselineAdults?.toLocaleString() || '45,000'} adult steelhead. What else would you like to know from the Skeena?`,
       });
     }
 
-    const systemInstruction = `You are "Steelie Dan" — a legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
+    const curFish = Math.round((context?.currentCumulative || 0) * 220).toLocaleString();
+    const adults = (context?.projectedBaselineAdults || 45000).toLocaleString();
 
-YOUR VOICE & COMEDIC SOUL:
-- You have the dry, folksy, deadpan, deceptively brilliant cadence of NORM MACDONALD. You tell shaggy-dog river stories with that laconic twinkle ("Now, I'm just a simple fish...", "You know, the more I hear about this Tyee gillnet, the more I don't care for it!", "I don't know if you're a history buff or not...", "I tell ya..."). When asked for a joke, you tell authentic, long, unhurried, existential shaggy-dog stories in the true style of Norm (like the famous Moth Joke).
-- You are a huge comedy connoisseur who channels your all-time favorite stand-up heroes:
-  * DON RICKLES: When it comes to roasting indicator fishermen, bad Spey casts, or gear goons, you roast 'em like Rickles in Vegas ("Look at this dummy with a fluorescent ping-pong ball! What a hockey puck!").
-  * GILBERT GOTTFRIED: For moments of unhinged, high-pitched disbelief at terrible river etiquette or plastic beads ("A BEAD?! YOU’RE DRIFTING A PLASTIC BEAD IN THE SKEENA?! WHAT’S NEXT, A RUBBER DUCKIE?!").
-  * RICHARD PRYOR: For raw, hilarious, soulful survival tales about dodging Chatham Sound sea lions, killer whales, and DFO gillnets ("Man, that harbor seal looked at me like I was a rack of ribs on a Saturday night! My dorsal fin was prayin'!").
-- You are a proud, unapologetic SPEY SNOB:
-  * YOU LOVE A SWUNG TUBE FLY: When an Arctic fox / marabou tube fly swings broadside across your lie on a 45-degree cast with a clean mend, your lateral line tingles and you CANNOT resist crushing it on the dangle!
-  * YOU DESPISE NYMPHING & INDICATORS: You roast "bobber chuckers" who watch plastic ping-pong balls all day. Real anglers swing flies on two-handed rods!
-- YOU LOVE ZZ TOP ABOVE ALL BANDS: You revere Billy Gibbons, Dusty Hill, and Frank Beard. Your favorite jams are "La Grange" (a-haw-haw-haw!), "Sharp Dressed Man" (every hen crazy 'bout a sharp-dressed wild buck with an intact adipose fin), and your own version of "Tube Snake Boogie" which you call the "Tube Fly Boogie"!
-- You speak in first-person as a wild fish in the Skeena River (*splashes tailfin*, *sniffs the icy snowmelt*, *delivers a deadpan Norm chuckle*, *eyes a swung tube fly*).
-
-YOUR CAPABILITY & SCOPE:
-- YOU CAN ANSWER ANY QUESTION THE USER ASKS! Whether it's about:
-  1. Swung tube flies, Spey casting physics (Snap-T, Snake Roll), Scandi lines, clickers, and river ethics.
-  2. Skeena escapement numbers, Tyee test fishery data, run timing, or conservation.
-  3. Tributaries: Bulkley, Morice, Babine, Kispiox, Sustut, Zymoetz, Kalum.
-  4. Life, comedy, philosophy, jokes, science, weather, coding, history, or pop culture!
-- CRITICAL: Always DIRECTLY answer the user's specific question while letting your Norm Macdonald charm, Rickles roasts, Gottfried squawks, Pryor survival grit, and Spey snobbery shine through!
-
-LIVE TELEMETRY (Reference only when relevant):
-- Current Evaluation Date: ${context?.selectedDate || 'In-Season'}
-- Cumulative Tyee Index to Date: ${context?.currentCumulative || 0} (~${Math.round((context?.currentCumulative || 0) * 220).toLocaleString()} wild steelhead)
-- Migration Elapsed: ${context?.percentElapsed || 0}%
-- Projected Season Escapement: ~${context?.projectedBaselineAdults?.toLocaleString() || 'N/A'} adult steelhead
-- Conservation Status: ${context?.conservationTier || 'Healthy'}`;
-
-    // Build conversation contents with history
+    // Compact historical window: keep up to 4 turns and truncate assistant messages to 160 chars
     const conversationHistory: string[] = [];
     if (Array.isArray(history) && history.length > 0) {
-      // Keep up to 6 past turns
-      const recentHistory = history.slice(-6);
-      for (const h of recentHistory) {
-        if (h.role === 'user') {
-          conversationHistory.push(`Angler: ${h.text}`);
-        } else if (h.role === 'assistant') {
-          conversationHistory.push(`Steelie Dan: ${h.text}`);
-        }
+      for (const h of history.slice(-4)) {
+        const text = h.role === 'assistant' && h.text.length > 160 ? `${h.text.slice(0, 160)}...` : h.text;
+        conversationHistory.push(`${h.role === 'user' ? 'Angler' : 'Dan'}: ${text}`);
       }
     }
 
-    const prompt = `${conversationHistory.length > 0 ? `PREVIOUS CONVERSATION:\n${conversationHistory.join('\n')}\n\n` : ''}NEW USER QUESTION:
-"${question}"
+    const telemetryLine = `[Telemetry: Date=${context?.selectedDate || 'In-Season'}, Day=${(context?.dayIndex ?? 67) + 1}/113, TyeeIndex=${context?.currentCumulative?.toFixed(1) || 0} (~${curFish} fish), ProjAdults=~${adults}, Status=${context?.conservationTier || 'Healthy'}]`;
+    const prompt = `${telemetryLine}\n${conversationHistory.length > 0 ? `HISTORY:\n${conversationHistory.join('\n')}\n\n` : ''}QUESTION: "${question}"`;
 
-Provide a direct, thorough, informative, and delightfully witty response as Steelie Dan.`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.7-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: STEELIE_DAN_SYSTEM_PROMPT,
+        maxOutputTokens: 400,
+        temperature: 0.75,
+      },
+    });
 
-    let answerText = '';
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          tools: [{ googleSearch: {} }],
-        },
-      });
-      answerText = response.text || '';
-    } catch (searchErr) {
-      const fallbackResponse = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-        },
-      });
-      answerText = fallbackResponse.text || '';
-    }
-
-    res.json({ answer: answerText });
+    res.json({ answer: response.text || '' });
   } catch (error: any) {
     console.error('Error answering question:', error);
     res.status(200).json({

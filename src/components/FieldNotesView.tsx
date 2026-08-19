@@ -28,7 +28,9 @@ import {
   Fish,
   Thermometer,
   Droplets,
-  HelpCircle
+  HelpCircle,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { FieldNote, WaterClarityType, FieldNoteStorageMode } from '../types/fieldNotes';
@@ -99,6 +101,13 @@ export const FieldNotesView: React.FC = () => {
   const [formStorageMode, setFormStorageMode] = useState<FieldNoteStorageMode>('cloud_encrypted');
   const [isGeoLocating, setIsGeoLocating] = useState<boolean>(false);
   const [isCompressingPhoto, setIsCompressingPhoto] = useState<boolean>(false);
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
+
+  const handleCopyCoords = (lat: number, lng: number, noteId: string) => {
+    navigator.clipboard?.writeText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    setCopiedNoteId(noteId);
+    setTimeout(() => setCopiedNoteId(null), 2000);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -722,10 +731,44 @@ export const FieldNotesView: React.FC = () => {
                     {/* Coordinates & Water Conditions Badges */}
                     <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
                       {note.location.lat && note.location.lng && (
-                        <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)] text-[11px] flex items-center gap-1">
-                          <Compass className="w-3 h-3 text-[var(--accent-amber)]" />
-                          <span>GPS: {note.location.lat.toFixed(4)}, {note.location.lng.toFixed(4)}</span>
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCoords(note.location.lat, note.location.lng, note.id)}
+                            className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] text-[11px] flex items-center gap-1 transition"
+                            title="Click to copy exact GPS coordinates"
+                          >
+                            <Compass className="w-3 h-3 text-[var(--accent-amber)]" />
+                            <span>GPS: {note.location.lat.toFixed(4)}, {note.location.lng.toFixed(4)}</span>
+                            {copiedNoteId === note.id ? (
+                              <span className="text-emerald-500 font-bold text-[10px] ml-0.5">Copied!</span>
+                            ) : (
+                              <Copy className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                            )}
+                          </button>
+
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${note.location.lat},${note.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
+                            title="Open in Google Maps"
+                          >
+                            <span>Google Maps</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+
+                          <a
+                            href={`https://maps.apple.com/?q=${encodeURIComponent(note.title || note.tributary)}&ll=${note.location.lat},${note.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-zinc-300 border border-zinc-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
+                            title="Open in Apple Maps"
+                          >
+                            <span>Apple Maps</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
                       )}
 
                       {clarityInfo && (
@@ -930,6 +973,30 @@ export const FieldNotesView: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Map Preview Links */}
+                {formLat && formLng ? (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">Preview pin:</span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${formLat},${formLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5"
+                    >
+                      Google Maps <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                    <span className="text-zinc-500">&bull;</span>
+                    <a
+                      href={`https://maps.apple.com/?q=${encodeURIComponent(formTitle || formTributary)}&ll=${formLat},${formLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-zinc-400 hover:underline flex items-center gap-0.5"
+                    >
+                      Apple Maps <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                ) : null}
               </div>
 
               {/* Date, Time, Clarity, Temp */}
