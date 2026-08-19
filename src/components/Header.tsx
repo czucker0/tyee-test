@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="border-b border-[var(--border-main)] bg-[var(--bg-surface)] backdrop-blur-md sticky top-0 z-30 shadow-sm transition-colors duration-200 w-full">
+      <header className="border-b border-[var(--border-main)] bg-[var(--bg-surface)] backdrop-blur-md relative sm:sticky sm:top-0 z-30 shadow-sm transition-colors duration-200 w-full">
         <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-2.5">
           <div className="flex items-center justify-between gap-2 min-w-0">
             {/* Left Section: Mobile Hamburger + Brand Fly Illustration + Brand Logo/Title */}

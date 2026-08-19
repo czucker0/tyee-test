@@ -90,7 +90,19 @@ export default function App() {
   // Display Units: Tyee Index points vs Estimated Adult Steelhead
   const [isMetricInAdults, setIsMetricInAdults] = useState<boolean>(false);
 
-  // 5 Main Mobile-First Tabs
+  // Scroll detection for dynamic condensed sticky bar
+  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // 4 Main Mobile-First Tabs
   const [activeTab, setActiveTab] = useState<MainTabType>('overview');
 
   // Modals
@@ -304,9 +316,11 @@ export default function App() {
         }}
       />
 
-      {/* Timeline & Navigation Header Dock - Firmly Anchored Under Top Header */}
-      <div className="sticky top-[47px] sm:top-[53px] z-20 bg-[var(--bg-surface)]/95 border-b border-[var(--border-main)] shadow-sm backdrop-blur-md transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 space-y-2">
+      {/* Timeline & Navigation Header Dock - Anchored to top-0 on mobile, top-[53px] on desktop */}
+      <div className={`sticky top-0 sm:top-[53px] z-20 bg-[var(--bg-surface)]/95 border-b border-[var(--border-main)] shadow-sm backdrop-blur-md transition-all duration-200 ${
+        isScrolled ? 'py-1.5 sm:py-2' : 'py-2 sm:py-2.5'
+      }`}>
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 space-y-1.5 sm:space-y-2">
           {/* Date Slider Control */}
           <DateSliderControl
             currentDayIndex={currentDayIndex}
@@ -317,6 +331,7 @@ export default function App() {
             playSpeed={playSpeed}
             onChangeSpeed={(spd) => setPlaySpeed(spd)}
             latestRecordedDayIndex={latestRecordedDayIndex}
+            isCondensed={isScrolled}
           />
 
           {/* Segmented Tab Navigation - Full Width 4-Column Grid on sm+ screens */}
@@ -327,7 +342,9 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-[13px] font-bold transition ${
+                  className={`w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 ${
+                    isScrolled ? 'py-1.5 text-xs' : 'py-2 text-xs sm:text-[13px]'
+                  } rounded-lg font-bold transition ${
                     isActive
                       ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
                       : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)]'
