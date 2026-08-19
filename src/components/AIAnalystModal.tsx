@@ -93,19 +93,23 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
     setIsAsking(true);
 
     try {
-      const answer = await askFisheryBiologist(q, {
-        selectedDate: selectedMonthDay,
-        dayIndex: projection.dayIndex,
-        percentElapsed: projection.percentElapsedHistorical,
-        currentCumulative: projection.currentCumulative,
-        projectedBaselineIndex: projection.projectedBaselineIndex,
-        projectedBaselineAdults: projection.projectedBaselineAdults,
-        projectedLowCI: projection.projectedLowCI,
-        projectedHighCI: projection.projectedHighCI,
-        bestFitYear: projection.bestFitAnalogYear,
-        conservationTier: projection.conservationTier,
-        tributaries,
-      });
+      const answer = await askFisheryBiologist(
+        q,
+        {
+          selectedDate: selectedMonthDay,
+          dayIndex: projection.dayIndex,
+          percentElapsed: projection.percentElapsedHistorical,
+          currentCumulative: projection.currentCumulative,
+          projectedBaselineIndex: projection.projectedBaselineIndex,
+          projectedBaselineAdults: projection.projectedBaselineAdults,
+          projectedLowCI: projection.projectedLowCI,
+          projectedHighCI: projection.projectedHighCI,
+          bestFitYear: projection.bestFitAnalogYear,
+          conservationTier: projection.conservationTier,
+          tributaries,
+        },
+        newMessages
+      );
 
       setMessages([...newMessages, { role: 'assistant', text: answer }]);
     } catch (e) {
@@ -122,10 +126,10 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
   };
 
   const promptSuggestions = [
-    'How are you dodging the Tyee test nets this year?',
-    'Are you heading for the Babine, Kispiox, or Bulkley?',
-    'How does 2026 feel compared to the 2018 record year?',
-    'What fly patterns do you actually look at when swinging?',
+    'What fly patterns do you actually look at in clear vs glacial water?',
+    'What is the best Spey casting tip for casting into an upstream wind?',
+    'Why do you travel up to the Babine and Kispiox rivers?',
+    'Explain the physics of a Skagit head and sink tip from a fish perspective',
   ];
 
   if (!isOpen) return null;
