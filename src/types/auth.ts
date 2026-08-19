@@ -13,6 +13,9 @@ export interface UserAccount {
   alertThreshold: number; // escapement trigger
   isLocalOnly: boolean;
   isAdmin?: boolean;
+  isBanned?: boolean;
+  bannedAt?: string;
+  bannedReason?: string;
   createdAt: string;
   updatedAt: string;
 }

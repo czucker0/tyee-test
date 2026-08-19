@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TributaryEscapement, RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile } from '../types/steelhead';
+import { TributaryEscapement, RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile, TribalAccessProtocol, TributaryAdminTacticalIntel } from '../types/steelhead';
 import { useAuth } from '../context/AuthContext';
 import {
   MapPin,
@@ -33,19 +33,45 @@ import {
   Sun,
   Droplets,
   Gauge,
+  KeyRound,
+  ShieldAlert,
 } from 'lucide-react';
 import { RiverAccessMapModal } from './RiverAccessMapModal';
 import { TributaryHydroWeatherModal } from './TributaryHydroWeatherModal';
+import { trackSiteEvent } from '../utils/analytics';
 import {
   fetchTributaryWeatherAndHydro,
   TributaryWeatherProfile,
   SKEENA_HYDRO_STATIONS,
 } from '../services/hydroWeatherService';
+import { ENCRYPTED_TRIBUTARY_VAULT } from '../data/encryptedDossierVault';
+import { decryptTributaryDossier } from '../utils/dossierSecurity';
 
 interface TributaryForecastCardProps {
   tributaries: TributaryEscapement[];
   selectedMonthDay: string;
 }
+
+// Map tributary name to encrypted vault key
+const TRIBUTARY_KEY_MAP: Record<string, string> = {
+  'Bulkley / Morice River System': 'bulkley',
+  'Babine River': 'babine',
+  'Kispiox River': 'kispiox',
+  'Zymoetz (Copper) River': 'zymoetz',
+  'Sustut River': 'sustut',
+  'Kalum (Kitsumkalum) River': 'kalum',
+  'Upper Skeena & Other Tributaries': 'upper_skeena',
+};
+
+const VAULT_BASIN_MAP: Record<string, string> = {
+  bulkley: 'Bulkley / Morice River System',
+  babine: 'Babine River',
+  kispiox: 'Kispiox River',
+  zymoetz: 'Zymoetz (Copper) River',
+  sustut: 'Sustut River',
+  kalum: 'Kalum (Kitsumkalum) River',
+  upper_skeena: 'Upper Skeena & Other Tributaries',
+};
 
 // Signature color coding for rivers
 const RIVER_COLORS: { [key: string]: { border: string; bg: string; dot: string; text: string } } = {
@@ -80,10 +106,10 @@ const RIVER_COLORS: { [key: string]: { border: string; bg: string; dot: string; 
     text: 'text-purple-500',
   },
   'Kalum (Kitsumkalum) River': {
-    border: 'border-slate-500/40',
-    bg: 'bg-slate-500/10',
-    dot: 'bg-slate-500',
-    text: 'text-slate-400',
+    border: 'border-emerald-500/40',
+    bg: 'bg-emerald-500/10',
+    dot: 'bg-emerald-500',
+    text: 'text-emerald-500',
   },
   'Upper Skeena & Other Tributaries': {
     border: 'border-yellow-600/40',
@@ -93,17 +119,30 @@ const RIVER_COLORS: { [key: string]: { border: string; bg: string; dot: string; 
   },
 };
 
+interface DecryptedDossierData {
+  adminTacticalIntel?: TributaryAdminTacticalIntel;
+  accessPoints?: RiverAccessPoint[];
+  floatSafety?: FloatSafetyProfile;
+  wadeSafety?: WadeSafetyProfile;
+  tribalProtocols?: TribalAccessProtocol;
+}
+
 export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
   tributaries,
   selectedMonthDay,
 }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   // Store expanded card IDs (all collapsed by default)
   const [expandedTribs, setExpandedTribs] = useState<{ [key: string]: boolean }>({});
 
   // Admin tactical mode toggle (only togglable if user is admin)
   const [showAdminTacticalIntel, setShowAdminTacticalIntel] = useState<boolean>(true);
+
+  // Zero-Knowledge Decrypted Dossier Cache
+  const [decryptedDossiers, setDecryptedDossiers] = useState<Record<string, DecryptedDossierData>>({});
+  const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
+  const [decryptionError, setDecryptionError] = useState<string | null>(null);
 
   // River Access & Map Modal State
   const [mapModalData, setMapModalData] = useState<{
@@ -140,6 +179,65 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
       isMounted = false;
     };
   }, []);
+
+  // Decrypt confidential intel automatically for verified admins once upon admin activation
+  useEffect(() => {
+    if (!isAdmin) {
+      setDecryptedDossiers({});
+      setDecryptionError(null);
+      setIsDecrypting(false);
+      return;
+    }
+
+    let isMounted = true;
+    const decryptAll = async () => {
+      setIsDecrypting(true);
+      setDecryptionError(null);
+      const results: Record<string, DecryptedDossierData> = {};
+
+      try {
+        const vaultKeys = ['bulkley', 'babine', 'kispiox', 'zymoetz', 'sustut', 'kalum', 'upper_skeena'] as const;
+        for (const key of vaultKeys) {
+          const encrypted = ENCRYPTED_TRIBUTARY_VAULT[key];
+          const displayName = VAULT_BASIN_MAP[key];
+
+          if (encrypted && displayName) {
+            try {
+              const dec = await decryptTributaryDossier(encrypted);
+              results[displayName] = dec;
+            } catch (err: any) {
+              console.error(`Decryption failed for ${key} (${displayName})`, err);
+            }
+          }
+        }
+
+        if (isMounted) {
+          setDecryptedDossiers(results);
+          setIsDecrypting(false);
+          // Telemetry tracking
+          trackSiteEvent({
+            type: 'DOSSIER_DECRYPT',
+            category: 'intelligence',
+            action: 'Decrypted Zero-Knowledge Tactical Dossiers for all Skeena Watershed Basins',
+            userRole: user?.riverRole || 'admin',
+            userId: user?.uid,
+            userEmail: user?.email
+          });
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setIsDecrypting(false);
+          setDecryptionError(err?.message || 'Decryption failed');
+        }
+      }
+    };
+
+    decryptAll();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAdmin]);
 
   const toggleTrib = (name: string) => {
     setExpandedTribs((prev) => ({
@@ -248,136 +346,56 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               onClick={() => setShowAdminTacticalIntel(!showAdminTacticalIntel)}
               className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold transition flex items-center gap-1.5 ${
                 showAdminTacticalIntel
-                  ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                  : 'border-[var(--border-main)] bg-[var(--bg-card)] text-[var(--text-muted)]'
+                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400'
+                  : 'bg-[var(--bg-card)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
-              title="Admin-only: toggle tactical reach intel and fishing guides"
+              title="Toggle decrypted super top secret beats, safety protocols & access coordinates"
             >
               {showAdminTacticalIntel ? (
                 <>
-                  <Unlock className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Admin Beat Intel: ON</span>
+                  <Unlock className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Super Top Secret (Decrypted)</span>
                 </>
               ) : (
                 <>
-                  <Lock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span>Admin Beat Intel: OFF</span>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Super Top Secret Hidden</span>
                 </>
               )}
             </button>
           )}
 
+          {/* Expand / Collapse All */}
           <button
             onClick={allExpandedState ? collapseAll : expandAll}
-            className="px-3 py-1.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-xs font-mono text-[var(--text-main)] font-semibold transition shadow-sm flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1.5 font-semibold"
           >
             {allExpandedState ? (
               <>
-                <ChevronUp className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
+                <ChevronUp className="w-3.5 h-3.5" />
                 <span>Collapse All</span>
               </>
             ) : (
               <>
-                <ChevronDown className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
-                <span>Expand All River Profiles</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span>Expand All</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Mainstem Quick Telemetry Banner: Lower Skeena & Middle Skeena */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
-        {/* Lower Skeena (Tidewater to Terrace) */}
-        {weatherProfiles['Lower Skeena'] && (
-          <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] flex items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-500 shrink-0">
-                <Waves className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="font-bold text-[var(--text-main)] text-xs">
-                  Lower Skeena (Tidewater to Terrace)
-                </div>
-                <div className="text-[10px] text-[var(--text-secondary)]">
-                  Estuary Corridor &bull; Transit: 2–6 Days &bull; ~1,450 m³/s
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedHydroModalProfile(weatherProfiles['Lower Skeena'])}
-              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--border-main)] font-bold transition flex items-center gap-1 shrink-0 text-[11px]"
-              title="Open Lower Skeena 5-day weather and hydro outlook"
-            >
-              <Thermometer className="w-3 h-3 text-amber-500" />
-              <span>{weatherProfiles['Lower Skeena'].hydro.waterTempC}°C</span>
-              <span className="text-[10px] text-[var(--text-muted)]">({weatherProfiles['Lower Skeena'].current.tempC}°C Air)</span>
-            </button>
-          </div>
-        )}
-
-        {/* Middle Skeena (Terrace to Hazelton / Usk) */}
-        {weatherProfiles['Middle Skeena'] && (
-          <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] flex items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-500 shrink-0">
-                <Gauge className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="font-bold text-[var(--text-main)] text-xs">
-                  Middle Skeena (Terrace to Hazelton / Usk)
-                </div>
-                <div className="text-[10px] text-[var(--text-secondary)]">
-                  Station 08EF001 &bull; Transit: 7–16 Days &bull; ~1,120 m³/s
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedHydroModalProfile(weatherProfiles['Middle Skeena'])}
-              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--border-main)] font-bold transition flex items-center gap-1 shrink-0 text-[11px]"
-              title="Open Middle Skeena / Usk 5-day weather and hydro outlook"
-            >
-              <Thermometer className="w-3 h-3 text-amber-500" />
-              <span>{weatherProfiles['Middle Skeena'].hydro.waterTempC}°C</span>
-              <span className="text-[10px] text-[var(--text-muted)]">({weatherProfiles['Middle Skeena'].current.tempC}°C Air)</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 2. Watershed Proportion Visualizer Bar */}
-      <div className="space-y-2 font-mono">
-        <div className="flex justify-between items-center text-xs text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5">
-            <Waves className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
-            <span>Genetic Stock Identification (GSI) Escapement Shares:</span>
+      {/* 2. Escapement Context Banner */}
+      <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] flex items-center justify-between gap-3 text-xs font-mono">
+        <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+          <Calendar className="w-4 h-4 text-[var(--accent-teal)] shrink-0" />
+          <span>
+            Telemetry Reference Day: <strong className="text-[var(--text-main)]">{selectedMonthDay}</strong>
           </span>
-          <span className="text-[var(--accent-teal)] font-bold">100% Watershed Run</span>
         </div>
-
-        <div className="w-full bg-[var(--bg-subtle)] h-4 rounded-xl overflow-hidden flex shadow-inner border border-[var(--border-main)] p-0.5">
-          {tributaries.map((t) => {
-            const riverStyle = RIVER_COLORS[t.name] || { dot: 'bg-stone-500' };
-            const isExpanded = !!expandedTribs[t.name];
-
-            return (
-              <div
-                key={`bar-${t.name}`}
-                className={`${riverStyle.dot} h-full transition-all hover:opacity-100 cursor-pointer first:rounded-l-lg last:rounded-r-lg ${
-                  isExpanded ? 'opacity-100 ring-2 ring-white/50' : 'opacity-80'
-                }`}
-                style={{ width: `${t.sharePct}%` }}
-                title={`${t.name}: ${t.sharePct}% (~${t.projectedAdults.toLocaleString()} fish) - Click to inspect scientific dossier`}
-                onClick={() => toggleTrib(t.name)}
-              />
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between text-[10px] text-[var(--text-muted)] pt-0.5 gap-2">
-          <span>Click any sub-basin bar or card to inspect complete hydrological &amp; ecological telemetry.</span>
-          <span className="text-[var(--text-secondary)] font-bold">Estimated as of {selectedMonthDay}</span>
-        </div>
+        <span className="text-[11px] text-[var(--accent-teal)] font-bold hidden sm:inline">
+          7 Monitored Sub-Basins &bull; 100% Wild Summer Stock
+        </span>
       </div>
 
       {/* 3. List of Interactive Expandable River Cards */}
@@ -391,8 +409,15 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
             text: 'text-[var(--accent-teal)]',
           };
           const sci = t.scientificProfile;
-          const adminIntel = t.adminTacticalIntel;
           const hydroProfile = weatherProfiles[t.name];
+          
+          // Get zero-knowledge decrypted data if available
+          const decrypted = decryptedDossiers[t.name];
+          const adminIntel = decrypted?.adminTacticalIntel;
+          const accessPoints = decrypted?.accessPoints || [];
+          const floatSafety = decrypted?.floatSafety;
+          const wadeSafety = decrypted?.wadeSafety;
+          const tribalProtocols = decrypted?.tribalProtocols;
 
           return (
             <div
@@ -479,24 +504,24 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                   {/* Expand Chevron Icon */}
                   <button
-                    onClick={() => toggleTrib(t.name)}
-                    className="p-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTrib(t.name);
+                    }}
+                    className="p-2 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition"
+                    aria-label="Toggle details"
                   >
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-[var(--accent-teal)]" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
+                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Expandable Deep-Dive Scientific Dossier */}
+              {/* Expandable Body */}
               {isExpanded && (
-                <div className="px-4 sm:px-6 pb-5 pt-3 border-t border-[var(--border-main)] bg-[var(--bg-surface)] space-y-4 animate-in fade-in duration-200">
-                  {/* Sub-Basin Overview & Live Weather Quick Bar */}
-                  <div className="p-3.5 sm:p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="p-4 sm:p-6 border-t border-[var(--border-main)] space-y-6 bg-[var(--bg-surface)]">
+                  {/* Overview Text */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--accent-teal)] uppercase tracking-wider font-mono">
                         <Binary className="w-4 h-4" />
                         <span>Ecological &amp; Sub-Basin Overview</span>
@@ -600,7 +625,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                     </div>
                   )}
 
-                  {/* 6. ADMIN CONFIDENTIAL SECTION (Restricted to authenticated admins) */}
+                  {/* 6. ZERO-KNOWLEDGE ENCRYPTED ADMIN SECTION (Restricted to authenticated admins) */}
                   {isAdmin ? (
                     showAdminTacticalIntel && (
                       <div className="p-4 sm:p-5 rounded-2xl border-2 border-dashed border-red-500 dark:border-white bg-[var(--bg-card)] space-y-4 font-mono text-xs shadow-sm">
@@ -608,73 +633,87 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--border-main)] pb-3">
                           <div className="flex items-center gap-2 text-[var(--text-main)] font-heading font-extrabold text-xs sm:text-sm uppercase tracking-wide">
                             <Lock className="w-4 h-4 shrink-0 text-[var(--accent-teal)]" />
-                            <span>Admin Confidential Dossier</span>
+                            <span>Super Top Secret Information (AES-256 Decrypted)</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] whitespace-nowrap">
-                              Admin Intel
+                            <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
+                              <KeyRound className="w-3 h-3" />
+                              <span>Zero-Knowledge Vault</span>
                             </span>
-                            {t.accessPoints && t.accessPoints.length > 0 && (
+                            {accessPoints && accessPoints.length > 0 && (
                               <button
                                 onClick={() =>
                                   setMapModalData({
                                     riverName: t.name,
-                                    accessPoints: t.accessPoints || [],
-                                    floatSafety: t.floatSafety,
-                                    wadeSafety: t.wadeSafety,
-                                    tribalProtocols: t.tribalProtocols,
+                                    accessPoints: accessPoints,
+                                    floatSafety: floatSafety,
+                                    wadeSafety: wadeSafety,
+                                    tribalProtocols: tribalProtocols,
                                   })
                                 }
                                 className="px-3 py-1 rounded-lg bg-[var(--accent-teal)] hover:opacity-90 text-white font-bold transition-all shadow-sm flex items-center gap-1.5 text-xs whitespace-nowrap"
                               >
                                 <Map className="w-3.5 h-3.5" />
-                                <span>River Map ({t.accessPoints.length})</span>
+                                <span>River Map ({accessPoints.length})</span>
                               </button>
                             )}
                           </div>
                         </div>
 
+                        {isDecrypting && (
+                          <div className="py-4 text-center text-xs text-[var(--text-muted)] animate-pulse font-mono font-semibold">
+                            Decrypting super top secret information. . .
+                          </div>
+                        )}
+
+                        {decryptionError && (
+                          <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-600 dark:text-rose-400 font-mono text-xs flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{decryptionError}</span>
+                          </div>
+                        )}
+
                         {/* First Nations Tribal Protocols & Access Permitting */}
-                        {t.tribalProtocols && (
+                        {tribalProtocols && (
                           <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2.5 text-xs">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-main)] pb-2">
                               <div className="flex items-center gap-2">
                                 <ShieldCheck className="w-4 h-4 text-[var(--accent-teal)]" />
                                 <span className="font-heading font-bold text-xs sm:text-sm text-[var(--text-main)]">
-                                  First Nations Territory: {t.tribalProtocols.nation}
+                                  First Nations Territory: {tribalProtocols.nation}
                                 </span>
                               </div>
                               <span
                                 className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border whitespace-nowrap ${
-                                  t.tribalProtocols.permitRequired
+                                  tribalProtocols.permitRequired
                                     ? 'bg-rose-500/15 border-rose-500/40 text-rose-500'
                                     : 'bg-teal-500/15 border-teal-500/40 text-[var(--accent-teal)]'
                                 }`}
                               >
-                                {t.tribalProtocols.permitRequired ? 'Permit Required' : 'Standard Crown Access'}
+                                {tribalProtocols.permitRequired ? 'Permit Required' : 'Standard Crown Access'}
                               </span>
                             </div>
 
                             <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
-                              {t.tribalProtocols.permitDetails}
+                              {tribalProtocols.permitDetails}
                             </p>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[var(--border-main)] text-[11px] font-mono">
                               <div>
                                 <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">Permit Office:</span>
-                                <span className="text-[var(--text-main)] font-medium">{t.tribalProtocols.officeLocation}</span>
+                                <span className="text-[var(--text-main)] font-medium">{tribalProtocols.officeLocation}</span>
                               </div>
-                              {t.tribalProtocols.costInfo && (
+                              {tribalProtocols.costInfo && (
                                 <div>
                                   <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">Access / Stewardship Fee:</span>
-                                  <span className="text-[var(--text-main)] font-semibold">{t.tribalProtocols.costInfo}</span>
+                                  <span className="text-[var(--text-main)] font-semibold">{tribalProtocols.costInfo}</span>
                                 </div>
                               )}
                             </div>
 
                             <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-sans">
                               <span className="font-mono font-bold text-[var(--text-muted)] uppercase text-[10px] block mb-0.5">Etiquette &amp; River Guidelines:</span>
-                              <p className="italic text-[var(--text-secondary)]">{t.tribalProtocols.etiquette}</p>
+                              <p className="italic text-[var(--text-secondary)]">{tribalProtocols.etiquette}</p>
                             </div>
                           </div>
                         )}
@@ -720,9 +759,9 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                           </div>
                         )}
 
-                        {/* Float & Wade Safety Profiles - Theme-consistent Design */}
+                        {/* Float & Wade Safety Profiles */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {t.floatSafety && (
+                          {floatSafety && (
                             <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2 text-xs">
                               <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-2">
                                 <div className="flex items-center gap-1.5 text-[var(--text-main)] font-bold uppercase tracking-wider text-[11px]">
@@ -730,18 +769,18 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                                   <span>Raft &amp; Float Profile</span>
                                 </div>
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)]">
-                                  {t.floatSafety.rating}
+                                  {floatSafety.rating}
                                 </span>
                               </div>
                               <div className="text-xs text-[var(--text-secondary)] space-y-1 font-sans">
-                                <p><strong className="text-[var(--text-main)] font-mono">Suitable Craft:</strong> {t.floatSafety.suitableCraft}</p>
-                                <p><strong className="text-[var(--text-main)] font-mono">Whitewater Class:</strong> {t.floatSafety.whitewaterClass}</p>
-                                <p><strong className="text-[var(--text-main)] font-mono">Typical Float Times:</strong> {t.floatSafety.typicalFloatTimes}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Suitable Craft:</strong> {floatSafety.suitableCraft}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Whitewater Class:</strong> {floatSafety.whitewaterClass}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Typical Float Times:</strong> {floatSafety.typicalFloatTimes}</p>
                               </div>
                             </div>
                           )}
 
-                          {t.wadeSafety && (
+                          {wadeSafety && (
                             <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-2 text-xs">
                               <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-2">
                                 <div className="flex items-center gap-1.5 text-[var(--text-main)] font-bold uppercase tracking-wider text-[11px]">
@@ -749,27 +788,27 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                                   <span>Wade Friendliness</span>
                                 </div>
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)]">
-                                  {t.wadeSafety.difficulty}
+                                  {wadeSafety.difficulty}
                                 </span>
                               </div>
                               <div className="text-xs text-[var(--text-secondary)] space-y-1 font-sans">
-                                <p><strong className="text-[var(--text-main)] font-mono">Footwear:</strong> {t.wadeSafety.footwearRecommendation}</p>
-                                <p><strong className="text-[var(--text-main)] font-mono">Bank Access:</strong> {t.wadeSafety.bankAccessibility}</p>
-                                <p><strong className="text-[var(--text-main)] font-mono">Wading Staff:</strong> {t.wadeSafety.wadingStaffAdvice}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Footwear:</strong> {wadeSafety.footwearRecommendation}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Bank Access:</strong> {wadeSafety.bankAccessibility}</p>
+                                <p><strong className="text-[var(--text-main)] font-mono">Wading Staff:</strong> {wadeSafety.wadingStaffAdvice}</p>
                               </div>
                             </div>
                           )}
                         </div>
 
                         {/* Critical Float & Navigation Hazards Card */}
-                        {t.floatSafety?.hazardWarnings && t.floatSafety.hazardWarnings.length > 0 && (
+                        {floatSafety?.hazardWarnings && floatSafety.hazardWarnings.length > 0 && (
                           <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs">
                             <div className="flex items-center gap-1.5 font-bold uppercase text-[11px] text-rose-500">
                               <AlertTriangle className="w-4 h-4 shrink-0" />
                               <span>Navigational &amp; Safety Hazards:</span>
                             </div>
                             <ul className="list-disc pl-5 space-y-1 font-sans text-xs text-[var(--text-secondary)]">
-                              {t.floatSafety.hazardWarnings.map((hz, i) => (
+                              {floatSafety.hazardWarnings.map((hz, i) => (
                                 <li key={i}>{hz}</li>
                               ))}
                             </ul>
@@ -777,19 +816,19 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                         )}
 
                         {/* Verified Access Points & Bushwhacking Routes Grid */}
-                        {t.accessPoints && t.accessPoints.length > 0 && (
+                        {accessPoints && accessPoints.length > 0 && (
                           <div className="space-y-2.5 pt-1">
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-[var(--text-main)] uppercase font-bold tracking-wider block">
                                 Access Points, Informal Trails &amp; Crown Land:
                               </span>
                               <span className="text-xs text-[var(--accent-teal)] font-mono font-bold">
-                                {t.accessPoints.length} Points
+                                {accessPoints.length} Points
                               </span>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {t.accessPoints.map((pt) => (
+                              {accessPoints.map((pt) => (
                                 <div
                                   key={pt.id}
                                   className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-[var(--accent-teal)] transition-all flex flex-col justify-between gap-2.5 shadow-sm"
@@ -833,10 +872,10 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                                       onClick={() =>
                                         setMapModalData({
                                           riverName: t.name,
-                                          accessPoints: t.accessPoints || [],
-                                          floatSafety: t.floatSafety,
-                                          wadeSafety: t.wadeSafety,
-                                          tribalProtocols: t.tribalProtocols,
+                                          accessPoints: accessPoints,
+                                          floatSafety: floatSafety,
+                                          wadeSafety: wadeSafety,
+                                          tribalProtocols: tribalProtocols,
                                           initialPointId: pt.id,
                                         })
                                       }
@@ -848,25 +887,13 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                                     <div className="flex items-center gap-1">
                                       <a
-                                        href={`https://maps.apple.com/?q=${encodeURIComponent(pt.name)}&ll=${pt.lat},${pt.lng}&t=m`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] font-semibold flex items-center gap-0.5 transition-colors text-[10px]"
-                                        title="Open in Apple Maps"
-                                      >
-                                        <span>Apple</span>
-                                        <ExternalLink className="w-2.5 h-2.5 text-sky-500" />
-                                      </a>
-
-                                      <a
                                         href={pt.googleMapsUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="px-2 py-0.5 rounded-md bg-[var(--accent-teal)] hover:opacity-90 text-white font-semibold flex items-center gap-0.5 transition-opacity text-[10px]"
-                                        title="Open in Google Maps"
+                                        className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] font-semibold flex items-center gap-1 transition-colors text-[10px]"
                                       >
-                                        <span>Google</span>
-                                        <ExternalLink className="w-2.5 h-2.5" />
+                                        <ExternalLink className="w-3 h-3 text-[var(--accent-teal)]" />
+                                        <span>GPS</span>
                                       </a>
                                     </div>
                                   </div>
@@ -881,7 +908,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                     <div className="p-3.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)]/50 flex items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)]">
                       <div className="flex items-center gap-2">
                         <Lock className="w-4 h-4 text-amber-500/70" />
-                        <span>Admin Beat Intel, Tribal Access, Raft Safety &amp; Access Waypoints (Protected for Authorized Admins)</span>
+                        <span>Admin Beat Intel, Tribal Access, Raft Safety &amp; Access Waypoints (Protected by Zero-Knowledge Encryption)</span>
                       </div>
                       <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)] font-bold">
                         ADMIN ONLY
@@ -906,7 +933,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
         })}
       </div>
 
-      {/* River Access & Interactive Map Modal (Option C) */}
+      {/* River Access & Interactive Map Modal */}
       {mapModalData && (
         <RiverAccessMapModal
           isOpen={true}
@@ -915,6 +942,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
           accessPoints={mapModalData.accessPoints}
           floatSafety={mapModalData.floatSafety}
           wadeSafety={mapModalData.wadeSafety}
+          tribalProtocols={mapModalData.tribalProtocols}
           initialSelectedPointId={mapModalData.initialPointId}
         />
       )}

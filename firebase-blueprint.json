@@ -342,9 +342,83 @@
         }
       },
       "required": ["id", "authorId", "authorName", "sharedWithUserIds", "title", "tributary", "date", "notes", "createdAt", "updatedAt"]
+    },
+    "UsageMetric": {
+      "title": "UsageMetric",
+      "description": "Daily site activity and feature usage metrics summary for root admin",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "Metric date in YYYY-MM-DD format",
+          "maxLength": 20
+        },
+        "totalVisits": {
+          "type": "number",
+          "description": "Total visits or sessions for the day"
+        },
+        "tyeeQueries": {
+          "type": "number",
+          "description": "Number of Tyee test fishery queries"
+        },
+        "simulatorRuns": {
+          "type": "number",
+          "description": "Number of run simulator calculations"
+        },
+        "dossierDecryptions": {
+          "type": "number",
+          "description": "Number of encrypted dossier decryptions"
+        }
+      },
+      "required": ["date", "totalVisits"]
+    },
+    "SiteEvent": {
+      "title": "SiteEvent",
+      "description": "Real-time telemetry event across the portal",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique event ID",
+          "maxLength": 128
+        },
+        "type": {
+          "type": "string",
+          "description": "Event type identifier",
+          "maxLength": 50
+        },
+        "category": {
+          "type": "string",
+          "description": "Event category",
+          "maxLength": 50
+        },
+        "action": {
+          "type": "string",
+          "description": "Description of action",
+          "maxLength": 250
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of event",
+          "maxLength": 50
+        }
+      },
+      "required": ["id", "type", "category", "action", "timestamp"]
     }
   },
   "firestore": {
+    "/usageMetrics/{metricId}": {
+      "schema": {
+        "$ref": "#/entities/UsageMetric"
+      },
+      "description": "Stores daily usage metrics summaries for administrative oversight."
+    },
+    "/siteEvents/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/SiteEvent"
+      },
+      "description": "Stores real-time interaction and telemetry event trail."
+    },
     "/admins/{adminId}": {
       "schema": {
         "$ref": "#/entities/AdminRecord"

@@ -27,6 +27,11 @@ function base64ToBuffer(base64: string): Uint8Array {
   return bytes;
 }
 
+// Helper to ensure an ArrayBuffer view is converted to an isolated ArrayBuffer slice
+function toCleanArrayBuffer(view: Uint8Array): ArrayBuffer {
+  return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+}
+
 /**
  * Derives a 256-bit AES-GCM CryptoKey using PBKDF2
  */
@@ -40,10 +45,12 @@ async function deriveAesKey(passphrase: string, saltBytes: Uint8Array): Promise<
     ['deriveKey']
   );
 
+  const cleanSaltBuffer = toCleanArrayBuffer(saltBytes);
+
   return window.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: saltBytes.buffer,
+      salt: cleanSaltBuffer,
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -75,11 +82,13 @@ export async function encryptObject<T>(data: T, secretKeySeed: string): Promise<
   // Derive key
   const cryptoKey = await deriveAesKey(secretKeySeed, salt);
 
+  const cleanIvBuffer = toCleanArrayBuffer(iv);
+
   // Encrypt with AES-GCM
   const ciphertextBuffer = await window.crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
-      iv: iv
+      iv: cleanIvBuffer
     },
     cryptoKey,
     plaintextBytes
@@ -87,8 +96,8 @@ export async function encryptObject<T>(data: T, secretKeySeed: string): Promise<
 
   return {
     ciphertext: bufferToBase64(ciphertextBuffer),
-    iv: bufferToBase64(iv.buffer),
-    salt: bufferToBase64(salt.buffer)
+    iv: bufferToBase64(cleanIvBuffer),
+    salt: bufferToBase64(toCleanArrayBuffer(salt))
   };
 }
 
@@ -102,16 +111,20 @@ export async function decryptObject<T>(payload: EncryptedPayload, secretKeySeed:
 
   const cryptoKey = await deriveAesKey(secretKeySeed, saltBytes);
 
+  const cleanIvBuffer = toCleanArrayBuffer(ivBytes);
+  const cleanCiphertextBuffer = toCleanArrayBuffer(ciphertextBytes);
+
   const decryptedBuffer = await window.crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
-      iv: ivBytes
+      iv: cleanIvBuffer
     },
     cryptoKey,
-    ciphertextBytes
+    cleanCiphertextBuffer
   );
 
   const dec = new TextDecoder();
   const jsonString = dec.decode(decryptedBuffer);
   return JSON.parse(jsonString) as T;
 }
+
