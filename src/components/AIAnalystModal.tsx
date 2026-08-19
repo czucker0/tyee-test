@@ -76,7 +76,7 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen && !report && activeTab === 'report') {
+    if (isOpen && activeTab === 'report') {
       fetchReport();
     }
   }, [isOpen, selectedMonthDay, activeTab]);
@@ -146,12 +146,12 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
   };
 
   const promptSuggestions = [
+    'Why can’t you resist a swinging tube fly?',
+    'What do you honestly think about bobber / indicator nymphing?',
+    'What is your all-time favorite tube fly recipe?',
     'How are you dodging the Tyee test nets this year?',
-    'What fly patterns do you actually look at in clear vs glacial water?',
-    'Are you heading for the Babine, Kispiox, or Bulkley?',
     'What is the best Spey casting tip for casting into an upstream wind?',
-    'How does 2026 feel compared to the 2018 record year?',
-    'What is your advice for catch-and-release anglers?',
+    'Are you heading for the Babine, Kispiox, or Bulkley?',
   ];
 
   if (!isOpen) return null;
@@ -237,22 +237,6 @@ export const AIAnalystModal: React.FC<AIAnalystModalProps> = ({
           <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-card)]">
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
-              {/* Ready / Connected Live Status Badge */}
-              <div className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-[var(--bg-surface)] to-emerald-500/5 border border-emerald-500/25 flex items-center justify-between text-xs font-mono text-emerald-400 shadow-sm">
-                <span className="flex items-center gap-2.5">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </span>
-                  <span>
-                    <strong>Steelie Dan is holding in the sweet spot</strong> — Live Skeena Telemetry Active
-                  </span>
-                </span>
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 hidden sm:inline">
-                  Instant AI
-                </span>
-              </div>
-
               {messages.map((m, idx) => (
                 <div
                   key={idx}

@@ -67,26 +67,51 @@ if ($action === 'analyze') {
     $day = ($input['dayIndex'] ?? 0) + 1;
     $elapsed = $input['percentElapsed'] ?? 0;
     $cum = round($input['currentCumulative'] ?? 0, 1);
-    $adults = number_format($input['projectedBaselineAdults'] ?? 45000);
+    $rawAdults = $input['projectedBaselineAdults'] ?? 45000;
+    $adults = number_format($rawAdults);
     $low = round($input['projectedLowCI'] ?? 0, 1);
     $high = round($input['projectedHighCI'] ?? 0, 1);
     $analog = $input['bestFitYear'] ?? 2018;
     $tier = strtoupper($input['conservationTier'] ?? 'Healthy');
 
-    $prompt = "You are a Senior Skeena River Fisheries Biologist. Generate an authoritative in-season steelhead escapement assessment for the Skeena River based on these metrics:
-- Evaluation Date: {$date} (Day {$day} of 113)
-- Run Completed: {$elapsed}%
-- Recorded Cumulative Tyee Index: {$cum} (~" . number_format(round($cum * 220)) . " wild adults)
-- Baseline Projected Season: {$adults} adult steelhead
-- 80% CI: {$low} - {$high} index points
-- Closest Analog Year: {$analog}
-- Conservation Status: {$tier}
+    $isAboveAverage = $rawAdults >= 30000;
+    $performanceNote = $isAboveAverage
+      ? "This projected run of ~{$adults} adult steelhead is well ABOVE the 10-year historical average (~25,000 fish) and EXCEEDING recent expectations! It represents a vibrant, healthy, and abundant summer run."
+      : "This projected run of ~{$adults} adult steelhead is tracking close to historical benchmarks ({$tier}).";
 
-Format in clean Markdown:
-1. 🐟 Executive Summary & Migration Trajectory
-2. 🌊 River Conditions & Migration Dynamics
-3. 🗺️ Tributary Breakdown (Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz)
-4. 🎣 Angler Advice & Conservation Priority";
+    $tributaries = $input['tributaries'] ?? [];
+    $tribList = [];
+    if (is_array($tributaries)) {
+        foreach ($tributaries as $t) {
+            $tName = $t['name'] ?? 'Tributary';
+            $tAdults = number_format($t['projectedAdults'] ?? 0);
+            $tPct = $t['sharePct'] ?? 0;
+            $tPeak = $t['peakWindow'] ?? 'Aug-Sep';
+            $tribList[] = "  * {$tName}: ~{$tAdults} fish ({$tPct}%) - Peak: {$tPeak}";
+        }
+    }
+    $tribText = implode("\n", $tribList);
+
+    $prompt = "You are \"Steelie Dan\" — the legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
+Write your personal \"Upstream Escapement Dispatch\" in FIRST-PERSON from inside the cold, emerald currents of the Skeena River (*splashes tailfin*, *sniffs the icy snowmelt*, *flares gill covers*).
+
+ACCURATE IN-SEASON TELEMETRY ({$date}):
+- Evaluation Date: {$date} (Day {$day} of 113)
+- Migration Completed so far: {$elapsed}%
+- Recorded Cumulative Tyee Index: {$cum} (~" . number_format(round($cum * 220)) . " wild adult steelhead already past Tyee test nets)
+- Baseline Projected Season Total: {$adults} adult wild steelhead
+- 80% Confidence Interval: {$low} - {$high} index points (~" . number_format(round($low * 220)) . " to " . number_format(round($high * 220)) . " adults)
+- Closest Historical Analog Year: {$analog}
+- Conservation Status: {$tier}
+- RUN PERFORMANCE CONTEXT: {$performanceNote} (The historical 10-year Skeena median is ~25,000 fish. Do NOT say the run is below expectations if it is above 25,000!)
+- Tributary breakdown estimates:
+{$tribText}
+
+Format your report in clean, charismatic Markdown:
+1. 🐟 **Steelie Dan's Migration Trajectory & Outlook** (Celebrate the run strength, compare against the ~25,000-fish 10-year average and {$analog} analog, and state the run status accurately)
+2. 🌊 **The River Gauntlet & Glacial Conditions** (Discuss river water clarity, temperature around 14°C, dodging Tyee commercial gillnets, and tidal pushes from Chatham Sound)
+3. 🗺️ **Where Our Pods Are Heading** (Tributary breakdown: Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz/Copper)
+4. 🎣 **Dan's Advice for Two-Leggers** (Keep 'em wet etiquette, barbless hooks, fly choices like the Lady Caroline & Intruder, and respecting cold-water holding pools)";
 
     $payload = [
         'contents' => [
@@ -104,12 +129,18 @@ Format in clean Markdown:
     $date = $context['selectedDate'] ?? 'In-Season';
 
     $systemInstruction = "You are \"Steelie Dan\" — a legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
-You speak in first-person as a wild fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*).
+You speak in first-person as an actual wild steelhead fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*, *rolls eyes at plastic strike indicators*, *eagerly eyes a swinging tube fly*).
+
+YOUR PASSIONS & CHARACTER:
+- You are a proud, unapologetic, die-hard SPEY SNOB!
+- YOU LOVE A SWUNG FLY ABOVE ALL: Especially juicy, pulsating TUBE FLIES (marabou, ostrich, Arctic fox, copper tubes, Templedogs, Scandi hairwings). When a delicious tube fly swings broadside through your holding lie on a crisp 45-degree angle with a slow mend, you CANNOT resist crushing it on the dangle!
+- YOU DESPISE NYMPHING & INDICATORS: You have total disdain for nymphing and \"bobber chuckers\" who fish under plastic strike indicators! You look down on fluorescent plastic ping-pong balls floating overhead and wouldn't touch a dead-drifted rubber-legged nymph or plastic bead with a 10-foot dorsal fin. Real steelhead anglers swing flies on two-handed Spey rods!
+
 Live Skeena Telemetry ({$date}):
 - Recorded Tyee CPUE Index: " . round($context['currentCumulative'] ?? 0, 1) . " (~{$curFish} wild steelhead passed)
 - Projected Escapement: ~{$adults} adult steelhead
 - Status: {$tier}, Run Progress: {$elapsed}%
-Answer any question the angler asks with fish humor and authentic river wisdom!";
+Answer any question the angler asks with fish humor, deep river wisdom, and unapologetic Spey pride!";
 
     $history = $input['history'] ?? [];
     $conversationParts = [];
