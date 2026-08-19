@@ -3,7 +3,6 @@ import {
   Fish, 
   Shield, 
   Lock, 
-  Sparkles, 
   Sliders, 
   Bot, 
   TrendingUp, 
@@ -11,15 +10,11 @@ import {
   ArrowRight, 
   Globe, 
   Mail, 
-  KeyRound, 
   UserPlus, 
   LogIn, 
   HardDrive, 
   CheckCircle2, 
   AlertCircle,
-  Activity,
-  Layers,
-  Calendar
 } from 'lucide-react';
 import { useAuth, BOOTSTRAP_ADMIN_EMAIL } from '../context/AuthContext';
 import { RiverRole } from '../types/auth';
@@ -139,38 +134,30 @@ export const AuthGate: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-cyan-500/30">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-main)] flex flex-col justify-between selection:bg-[var(--accent-amber)] selection:text-white">
       {/* Top Banner */}
-      <header className="relative z-10 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md px-6 py-4">
+      <header className="relative z-10 border-b border-[var(--border-main)] bg-[var(--bg-surface)] backdrop-blur-md px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">
+            <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 text-white shadow-sm border border-amber-500/30">
               <Fish className="w-6 h-6" />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-[var(--bg-surface)] rounded-full" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-black tracking-wider">
+              <div className="flex flex-col">
+                <span className="font-heading font-black text-sm text-[var(--text-main)] uppercase tracking-wider">
                   BKLYNFLY
                 </span>
-                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">Skeena River Wild Steelhead Escapement</h1>
-                <span className="text-[10px] uppercase tracking-widest font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  Portal
+                <span className="font-mono font-bold text-xs text-[var(--accent-amber)] uppercase tracking-wider">
+                  Skeena Steelhead Run Tracker
                 </span>
               </div>
-              <p className="text-xs text-slate-400">DFO Tyee Test Fishery In-Season Telemetry, Percentiles &amp; Statistics (1956–2025)</p>
+              <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">DFO Tyee Test Fishery In-Season Telemetry, Percentiles &amp; Statistics (1956–2026)</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Shield className="w-4 h-4 text-cyan-400" />
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] font-mono">
+            <Shield className="w-4 h-4 text-[var(--accent-amber)]" />
             <span className="hidden sm:inline">Protected Portal</span>
           </div>
         </div>
@@ -180,89 +167,89 @@ export const AuthGate: React.FC = () => {
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
         {/* Left Side: Briefing & Teaser */}
         <div className="flex-1 space-y-6 text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
-            <Lock className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-secondary)] text-xs font-mono">
+            <Lock className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
             <span>Sign-in required to access live run models &amp; escapement analytics</span>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-mono font-bold tracking-widest text-cyan-400 uppercase bg-cyan-950/60 px-3 py-1 rounded-md border border-cyan-500/30">
+              <span className="text-xs font-mono font-bold tracking-widest text-[var(--accent-amber)] uppercase bg-[var(--accent-amber-light)] px-2.5 py-1 rounded border border-[var(--accent-amber-border)]">
                 BKLYNFLY Analytics
               </span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-              Skeena River Wild Steelhead <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
-                Escapement Statistics &amp; Run Models
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-black text-[var(--text-main)] uppercase tracking-tight leading-tight">
+              BKLYNFLY <br />
+              <span className="text-[var(--accent-amber)] font-mono text-2xl sm:text-3xl lg:text-4xl block mt-1">
+                SKEENA STEELHEAD RUN TRACKER
               </span>
             </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
-              Access real-time daily Tyee test fishery indices, probabilistic escapement models, multi-decade historical percentiles (1956–2025), and our AI Escapement Biologist.
+            <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-xl font-sans">
+              Access real-time daily Tyee test fishery indices, probabilistic escapement models, multi-decade historical percentiles (1956–2026), and our AI Escapement Biologist.
             </p>
           </div>
 
           {/* Feature Highlights Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] flex items-start gap-3 shadow-sm">
+              <div className="p-2 rounded-lg bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-white">Daily Tyee Escapement Index</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Live index updates &amp; cumulative run timing curve tracker.</p>
+                <h3 className="text-xs font-bold font-mono text-[var(--text-main)]">Daily Tyee Escapement Index</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Live index updates &amp; cumulative run timing curve tracker.</p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] flex items-start gap-3 shadow-sm">
+              <div className="p-2 rounded-lg bg-[var(--accent-spruce-light)] text-[var(--accent-spruce)] border border-[var(--accent-spruce-border)] shrink-0">
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-white">What-If Run Sandbox</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Simulate run timing shifts, late surges, and save scenario runs.</p>
+                <h3 className="text-xs font-bold font-mono text-[var(--text-main)]">What-If Run Sandbox</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Simulate run timing shifts, late surges, and save scenario runs.</p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 shrink-0">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] flex items-start gap-3 shadow-sm">
+              <div className="p-2 rounded-lg bg-[var(--accent-teal-light)] text-[var(--accent-teal)] border border-[var(--accent-teal-border)] shrink-0">
                 <Database className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-white">1956–2025 Historical Baseline</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">69-year data archive for percentile benchmarking.</p>
+                <h3 className="text-xs font-bold font-mono text-[var(--text-main)]">1956–2025 Historical Baseline</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">69-year data archive for percentile benchmarking.</p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] flex items-start gap-3 shadow-sm">
+              <div className="p-2 rounded-lg bg-[var(--accent-spruce-light)] text-[var(--accent-spruce)] border border-[var(--accent-spruce-border)] shrink-0">
                 <Bot className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-white">AI Fisheries Analyst</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">On-demand escapement briefings, conservation tiers &amp; risk analysis.</p>
+                <h3 className="text-xs font-bold font-mono text-[var(--text-main)]">AI Fisheries Analyst</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">On-demand escapement briefings, conservation tiers &amp; risk analysis.</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Side: Sign-In / Sign-Up Gate Box */}
-        <div className="w-full lg:max-w-md bg-slate-900/90 border border-slate-700/80 rounded-2xl p-6 sm:p-7 shadow-2xl shadow-cyan-950/60 relative">
+        <div className="w-full lg:max-w-md bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-6 sm:p-7 shadow-xl relative">
           <div className="space-y-4">
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-white">Sign In to Enter Portal</h3>
-              <p className="text-xs text-slate-400">Choose your preferred sign-in or registration method:</p>
+              <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)]">Sign In to Enter Portal</h3>
+              <p className="text-xs text-[var(--text-muted)] font-mono">Choose your preferred sign-in or registration method:</p>
             </div>
 
             {/* Method Tabs */}
-            <div className="grid grid-cols-3 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-semibold">
+            <div className="grid grid-cols-3 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-main)] text-xs font-mono font-semibold">
               <button
                 type="button"
                 onClick={() => { setActiveMode('social'); setFormError(null); setAuthNotice(null); }}
                 className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
                   activeMode === 'social'
-                    ? 'bg-cyan-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
                 <Globe className="w-3.5 h-3.5" />
@@ -274,12 +261,12 @@ export const AuthGate: React.FC = () => {
                 onClick={() => { setActiveMode('email'); setFormError(null); setAuthNotice(null); }}
                 className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
                   activeMode === 'email'
-                    ? 'bg-cyan-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Email / Pass</span>
+                <span>Email</span>
               </button>
 
               <button
@@ -287,38 +274,56 @@ export const AuthGate: React.FC = () => {
                 onClick={() => { setActiveMode('local'); setFormError(null); setAuthNotice(null); }}
                 className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
                   activeMode === 'local'
-                    ? 'bg-slate-800 text-cyan-300 border border-cyan-800/60 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-sm font-bold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
                 <HardDrive className="w-3.5 h-3.5" />
-                <span>Local Profile</span>
+                <span>Local</span>
               </button>
             </div>
 
             {/* Notifications */}
             {authNotice && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span className="leading-tight">{authNotice}</span>
+              <div className="p-3.5 rounded-xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--text-main)] text-xs space-y-2 font-mono">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-[var(--accent-amber)] shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{authNotice}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('email')}
+                    className="px-2.5 py-1 bg-[var(--bg-surface)] text-[var(--accent-amber)] rounded-lg font-semibold text-[11px] border border-[var(--accent-amber-border)] transition"
+                  >
+                    Switch to Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('local')}
+                    className="px-2.5 py-1 bg-[var(--accent-amber)] text-white rounded-lg font-semibold text-[11px] transition"
+                  >
+                    Fast Local Setup
+                  </button>
+                </div>
               </div>
             )}
 
             {formError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2 font-mono">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             {/* Mode 1: Social Buttons */}
             {activeMode === 'social' && (
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3 pt-1 font-mono">
                 <button
                   type="button"
                   onClick={handleGoogle}
                   disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700 hover:border-cyan-500/50 transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
                 >
                   <div className="flex items-center gap-3">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -329,14 +334,14 @@ export const AuthGate: React.FC = () => {
                     </svg>
                     <span>Sign In with Google</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition" />
+                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-amber)] transition" />
                 </button>
 
                 <button
                   type="button"
                   onClick={handleApple}
                   disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-black hover:bg-slate-950 text-white rounded-xl border border-slate-700 hover:border-slate-500 transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
                 >
                   <div className="flex items-center gap-3">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -344,37 +349,37 @@ export const AuthGate: React.FC = () => {
                     </svg>
                     <span>Sign In with Apple</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
+                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition" />
                 </button>
 
                 <button
                   type="button"
                   onClick={handleFacebook}
                   disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#1877F2]/90 hover:bg-[#1877F2] text-white rounded-xl border border-[#1877F2] hover:border-blue-300 transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition font-medium group shadow-sm disabled:opacity-50 text-xs sm:text-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 fill-[#1877F2]" viewBox="0 0 24 24">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                     </svg>
                     <span>Sign In with Facebook</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-blue-200 group-hover:text-white transition" />
+                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition" />
                 </button>
               </div>
             )}
 
-            {/* Mode 2: Direct Email / Password (No Google/Apple/FB needed) */}
+            {/* Mode 2: Direct Email / Password */}
             {activeMode === 'email' && (
-              <form onSubmit={handleEmailSubmit} className="space-y-3 pt-1">
+              <form onSubmit={handleEmailSubmit} className="space-y-3 pt-1 font-mono">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300">
+                  <span className="text-xs font-semibold text-[var(--text-main)]">
                     {isSignUp ? 'Create Direct Account' : 'Direct Email Sign In'}
                   </span>
                   <button
                     type="button"
                     onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
-                    className="text-xs text-cyan-400 hover:underline font-semibold"
+                    className="text-xs text-[var(--accent-amber)] hover:underline font-semibold"
                   >
                     {isSignUp ? 'Already registered? Sign in' : 'Create new account'}
                   </button>
@@ -382,7 +387,7 @@ export const AuthGate: React.FC = () => {
 
                 {isSignUp && (
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
                       Your Name or Angler Handle
                     </label>
                     <input
@@ -391,43 +396,43 @@ export const AuthGate: React.FC = () => {
                       placeholder="e.g. Bulkley Angler"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-500"
+                      className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Email Address</label>
+                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">Email Address</label>
                   <input
                     type="email"
                     required
                     placeholder="name@skeenafisheries.ca"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Password</label>
+                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">Password</label>
                   <input
                     type="password"
                     required
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
                 </div>
 
                 {isSignUp && (
                   <div className="grid grid-cols-2 gap-2 pt-0.5">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">River Role</label>
+                      <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">River Role</label>
                       <select
                         value={role}
                         onChange={(e) => setRole(e.target.value as RiverRole)}
-                        className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-cyan-500"
+                        className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                       >
                         <option value="angler">🎣 Angler</option>
                         <option value="guide">🛶 Guide</option>
@@ -438,11 +443,11 @@ export const AuthGate: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Focus Tributary</label>
+                      <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Focus Tributary</label>
                       <select
                         value={tributary}
                         onChange={(e) => setTributary(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-cyan-500 truncate"
+                        className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)] truncate"
                       >
                         {TRIBUTARY_OPTIONS.map((t) => (
                           <option key={t} value={t}>{t}</option>
@@ -455,7 +460,7 @@ export const AuthGate: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-cyan-950/60 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+                  className="w-full py-2.5 px-4 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                 >
                   {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
                   <span>{isSignUp ? 'Create Free Account' : 'Sign In'}</span>
@@ -463,16 +468,16 @@ export const AuthGate: React.FC = () => {
               </form>
             )}
 
-            {/* Mode 3: Local Offline / Fast Setup */}
+            {/* Mode 3: Local Fast Setup */}
             {activeMode === 'local' && (
-              <form onSubmit={handleLocalSubmit} className="space-y-3 pt-1">
-                <p className="text-xs text-slate-400">
+              <form onSubmit={handleLocalSubmit} className="space-y-3 pt-1 font-mono">
+                <p className="text-xs text-[var(--text-muted)] font-sans">
                   Instant profile stored locally in your browser. No social logins or passwords required:
                 </p>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                    Your Name or Handle <span className="text-cyan-400">*</span>
+                  <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                    Your Name or Handle <span className="text-[var(--accent-amber)]">*</span>
                   </label>
                   <input
                     type="text"
@@ -480,17 +485,17 @@ export const AuthGate: React.FC = () => {
                     placeholder="e.g. Sustut Watcher, Skeena Angler"
                     value={localName}
                     onChange={(e) => setLocalName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">River Role</label>
+                    <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">River Role</label>
                     <select
                       value={localRole}
                       onChange={(e) => setLocalRole(e.target.value as RiverRole)}
-                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-cyan-500"
+                      className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                     >
                       <option value="angler">🎣 Angler</option>
                       <option value="guide">🛶 Guide</option>
@@ -501,11 +506,11 @@ export const AuthGate: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Focus Tributary</label>
+                    <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Focus Tributary</label>
                     <select
                       value={localTributary}
                       onChange={(e) => setLocalTributary(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-cyan-500 truncate"
+                      className="w-full px-2 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)] truncate"
                     >
                       {TRIBUTARY_OPTIONS.map((t) => (
                         <option key={t} value={t}>{t}</option>
@@ -515,7 +520,7 @@ export const AuthGate: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">
                     Email Address (Optional)
                   </label>
                   <input
@@ -523,24 +528,24 @@ export const AuthGate: React.FC = () => {
                     placeholder="name@example.com"
                     value={localEmail}
                     onChange={(e) => setLocalEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-slate-600"
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs sm:text-sm rounded-xl border border-cyan-800/60 shadow-lg transition flex items-center justify-center gap-2 mt-2"
+                  className="w-full py-2.5 px-4 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--accent-amber)] font-bold text-xs sm:text-sm rounded-xl border border-[var(--border-main)] shadow-sm transition flex items-center justify-center gap-2 mt-2"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+                  <CheckCircle2 className="w-4 h-4 text-[var(--accent-amber)]" />
                   <span>Enter with Local Profile</span>
                 </button>
               </form>
             )}
 
             <div className="pt-2 text-center">
-              <span className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-                <Shield className="w-3 h-3 text-slate-600" />
-                Root Administrator: <span className="text-slate-400 font-mono">{BOOTSTRAP_ADMIN_EMAIL}</span>
+              <span className="text-[10px] text-[var(--text-muted)] flex items-center justify-center gap-1 font-mono">
+                <Shield className="w-3 h-3 text-[var(--text-muted)]" />
+                Root Administrator: <span className="text-[var(--text-main)] font-mono">{BOOTSTRAP_ADMIN_EMAIL}</span>
               </span>
             </div>
           </div>
@@ -548,10 +553,10 @@ export const AuthGate: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-900 bg-slate-950/80 px-6 py-4 text-center text-xs text-slate-500">
+      <footer className="relative z-10 border-t border-[var(--border-main)] bg-[var(--bg-surface)] px-6 py-4 text-center text-xs text-[var(--text-muted)] font-mono">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Fisheries and Oceans Canada (DFO) &bull; Skeena River Tyee Test Fishery Project</span>
-          <span className="font-mono text-[11px] text-slate-600">Skeena Watershed &bull; Gitxsan, Wet'suwet'en &amp; Ts'msyen Territories</span>
+          <span className="text-[11px]">Skeena Watershed &bull; Gitxsan, Wet'suwet'en &amp; Ts'msyen Territories</span>
         </div>
       </footer>
     </div>

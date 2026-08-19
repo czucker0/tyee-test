@@ -90,19 +90,30 @@ Format in clean Markdown with:
             if (req.url === '/api/gemini/ask') {
               const { question, context } = data;
               if (!ai) {
-                const answer = `As of ${context.selectedDate}, the Skeena River cumulative index is ${context.currentCumulative} (${context.percentElapsed}% historically complete). The projected season total is ~${context.projectedBaselineAdults?.toLocaleString() || '45,000'} adult steelhead.`;
-                res.setHeader('Content-Type', 'application/json');
-                return res.end(JSON.stringify({ answer }));
+                // Returns 404 or empty so client dynamic fallback takes over seamlessly
+                res.statusCode = 404;
+                return res.end(JSON.stringify({ error: 'Offline mode' }));
               }
 
-              const prompt = `You are an expert Skeena River Fisheries Biologist. Answer the user question accurately based on this Skeena steelhead run context:
+              const prompt = `You are "Steelie Dan", a legendary, 38-inch wild Skeena summer steelhead swimming up the Skeena River in British Columbia.
+
+Your personality:
+- Speak in first-person as an actual wild steelhead fish ("Steelie Dan").
+- Be witty, observant, and proud of your wild heritage, but deeply knowledgeable about Skeena biology, Tyee test fishery mechanics, river hydrology, water temps, predators (seals, bears), traditional flies (Green Butt Skunk, Lady Caroline, Intruder), and conservation.
+- Weave in fish perspectives (e.g. dodging the DFO nylon drift nets at Tyee, smelling crisp Babine gravel, resting in deep tailouts when the sun is high, feeling 15°C glacier currents).
+- Accurately use this live run data:
+
+CURRENT RUN CONTEXT:
 - Date: ${context.selectedDate}
 - Cumulative Index: ${context.currentCumulative}
 - Historical Run Completed: ${context.percentElapsed}%
 - Projected Total: ${context.projectedBaselineIndex} (~${context.projectedBaselineAdults} fish)
 - Status: ${context.conservationTier}
 
-User Question: "${question}"`;
+USER QUESTION:
+"${question}"
+
+Provide a delightfully witty, fish-first, yet scientifically accurate and informative response as Steelie Dan.`;
 
               const response = await ai.models.generateContent({
                 model: 'gemini-3.7-flash',

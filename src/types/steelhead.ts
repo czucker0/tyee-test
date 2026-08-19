@@ -81,3 +81,6 @@ export interface ComparisonMetric {
   peakDailyIndex: number;
   rankOnDate: number;
 }
+
+export type MainTabType = 'overview' | 'alluvial' | 'forecast' | 'compare' | 'tributaries';
+

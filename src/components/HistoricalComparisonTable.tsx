@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import {
   CURRENT_YEAR,
-  HISTORICAL_AVERAGE_CURVE,
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
-import { ArrowUpDown, Table, Check, AlertTriangle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { ArrowUpDown, Table, AlertTriangle, AlertCircle, ShieldCheck } from 'lucide-react';
 
 interface HistoricalComparisonTableProps {
   currentDayIndex: number;
@@ -26,7 +25,6 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
   selectedMonthDay,
   isMetricInAdults,
   selectedYears,
-  onToggleYear,
   allYears = [],
 }) => {
   const [sortField, setSortField] = useState<SortField>('rank');
@@ -104,84 +102,68 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'Healthy':
+      case 'Zone 1 (Healthy / Abundant)':
       case 'Abundant':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Abundant
-          </span>
-        );
-      case 'Healthy':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
-            Healthy
-          </span>
-        );
-      case 'Moderate':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            Moderate
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600/40 inline-flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" /> Healthy
           </span>
         );
       case 'Precautionary':
+      case 'Zone 2 (Cautionary Band)':
+      case 'Moderate':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30">
-            Precautionary
-          </span>
-        );
-      case 'Critical':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            Critical
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-600/40 inline-flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Caution
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-600/40 inline-flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" /> Critical
+          </span>
+        );
     }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30">
-            <Table className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Historical Run Escapement Ledger
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Table className="w-5 h-5 text-[var(--accent-amber)]" />
+            <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide">
+              Complete Multi-Year Escapement Archive
             </h3>
-            <p className="text-xs text-slate-400">
-              Direct comparison of all recorded Skeena seasons on {selectedMonthDay}
-            </p>
           </div>
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
+            Sortable matrix comparing cumulative CPUE indices, escapement ranks, and peak dates.
+          </p>
         </div>
 
-        {selectedYears && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilterToSelected(!filterToSelected)}
-              className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition ${
-                filterToSelected
-                  ? 'bg-purple-950/70 border-purple-500/50 text-purple-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {filterToSelected ? 'Showing Selected Only' : 'Show All Years'}
-            </button>
-          </div>
+        {selectedYears && selectedYears.length > 0 && (
+          <button
+            onClick={() => setFilterToSelected(!filterToSelected)}
+            className={`text-xs px-3 py-1.5 rounded-lg border font-mono font-semibold transition ${
+              filterToSelected
+                ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)]'
+                : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+          >
+            {filterToSelected ? 'Showing Selected Only' : 'Show All Archive Seasons'}
+          </button>
         )}
       </div>
 
-      {/* Table Container */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/50">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-900/90 text-slate-400 font-mono text-[11px] border-b border-slate-800">
-            <tr>
+      <div className="overflow-x-auto no-scrollbar">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-[var(--border-main)] text-[var(--text-muted)] font-mono text-[11px]">
               <th className="p-3">
                 <button
                   onClick={() => handleSort('rank')}
-                  className="flex items-center gap-1 hover:text-white font-bold"
+                  className="flex items-center gap-1 hover:text-[var(--text-main)] font-bold"
                 >
                   <span>Rank</span>
                   <ArrowUpDown className="w-3 h-3" />
@@ -190,7 +172,7 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
               <th className="p-3">
                 <button
                   onClick={() => handleSort('year')}
-                  className="flex items-center gap-1 hover:text-white font-bold"
+                  className="flex items-center gap-1 hover:text-[var(--text-main)] font-bold"
                 >
                   <span>Season</span>
                   <ArrowUpDown className="w-3 h-3" />
@@ -199,7 +181,7 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
               <th className="p-3">
                 <button
                   onClick={() => handleSort('onDate')}
-                  className="flex items-center gap-1 hover:text-white font-bold"
+                  className="flex items-center gap-1 hover:text-[var(--text-main)] font-bold"
                 >
                   <span>Cumulative on {selectedMonthDay}</span>
                   <ArrowUpDown className="w-3 h-3" />
@@ -211,7 +193,7 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
               <th className="p-3">
                 <button
                   onClick={() => handleSort('peakVal')}
-                  className="flex items-center gap-1 hover:text-white font-bold"
+                  className="flex items-center gap-1 hover:text-[var(--text-main)] font-bold"
                 >
                   <span>Peak Migration</span>
                   <ArrowUpDown className="w-3 h-3" />
@@ -220,7 +202,7 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
               <th className="p-3">
                 <button
                   onClick={() => handleSort('total')}
-                  className="flex items-center gap-1 hover:text-white font-bold"
+                  className="flex items-center gap-1 hover:text-[var(--text-main)] font-bold"
                 >
                   <span>Final Total</span>
                   <ArrowUpDown className="w-3 h-3" />
@@ -230,22 +212,22 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
               <th className="p-3 hidden md:table-cell">Historical Notes</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-mono">
+          <tbody className="divide-y divide-[var(--border-main)] font-mono">
             {rawRows.map((row) => (
               <tr
                 key={row.year}
-                className={`hover:bg-slate-900/80 transition ${
-                  row.isCurrent ? 'bg-indigo-950/40 text-white font-bold' : 'text-slate-300'
+                className={`hover:bg-[var(--bg-subtle)] transition ${
+                  row.isCurrent ? 'bg-[var(--accent-amber-light)] text-[var(--text-main)] font-bold' : 'text-[var(--text-secondary)]'
                 }`}
               >
                 <td className="p-3">
                   <span
                     className={`px-2 py-0.5 rounded font-black text-xs ${
                       row.rank === 1
-                        ? 'bg-amber-500 text-slate-950'
+                        ? 'bg-[var(--accent-amber)] text-white'
                         : row.rank <= 3
-                        ? 'bg-slate-800 text-amber-300'
-                        : 'text-slate-400'
+                        ? 'bg-[var(--bg-subtle)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)]'
+                        : 'text-[var(--text-muted)]'
                     }`}
                   >
                     #{row.rank}
@@ -257,9 +239,9 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: row.color }}
                     />
-                    <span className="font-bold text-white">{row.year}</span>
+                    <span className="font-bold text-[var(--text-main)]">{row.year}</span>
                     {row.isCurrent && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-300 uppercase">
+                      <span className="stamp-badge stamp-amber">
                         Current
                       </span>
                     )}
@@ -267,19 +249,19 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
                 </td>
                 <td className="p-3">
                   <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="font-bold text-white">{row.onDateVal.toFixed(1)}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      (~{Math.round(row.onDateVal * 50).toLocaleString()} fish)
+                    <span className="font-bold text-[var(--text-main)]">{row.onDateVal.toFixed(1)}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-normal">
+                      (~{Math.round(row.onDateVal * ADULT_EXPANSION_FACTOR).toLocaleString()} fish)
                     </span>
                   </div>
                 </td>
                 <td className="p-3">
                   {row.isCurrent ? (
-                    <span className="text-indigo-400 text-xs font-bold">Baseline</span>
+                    <span className="text-[var(--accent-amber)] text-xs font-bold">Baseline</span>
                   ) : (
                     <span
                       className={`text-xs font-semibold ${
-                        row.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        row.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
                       {row.delta >= 0 ? '+' : ''}
@@ -287,20 +269,20 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
                     </span>
                   )}
                 </td>
-                <td className="p-3 text-slate-400">
-                  <span className="text-slate-200 font-semibold">{row.peakDate}</span>{' '}
+                <td className="p-3 text-[var(--text-muted)]">
+                  <span className="text-[var(--text-main)] font-semibold">{row.peakDate}</span>{' '}
                   <span className="text-[10px]">({row.peakDailyVal.toFixed(1)} pts)</span>
                 </td>
                 <td className="p-3">
                   <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="font-bold text-white">{row.totalVal.toFixed(1)}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
+                    <span className="font-bold text-[var(--text-main)]">{row.totalVal.toFixed(1)}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-normal">
                       (~{row.adults.toLocaleString()} fish)
                     </span>
                   </div>
                 </td>
                 <td className="p-3">{getStatusBadge(row.status)}</td>
-                <td className="p-3 hidden md:table-cell text-[11px] text-slate-400 font-sans max-w-xs truncate">
+                <td className="p-3 hidden md:table-cell text-[11px] text-[var(--text-muted)] font-sans max-w-xs truncate">
                   {row.notes}
                 </td>
               </tr>

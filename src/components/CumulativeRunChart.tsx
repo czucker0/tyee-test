@@ -7,9 +7,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   ReferenceLine,
-  ReferenceArea,
 } from 'recharts';
 import {
   CURRENT_YEAR,
@@ -19,11 +17,18 @@ import {
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
-import { Eye, EyeOff, Layers, Check, Filter, Sparkles, Fish } from 'lucide-react';
+import {
+  Sparkles,
+  Fish,
+  BarChart3,
+  LineChart,
+} from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface CumulativeRunChartProps {
   currentDayIndex: number;
   projection: ProjectionModelResult;
+  selectedMonthDay?: string;
   isMetricInAdults: boolean;
   selectedYears: number[];
   onToggleYear: (year: number) => void;
@@ -34,28 +39,32 @@ interface CumulativeRunChartProps {
 export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
   currentDayIndex,
   projection,
+  selectedMonthDay,
   isMetricInAdults,
   selectedYears,
-  onToggleYear,
   onSelectPreset,
   allYears = [],
 }) => {
+  const { isDark } = useTheme();
+  const dateLabel = selectedMonthDay || SEASON_DAYS[currentDayIndex]?.monthDay || 'Selected Date';
+  // Toggle between Horizontal Standings / Benchmark Bars and the S-Curve Line Chart
+  const [visualMode, setVisualMode] = useState<'bars' | 'curve'>('bars');
+  const [barScope, setBarScope] = useState<'onDate' | 'seasonTotal'>('onDate');
+
   const [showAverage, setShowAverage] = useState<boolean>(true);
-  const [showEnvelope, setShowEnvelope] = useState<boolean>(true);
-  const [showThresholds, setShowThresholds] = useState<boolean>(true);
+  const [showEnvelope] = useState<boolean>(true);
+  const [showThresholds] = useState<boolean>(true);
   const [showConfidenceBands, setShowConfidenceBands] = useState<boolean>(true);
 
   // Multiplier for display units
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
-  const unitLabel = isMetricInAdults ? 'Adult Steelhead' : 'Tyee Index Points';
 
   const isYearSelected = (year: number) => selectedYears.includes(year);
 
-  // Build chart dataset
-  const { chartData, lastRecordedDayIndex, isSelectedDateFuture } = useMemo(() => {
+  // Build line chart dataset
+  const { chartData, isSelectedDateFuture } = useMemo(() => {
     const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
     
-    // Find the latest day with published in-season DFO data
     let lastRecIdx = 67; // Aug 16 fallback
     if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
       for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
@@ -95,469 +104,568 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         }
       });
 
-      // Current Year 2026 handling:
-      // 1. Solid Cyan line ONLY up to the last authentic recorded day (Aug 16)
+      // 2026 In-Season actual vs projected trajectory
       if (isPastOrRecorded) {
-        const raw = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
-        row.currentActual = Math.round(raw * mult * 10) / 10;
-        // Connect seam on last recorded day
+        const recVal = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
+        row.currentActual = Math.round(recVal * mult * 10) / 10;
         if (idx === lastRecIdx) {
-          row.currentProjected = row.currentActual;
-          row.ciLow = row.currentActual;
-          row.ciHigh = row.currentActual;
-          row.ciRange = [row.currentActual, row.currentActual];
-        } else {
-          row.currentProjected = null;
-          row.ciLow = null;
-          row.ciHigh = null;
-          row.ciRange = null;
+          row.currentProjected = Math.round(recVal * mult * 10) / 10;
         }
       } else {
-        // 2. Beyond last recorded day (Aug 17 - Sep 30): Statistical Projection Trajectory
-        row.currentActual = null;
+        const projectedVal = projItem?.projectedCumulative ?? projection.projectedBaselineIndex;
+        row.currentProjected = Math.round(projectedVal * mult * 10) / 10;
+
         if (projItem) {
-          row.currentProjected = Math.round(projItem.projectedCumulative * mult * 10) / 10;
-          row.ciLow = Math.round(projItem.projectedCumulativeLow * mult * 10) / 10;
-          row.ciHigh = Math.round(projItem.projectedCumulativeHigh * mult * 10) / 10;
           row.ciRange = [
-            Math.round(projItem.projectedCumulativeLow * mult * 10) / 10,
-            Math.round(projItem.projectedCumulativeHigh * mult * 10) / 10,
+            Math.round(projItem.projectedLowCI * mult * 10) / 10,
+            Math.round(projItem.projectedHighCI * mult * 10) / 10,
           ];
         }
-      }
-
-      // Slider marker tracking
-      if (idx === currentDayIndex) {
-        row.sliderSelectedValue = isPastOrRecorded ? row.currentActual : row.currentProjected;
       }
 
       return row;
     });
 
     return { chartData: data, lastRecordedDayIndex: lastRecIdx, isSelectedDateFuture: isFuture };
-  }, [currentDayIndex, projection, mult, allYears]);
+  }, [allYears, currentDayIndex, mult, projection]);
 
-  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
+  // Build horizontal benchmark bar dataset
+  const horizontalBarData = useMemo(() => {
+    const histDay = HISTORICAL_AVERAGE_CURVE[currentDayIndex] || HISTORICAL_AVERAGE_CURVE[0];
+    const histAvgOnDate = histDay.avgCumulative;
+    const histFinalAvg = HISTORICAL_AVERAGE_CURVE[HISTORICAL_AVERAGE_CURVE.length - 1].avgCumulative;
 
-  // Custom Tooltip
+    const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
+    
+    // Find last recorded day index
+    let lastRecIdx = 67; // Aug 16 fallback
+    if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
+      for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
+        const d: any = currentYearRecord.data[i];
+        if (d.isRecorded === true || (d.dailyIndex > 0 && d.cumulativeIndex > 0)) {
+          lastRecIdx = i;
+          break;
+        }
+      }
+    }
+
+    const isDateFuture = currentDayIndex > lastRecIdx;
+
+    // Trajectory lookup
+    const trajectoryItem = projection.projectedDailyTrajectory.find((t) => t.dayOfYear - 1 === currentDayIndex);
+
+    // Calculate current year value on date (use projection if date is beyond recorded data)
+    let currentOnDate = currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative;
+    if (isDateFuture) {
+      currentOnDate = trajectoryItem?.projectedCumulative ?? projection.projectedBaselineIndex;
+    }
+
+    const currentSeasonTotal = projection.projectedBaselineIndex;
+
+    const barItems: Array<{
+      id: string;
+      label: string;
+      year?: number;
+      isCurrent?: boolean;
+      isProjected?: boolean;
+      isAverage?: boolean;
+      color: string;
+      rawVal: number;
+      valDisplay: number;
+      adults: number;
+      deltaVsBaseline: number;
+    }> = [];
+
+    // 1. Current 2026 Year
+    const currentActiveVal = barScope === 'onDate' ? currentOnDate : currentSeasonTotal;
+    const baseToCompare = barScope === 'onDate' ? histAvgOnDate : histFinalAvg;
+    const curDelta = baseToCompare > 0 ? Math.round(((currentActiveVal - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
+
+    let currentLabel = `${CURRENT_YEAR} (Recorded to Date)`;
+    if (barScope === 'seasonTotal') {
+      currentLabel = `${CURRENT_YEAR} (Forecast Final)`;
+    } else if (isDateFuture) {
+      currentLabel = `${CURRENT_YEAR} (Projected on ${dateLabel})`;
+    }
+
+    barItems.push({
+      id: `current_${CURRENT_YEAR}`,
+      label: currentLabel,
+      year: CURRENT_YEAR,
+      isCurrent: true,
+      isProjected: isDateFuture || barScope === 'seasonTotal',
+      color: isDark ? '#f59e0b' : '#c56a25',
+      rawVal: currentActiveVal,
+      valDisplay: currentActiveVal * mult,
+      adults: Math.round(currentActiveVal * ADULT_EXPANSION_FACTOR),
+      deltaVsBaseline: curDelta,
+    });
+
+    // 2. 10-Year Historical Average
+    const avgActiveVal = barScope === 'onDate' ? histAvgOnDate : histFinalAvg;
+    barItems.push({
+      id: 'hist_avg',
+      label: barScope === 'onDate' ? '10-Year Average (On Date)' : '10-Year Average (Final)',
+      isAverage: true,
+      color: isDark ? '#2dd4bf' : '#1a6467',
+      rawVal: avgActiveVal,
+      valDisplay: avgActiveVal * mult,
+      adults: Math.round(avgActiveVal * ADULT_EXPANSION_FACTOR),
+      deltaVsBaseline: 0,
+    });
+
+    // 3. Archival Selected Years
+    allYears.forEach((y) => {
+      if (y.isCurrentYear || y.year === CURRENT_YEAR || !isYearSelected(y.year)) return;
+      const yValOnDate = y.data[currentDayIndex]?.cumulativeIndex || 0;
+      const yValFinal = y.totalIndex;
+      const yActive = barScope === 'onDate' ? yValOnDate : yValFinal;
+      const yDelta = baseToCompare > 0 ? Math.round(((yActive - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
+
+      barItems.push({
+        id: `year_${y.year}`,
+        label: `${y.year} ${barScope === 'onDate' ? `(${y.data[currentDayIndex]?.monthDay || ''})` : 'Final'}`,
+        year: y.year,
+        color: y.color,
+        rawVal: yActive,
+        valDisplay: yActive * mult,
+        adults: Math.round(yActive * ADULT_EXPANSION_FACTOR),
+        deltaVsBaseline: yDelta,
+      });
+    });
+
+    // Sort descending by value
+    barItems.sort((a, b) => b.rawVal - a.rawVal);
+
+    const maxVal = Math.max(...barItems.map((b) => b.rawVal), 1);
+    const currentRank = barItems.findIndex((b) => b.isCurrent) + 1;
+
+    return {
+      items: barItems,
+      maxVal,
+      currentRank,
+      totalCount: barItems.length,
+    };
+  }, [allYears, barScope, currentDayIndex, isDark, isYearSelected, mult, projection]);
+
+  // Selected date info
+  const selectedDayInfo = SEASON_DAYS[currentDayIndex] || SEASON_DAYS[0];
+  const dateFormatted = selectedMonthDay || selectedDayInfo.monthDay;
+
+  // Custom Tooltip for S-Curve Line Chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
-    const hoveredDayIndex = payload[0]?.payload?.dayIndex;
-    const isHoveredRecorded = hoveredDayIndex !== undefined && hoveredDayIndex <= lastRecordedDayIndex;
-
-    const filteredEntries = payload.filter((p: any) => {
-      if (!p.dataKey || p.value === undefined || p.value === null || isNaN(p.value)) return false;
-      if (p.dataKey.includes('envelope') || p.dataKey.includes('ciRange') || p.dataKey === 'ciLow' || p.dataKey === 'ciHigh' || p.dataKey === 'sliderSelectedValue') {
-        return false;
-      }
-
-      if (isHoveredRecorded && p.dataKey === 'currentProjected' && hoveredDayIndex !== lastRecordedDayIndex) return false;
-      if (!isHoveredRecorded && p.dataKey === 'currentActual') return false;
-
-      return true;
-    });
-
-    const getYearWeight = (dataKey: string): number => {
-      if (dataKey === 'currentActual' || dataKey === 'currentProjected') return 2026;
-      if (dataKey.startsWith('year_')) {
-        return parseInt(dataKey.replace('year_', ''), 10) || 0;
-      }
-      if (dataKey === 'avgCumulative') return 0;
-      return -1;
-    };
-
-    const sortedEntries = [...filteredEntries].sort((a: any, b: any) => {
-      return getYearWeight(b.dataKey) - getYearWeight(a.dataKey);
-    });
-
     return (
-      <div className="bg-slate-950/95 border border-slate-700 rounded-xl p-3.5 shadow-2xl backdrop-blur text-xs space-y-2 min-w-[240px] max-w-[320px]">
-        <div className="font-bold text-white border-b border-slate-800 pb-1.5 flex justify-between items-center">
-          <span className="flex items-center gap-1.5">
-            <span className="text-cyan-400 font-extrabold">{label}</span>
-            <span className="text-slate-400 font-normal">
-              (Day {hoveredDayIndex !== undefined ? hoveredDayIndex + 1 : ''}/113)
-            </span>
-          </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase bg-slate-800 text-slate-300">
-            {isHoveredRecorded ? 'Recorded DFO' : 'Model Forecast'}
-          </span>
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl max-w-xs text-xs font-mono">
+        <div className="border-b border-[var(--border-main)] pb-1.5 mb-2 flex items-center justify-between">
+          <span className="font-bold text-[var(--text-main)] text-sm">{label}</span>
+          <span className="text-[10px] text-[var(--text-muted)] font-mono">Day {payload[0]?.payload?.dayIndex + 1}/113</span>
         </div>
 
-        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-          {sortedEntries.map((p: any) => {
-            const is2026 = p.dataKey === 'currentActual' || p.dataKey === 'currentProjected';
-            const isAvg = p.dataKey === 'avgCumulative';
-            const yearName = is2026
-              ? isHoveredRecorded
-                ? `${CURRENT_YEAR} (Recorded)`
-                : `${CURRENT_YEAR} (Model Forecast)`
-              : isAvg
-              ? '10-Yr DFO Average'
-              : p.name;
+        <div className="space-y-1.5">
+          {payload.map((p: any) => {
+            if (p.dataKey === 'envelopeRange' || p.dataKey === 'ciRange') return null;
 
-            const val = typeof p.value === 'number' ? p.value : 0;
-            const expandedAdults = isMetricInAdults
-              ? val
-              : Math.round(val * ADULT_EXPANSION_FACTOR);
+            let yearName = p.name;
+            let val = Number(p.value || 0);
+            let expandedAdults = Math.round(val * (isMetricInAdults ? 1 : ADULT_EXPANSION_FACTOR));
 
             return (
-              <div
-                key={p.dataKey}
-                className={`flex justify-between items-center py-1 px-1.5 rounded transition ${
-                  is2026
-                    ? 'bg-cyan-950/40 border border-cyan-500/30'
-                    : isAvg
-                    ? 'bg-slate-900/60'
-                    : 'hover:bg-slate-900'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: p.color || '#38bdf8' }}
-                  />
-                  <span
-                    className={`font-medium ${
-                      is2026 ? 'text-cyan-200 font-bold' : isAvg ? 'text-slate-300' : 'text-slate-400'
-                    }`}
-                  >
-                    {yearName}
-                  </span>
+              <div key={p.dataKey} className="flex items-center justify-between gap-3 text-[var(--text-secondary)]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color || '#c56a25' }} />
+                  <span className="font-medium font-mono text-[11px]">{yearName}</span>
                 </div>
-                <div className="font-mono text-right">
-                  <span className={`font-bold ${is2026 ? 'text-cyan-300' : 'text-white'}`}>
-                    {val.toFixed(1)}
-                  </span>
-                  {!isMetricInAdults && (
-                    <span className="text-[10px] text-slate-400 font-normal ml-1">
-                      (~{expandedAdults.toLocaleString()} fish)
-                    </span>
-                  )}
+                <div className="font-mono font-bold text-right text-[var(--text-main)]">
+                  <span>{val.toFixed(1)}</span>
+                  {!isMetricInAdults && <span className="text-[10px] text-[var(--text-muted)] ml-1">(~{expandedAdults.toLocaleString()})</span>}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* Confidence Band info on future dates */}
-        {!isHoveredRecorded && payload[0]?.payload?.ciLow !== null && (
-          <div className="pt-1.5 border-t border-slate-800/80 text-[10px] text-indigo-300/90 font-mono flex justify-between">
-            <span>80% Model Envelope:</span>
-            <span>
-              {payload[0].payload.ciLow?.toFixed(1)} – {payload[0].payload.ciHigh?.toFixed(1)}{' '}
-              {!isMetricInAdults ? 'pts' : 'fish'}
-            </span>
-          </div>
-        )}
       </div>
     );
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
-      {/* Header & Controls Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-slate-800/80 pb-4">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
+      {/* Top Header & Visual Mode Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3 sm:pb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <span>Cumulative Tyee Test Fishery Migration Curve</span>
+            <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide flex items-center gap-2">
+              <span>{visualMode === 'bars' ? 'Escapement Standings & Benchmarks' : 'S-Curve Migration Trajectory'}</span>
             </h3>
             {isSelectedDateFuture ? (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-semibold flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Forecasting {selectedMonthDay}
+              <span className="stamp-badge stamp-amber">
+                <Sparkles className="w-3 h-3 text-[var(--accent-amber)]" />
+                Forecasting {dateFormatted}
               </span>
             ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono font-semibold flex items-center gap-1">
+              <span className="stamp-badge stamp-teal">
                 <Fish className="w-3 h-3" />
-                DFO Recorded through {SEASON_DAYS[lastRecordedDayIndex]?.monthDay}
+                <span>DFO Telemetry</span>
+                <span className="font-bold normal-case">({dateFormatted})</span>
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Tracking in-season run progression against historical benchmarks and statistical projection bounds.
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
+            {visualMode === 'bars'
+              ? `2026 currently ranks #${horizontalBarData.currentRank} of ${horizontalBarData.totalCount} seasons in ledger`
+              : 'Tracking in-season run progression against historical percentiles and model projection'}
           </p>
         </div>
 
-        {/* Toggle Layers Toolbar */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={() => setShowAverage(!showAverage)}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium border transition flex items-center gap-1.5 ${
-              showAverage
-                ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300'
-                : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {showAverage ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>10-Yr Mean</span>
-          </button>
+        {/* Primary View Toggle Switch */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1 font-mono">
+            <button
+              onClick={() => setVisualMode('bars')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                visualMode === 'bars'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Standings Bars</span>
+            </button>
 
-          <button
-            onClick={() => setShowConfidenceBands(!showConfidenceBands)}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium border transition flex items-center gap-1.5 ${
-              showConfidenceBands
-                ? 'bg-indigo-950/60 border-indigo-500/50 text-indigo-300'
-                : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {showConfidenceBands ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>80% Model CI</span>
-          </button>
-
-          <button
-            onClick={() => setShowEnvelope(!showEnvelope)}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium border transition flex items-center gap-1.5 ${
-              showEnvelope
-                ? 'bg-slate-800 border-slate-600 text-slate-200'
-                : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {showEnvelope ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>Historical Range</span>
-          </button>
-
-          <button
-            onClick={() => setShowThresholds(!showThresholds)}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium border transition flex items-center gap-1.5 ${
-              showThresholds
-                ? 'bg-amber-950/60 border-amber-500/50 text-amber-300'
-                : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {showThresholds ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>Escapement Target (110)</span>
-          </button>
+            <button
+              onClick={() => setVisualMode('curve')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                visualMode === 'curve'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              <LineChart className="w-3.5 h-3.5" />
+              <span>Run Curve</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Year Filter Quick Buttons */}
-      <div className="flex items-center justify-between gap-2 flex-wrap text-xs pt-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-slate-400 text-xs font-semibold mr-1 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5" /> Compare:
-          </span>
-          <button
-            onClick={() => onSelectPreset('currentOnly')}
-            className={`px-2 py-1 rounded-md transition font-medium ${
-              selectedYears.length === 1 && selectedYears[0] === CURRENT_YEAR
-                ? 'bg-cyan-500 text-slate-950 font-bold'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            2026 Only
-          </button>
-          <button
-            onClick={() => onSelectPreset('recent')}
-            className="px-2 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium"
-          >
-            Recent (2022–2026)
-          </button>
-          <button
-            onClick={() => onSelectPreset('extremes')}
-            className="px-2 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium"
-          >
-            Record Years (2018/2021)
-          </button>
-          <button
-            onClick={() => onSelectPreset('all')}
-            className="px-2 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium"
-          >
-            All Archive
-          </button>
-        </div>
+      {/* 1. HORIZONTAL STANDINGS & BENCHMARK BAR VIEW */}
+      {visualMode === 'bars' ? (
+        <div className="space-y-3.5">
+          {/* Sub-scope toggle: To-Date vs Season Total */}
+          <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
+            <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-lg border border-[var(--border-main)]">
+              <button
+                onClick={() => setBarScope('onDate')}
+                className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+                  barScope === 'onDate' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <span>Passage on</span>
+                <span className="font-bold">{selectedMonthDay}</span>
+              </button>
+              <button
+                onClick={() => setBarScope('seasonTotal')}
+                className={`px-2.5 py-1 rounded font-medium transition ${
+                  barScope === 'seasonTotal' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                Full Season Final / Proj
+              </button>
+            </div>
 
-        {/* Dynamic Year Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-1">
-          {allYears
-            .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
-            .slice(0, 6)
-            .map((yr) => {
-              const selected = isYearSelected(yr.year);
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-amber)]" />
+                <strong className="text-[var(--accent-amber)]">2026</strong>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-teal)]" />
+                <span>10-Yr Avg</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-stone-400" />
+                <span>Archive</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Vertical Stack of Horizontal Bars */}
+          <div className="space-y-2.5">
+            {horizontalBarData.items.map((item, idx) => {
+              const rank = item.isAverage ? null : idx + 1;
+              const barWidthPct = Math.max(5, Math.round((item.rawVal / horizontalBarData.maxVal) * 100));
+
               return (
-                <button
-                  key={yr.year}
-                  onClick={() => onToggleYear(yr.year)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono transition flex items-center gap-1 border ${
-                    selected
-                      ? 'bg-slate-800 border-slate-600 text-white font-bold'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-300'
+                <div
+                  key={item.id}
+                  className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col gap-1.5 ${
+                    item.isCurrent
+                      ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
+                      : item.isAverage
+                      ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)]'
+                      : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
                   }`}
                 >
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: yr.color }} />
-                  <span>{yr.year}</span>
-                </button>
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    {/* Rank & Year Label */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      {rank !== null ? (
+                        <span
+                          className={`w-6 h-6 rounded-md flex items-center justify-center font-mono text-[11px] font-black shrink-0 ${
+                            rank === 1
+                              ? 'bg-[var(--accent-amber)] text-white'
+                              : rank === 2
+                              ? 'bg-stone-300 text-stone-900'
+                              : rank === 3
+                              ? 'bg-stone-400 text-white'
+                              : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
+                          }`}
+                        >
+                          #{rank}
+                        </span>
+                      ) : (
+                        <span className="w-6 h-6 rounded-md bg-[var(--accent-teal)] text-white flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
+                          AVG
+                        </span>
+                      )}
+
+                      <span className={`font-bold truncate ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm font-mono' : item.isAverage ? 'text-[var(--accent-teal)] font-mono font-semibold' : 'text-[var(--text-main)] font-mono'}`}>
+                        {item.label}
+                        {item.isCurrent && (
+                          <span className={`ml-1.5 stamp-badge ${item.isProjected ? 'stamp-amber' : 'stamp-teal'}`}>
+                            {item.isProjected ? 'PROJECTION' : 'RECORDED'}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Escapement Values & Delta */}
+                    <div className="flex items-center gap-2 text-right shrink-0">
+                      <div className="font-mono">
+                        <span className={`font-black ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm' : 'text-[var(--text-main)]'}`}>
+                          {item.valDisplay.toFixed(1)} {isMetricInAdults ? 'adults' : 'pts'}
+                        </span>
+                        {!isMetricInAdults && (
+                          <span className="text-[10px] text-[var(--text-muted)] ml-1.5 hidden xs:inline">
+                            (~{item.adults.toLocaleString()} fish)
+                          </span>
+                        )}
+                      </div>
+
+                      {!item.isAverage && (
+                        <span
+                          className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                            item.deltaVsBaseline >= 0
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                          }`}
+                        >
+                          {item.deltaVsBaseline >= 0 ? `+${item.deltaVsBaseline}%` : `${item.deltaVsBaseline}%`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Horizontal Bar Metric Track */}
+                  <div className="w-full bg-[var(--bg-subtle)] rounded-full h-2.5 sm:h-3 overflow-hidden relative border border-[var(--border-main)]">
+                    {/* Conservation Target Marker line (110 pts) */}
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-spruce)] z-10 opacity-70 pointer-events-none"
+                      style={{
+                        left: `${Math.min(100, (ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY / horizontalBarData.maxVal) * 100)}%`,
+                      }}
+                      title="Healthy Conservation Target (110 pts)"
+                    />
+
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        item.isCurrent
+                          ? 'bg-[var(--accent-amber)]'
+                          : item.isAverage
+                          ? 'bg-[var(--accent-teal)]'
+                          : 'bg-stone-400 dark:bg-stone-600'
+                      }`}
+                      style={{ width: `${barWidthPct}%` }}
+                    />
+                  </div>
+                </div>
               );
             })}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* 2. S-CURVE TRAJECTORY LINE CHART */
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
+            {/* Quick Year Presets */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[11px] text-[var(--text-muted)] mr-1">Presets:</span>
+              <button
+                onClick={() => onSelectPreset('currentOnly')}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
+              >
+                2026 Only
+              </button>
+              <button
+                onClick={() => onSelectPreset('recent')}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
+              >
+                Recent (2022–24)
+              </button>
+              <button
+                onClick={() => onSelectPreset('extremes')}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
+              >
+                Extremes
+              </button>
+              <button
+                onClick={() => onSelectPreset('all')}
+                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
+              >
+                All
+              </button>
+            </div>
 
-      {/* Main Chart Canvas */}
-      <div className="h-[360px] sm:h-[420px] w-full pt-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
-            {/* Historical Min-Max Envelope Band */}
-            {showEnvelope && (
-              <Area
-                type="monotone"
-                dataKey="envelopeRange"
-                stroke="none"
-                fill="#334155"
-                fillOpacity={0.18}
-                name="Historical Range (1998–2025)"
-                isAnimationActive={false}
-              />
-            )}
+            {/* Layer Toggles */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowAverage(!showAverage)}
+                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
+                  showAverage ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)] text-[var(--accent-teal)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
+                }`}
+              >
+                10-Yr Avg
+              </button>
+              <button
+                onClick={() => setShowConfidenceBands(!showConfidenceBands)}
+                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
+                  showConfidenceBands ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
+                }`}
+              >
+                80% CI
+              </button>
+            </div>
+          </div>
 
-            {/* 80% Projection Confidence Interval Band */}
-            {showConfidenceBands && (
-              <Area
-                type="monotone"
-                dataKey="ciRange"
-                stroke="none"
-                fill="#6366f1"
-                fillOpacity={0.22}
-                name="80% Projection Confidence Envelope"
-                isAnimationActive={false}
-              />
-            )}
+          {/* Line Chart Canvas */}
+          <div className="h-[320px] sm:h-[400px] w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 10, right: 15, left: 0, bottom: 15 }}>
+                {showEnvelope && (
+                  <Area
+                    type="monotone"
+                    dataKey="envelopeRange"
+                    stroke="none"
+                    fill={isDark ? '#1e2e33' : '#e4dcd0'}
+                    fillOpacity={isDark ? 0.25 : 0.45}
+                    isAnimationActive={false}
+                  />
+                )}
 
-            <XAxis
-              dataKey="monthDay"
-              stroke="#64748b"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              tickLine={{ stroke: '#334155' }}
-              interval={10}
-            />
+                {showConfidenceBands && (
+                  <Area
+                    type="monotone"
+                    dataKey="ciRange"
+                    stroke="none"
+                    fill={isDark ? '#d97706' : '#e89553'}
+                    fillOpacity={isDark ? 0.18 : 0.25}
+                    isAnimationActive={false}
+                  />
+                )}
 
-            <YAxis
-              stroke="#64748b"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              tickLine={{ stroke: '#334155' }}
-              domain={[0, 'auto']}
-              label={{
-                value: unitLabel,
-                angle: -90,
-                position: 'insideLeft',
-                fill: '#64748b',
-                fontSize: 11,
-                offset: 0,
-              }}
-            />
+                <XAxis
+                  dataKey="monthDay"
+                  stroke={isDark ? '#475569' : '#a39b8c'}
+                  tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
+                  tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
+                  interval={12}
+                />
 
-            <Tooltip content={<CustomTooltip />} />
+                <YAxis
+                  stroke={isDark ? '#475569' : '#a39b8c'}
+                  tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
+                  tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
+                  domain={[0, 'auto']}
+                />
 
-            {/* Escapement Target Reference Line (110 index) */}
-            {showThresholds && (
-              <ReferenceLine
-                y={ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY * mult}
-                stroke="#10b981"
-                strokeDasharray="4 4"
-                strokeWidth={1.5}
-                label={{
-                  value: `Target: ${ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY * mult} ${isMetricInAdults ? 'adults' : 'pts'}`,
-                  fill: '#10b981',
-                  fontSize: 10,
-                  position: 'right',
-                }}
-              />
-            )}
+                <Tooltip content={<CustomTooltip />} />
 
-            {/* Selected Date Slider Marker */}
-            <ReferenceLine
-              x={selectedMonthDay}
-              stroke="#38bdf8"
-              strokeWidth={2}
-              strokeDasharray="3 3"
-              label={{
-                value: selectedMonthDay,
-                fill: '#38bdf8',
-                fontSize: 11,
-                position: 'top',
-                fontWeight: 'bold',
-              }}
-            />
+                {showThresholds && (
+                  <ReferenceLine
+                    y={ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY * mult}
+                    stroke={isDark ? '#10b981' : '#224b38'}
+                    strokeDasharray="4 4"
+                    strokeWidth={1.5}
+                  />
+                )}
 
-            {/* 10-Year Historical Average Baseline Line */}
-            {showAverage && (
-              <Line
-                type="monotone"
-                dataKey="avgCumulative"
-                stroke="#38bdf8"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-                name="10-Year Average (Baseline)"
-                isAnimationActive={false}
-              />
-            )}
+                {/* Selected Date Pin */}
+                <ReferenceLine
+                  x={selectedMonthDay}
+                  stroke={isDark ? '#f59e0b' : '#c56a25'}
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                />
 
-            {/* Historical Years Lines */}
-            {allYears.map((yr) => {
-              if (yr.isCurrentYear || yr.year === CURRENT_YEAR || !isYearSelected(yr.year)) {
-                return null;
-              }
-              return (
+                {showAverage && (
+                  <Line
+                    type="monotone"
+                    dataKey="avgCumulative"
+                    stroke={isDark ? '#2dd4bf' : '#1a6467'}
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    name="10-Year Average"
+                    isAnimationActive={false}
+                  />
+                )}
+
+                {allYears.map((yr) => {
+                  if (yr.isCurrentYear || yr.year === CURRENT_YEAR || !isYearSelected(yr.year)) return null;
+                  return (
+                    <Line
+                      key={yr.year}
+                      type="monotone"
+                      dataKey={`year_${yr.year}`}
+                      stroke={yr.color}
+                      strokeWidth={1.75}
+                      dot={false}
+                      name={`${yr.year}`}
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
+
                 <Line
-                  key={yr.year}
                   type="monotone"
-                  dataKey={`year_${yr.year}`}
-                  stroke={yr.color}
-                  strokeWidth={1.75}
+                  dataKey="currentActual"
+                  stroke={isDark ? '#f59e0b' : '#c56a25'}
+                  strokeWidth={3.5}
                   dot={false}
-                  name={`${yr.year}`}
+                  name={`${CURRENT_YEAR} Recorded`}
                   isAnimationActive={false}
                 />
-              );
-            })}
 
-            {/* Current Year Recorded Actuals (Solid Cyan Line up to Aug 16) */}
-            <Line
-              type="monotone"
-              dataKey="currentActual"
-              stroke="#06b6d4"
-              strokeWidth={3.5}
-              dot={false}
-              name={`${CURRENT_YEAR} (Recorded DFO Actual)`}
-              isAnimationActive={false}
-            />
-
-            {/* Current Year Statistical Projection (Dashed Indigo Line from Aug 16 to Sep 30) */}
-            <Line
-              type="monotone"
-              dataKey="currentProjected"
-              stroke="#818cf8"
-              strokeWidth={2.75}
-              strokeDasharray="6 4"
-              dot={false}
-              name={`${CURRENT_YEAR} (Model Forecast)`}
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Chart Legend Footer */}
-      <div className="flex items-center justify-between flex-wrap gap-2 text-xs border-t border-slate-800/80 pt-3 text-slate-400">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-1 bg-cyan-400 rounded-full" />
-            <span className="text-cyan-300 font-semibold">{CURRENT_YEAR} Recorded DFO</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-1 bg-indigo-400 rounded-full border-t border-dashed border-indigo-400" />
-            <span className="text-indigo-300 font-semibold">{CURRENT_YEAR} Model Projection</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-1 bg-sky-400 rounded-full border-t border-dashed border-sky-400" />
-            <span className="text-sky-300">10-Yr Baseline</span>
+                <Line
+                  type="monotone"
+                  dataKey="currentProjected"
+                  stroke={isDark ? '#fbbf24' : '#e89553'}
+                  strokeWidth={2.5}
+                  strokeDasharray="6 4"
+                  dot={false}
+                  name={`${CURRENT_YEAR} Forecast`}
+                  isAnimationActive={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </div>
-        <span className="text-[11px] text-slate-500 font-mono">
-          Last published test fishery record: <strong>{SEASON_DAYS[lastRecordedDayIndex]?.monthDay}</strong>
-        </span>
+      )}
+
+      {/* Footer Note */}
+      <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] border-t border-[var(--border-main)] pt-2.5 text-[var(--text-muted)] font-mono">
+        <span>Target: 110 Index pts (~24,200 adult wild steelhead)</span>
+        <span className="text-[var(--accent-amber)]">Conversion: 1.0 pt &approx; 220 adult fish</span>
       </div>
     </div>
   );

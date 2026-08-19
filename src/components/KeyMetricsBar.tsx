@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -7,9 +7,9 @@ import {
   Compass,
   Fish,
   Gauge,
-  Sparkles,
-  Zap,
   Activity,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { ProjectionModelResult, YearRunData } from '../types/steelhead';
 import {
@@ -34,16 +34,16 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   allYears = ALL_YEARS_DATA,
   currentDayIndex = projection.dayIndex,
 }) => {
+  const [showDetailedCards, setShowDetailedCards] = useState<boolean>(false);
   const dayIdx = Math.max(0, Math.min(HISTORICAL_AVERAGE_CURVE.length - 1, currentDayIndex));
   const histDay = HISTORICAL_AVERAGE_CURVE[dayIdx] || HISTORICAL_AVERAGE_CURVE[0];
   const histAvgCumulative = histDay ? histDay.avgCumulative : 1;
-  const histFinalAvg = HISTORICAL_AVERAGE_CURVE[HISTORICAL_AVERAGE_CURVE.length - 1].avgCumulative;
 
-  // Locate the current year's time-series
+  // Locate current year record
   const currentYearData = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
 
-  // Dynamically find the latest day with published in-season DFO data
-  let lastRecordedDayIndex = 67; // Aug 16 fallback
+  // Latest recorded day
+  let lastRecordedDayIndex = 67;
   if (currentYearData && currentYearData.data && currentYearData.data.length > 0) {
     for (let i = currentYearData.data.length - 1; i >= 0; i--) {
       const d: any = currentYearData.data[i];
@@ -55,42 +55,13 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   }
 
   const isBeyondRecordedData = dayIdx > lastRecordedDayIndex;
-  const isFinalSeasonDay = dayIdx === HISTORICAL_AVERAGE_CURVE.length - 1;
-
-  // Ground truth actual cumulative vs projected trajectory
   const recordedCum = currentYearData?.data[dayIdx]?.cumulativeIndex ?? projection.currentCumulative;
-  const lastRecordedCum = currentYearData?.data[lastRecordedDayIndex]?.cumulativeIndex ?? 161.93;
-  const lastRecordedDateStr = currentYearData?.data[lastRecordedDayIndex]?.monthDay ?? 'Aug 16';
-
-  // Projected value on selected future day
-  const trajectoryEntry =
-    projection.projectedDailyTrajectory[dayIdx] ||
-    projection.projectedDailyTrajectory.find(
-      (t) => t.monthDay === selectedMonthDay || t.dayOfYear === dayIdx + 1
-    );
-
-  const projectedOnSelectedDate = isBeyondRecordedData
-    ? projection.currentCumulative
-    : recordedCum;
-
-  const projectedLowOnDate = trajectoryEntry
-    ? trajectoryEntry.projectedCumulativeLow
-    : projection.projectedLowCI;
-  const projectedHighOnDate = trajectoryEntry
-    ? trajectoryEntry.projectedCumulativeHigh
-    : projection.projectedHighCI;
-
   const currentCumAdults = Math.round(recordedCum * ADULT_EXPANSION_FACTOR);
-  const histAvgAdults = Math.round(histAvgCumulative * ADULT_EXPANSION_FACTOR);
 
   const projectedTotal = projection.projectedBaselineIndex;
   const projectedAdults = Math.round(projectedTotal * ADULT_EXPANSION_FACTOR);
   const lowCIAdults = Math.round(projection.projectedLowCI * ADULT_EXPANSION_FACTOR);
   const highCIAdults = Math.round(projection.projectedHighCI * ADULT_EXPANSION_FACTOR);
-
-  const projectedOnDateAdults = Math.round(projectedOnSelectedDate * ADULT_EXPANSION_FACTOR);
-  const lowOnDateAdults = Math.round(projectedLowOnDate * ADULT_EXPANSION_FACTOR);
-  const highOnDateAdults = Math.round(projectedHighOnDate * ADULT_EXPANSION_FACTOR);
 
   // Delta calculations
   const deltaVsAvgPct =
@@ -98,346 +69,199 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
       ? Math.round(((recordedCum - histAvgCumulative) / histAvgCumulative) * 1000) / 10
       : 0;
 
-  const projDeltaVsAvgFinalPct =
-    histFinalAvg > 0
-      ? Math.round(((projectedTotal - histFinalAvg) / histFinalAvg) * 1000) / 10
-      : 0;
-
-  // ==========================================
-  // VELOCITY CALCULATIONS (Card 2)
-  // ==========================================
+  // Velocity calculations
   let rolling3DayPace = 0;
-  let rolling5DayPace = 0;
   let singleDaySet = 0;
-  let isAccelerating = false;
-  let isDecelerating = false;
-  let projectedDailyEntry = 0;
 
   if (!isBeyondRecordedData && currentYearData?.data) {
     singleDaySet = currentYearData.data[dayIdx]?.dailyIndex ?? 0;
-
-    // 3-Day Rolling Average Pace
     const d0 = singleDaySet;
     const d1 = dayIdx > 0 ? (currentYearData.data[dayIdx - 1]?.dailyIndex ?? 0) : d0;
     const d2 = dayIdx > 1 ? (currentYearData.data[dayIdx - 2]?.dailyIndex ?? 0) : d1;
     const count3 = dayIdx >= 2 ? 3 : dayIdx + 1;
     rolling3DayPace = Math.round(((d0 + d1 + d2) / count3) * 100) / 100;
-
-    // 5-Day Rolling Average for acceleration baseline
-    const d3 = dayIdx > 2 ? (currentYearData.data[dayIdx - 3]?.dailyIndex ?? 0) : d2;
-    const d4 = dayIdx > 3 ? (currentYearData.data[dayIdx - 4]?.dailyIndex ?? 0) : d3;
-    const count5 = dayIdx >= 4 ? 5 : dayIdx + 1;
-    rolling5DayPace = (d0 + d1 + d2 + d3 + d4) / count5;
-
-    isAccelerating = rolling3DayPace > rolling5DayPace * 1.08 && rolling3DayPace >= 1.0;
-    isDecelerating = rolling3DayPace < rolling5DayPace * 0.92 && rolling3DayPace >= 0.5;
-  } else {
-    // Beyond recorded data: extract modeled daily velocity from trajectory
-    projectedDailyEntry = trajectoryEntry?.projectedDaily ?? 0;
   }
 
   const rollingAdultsPace = Math.round(rolling3DayPace * ADULT_EXPANSION_FACTOR);
-  const projectedDailyAdults = Math.round(projectedDailyEntry * ADULT_EXPANSION_FACTOR);
   const peakDailyIndex = currentYearData?.peakDailyIndex || 9.35;
   const peakDate = currentYearData?.peakDate || 'Aug 5';
 
-  const getStatusColor = (tier: string) => {
-    switch (tier) {
-      case 'Abundant':
-        return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
-      case 'Healthy':
-        return 'text-teal-400 border-teal-500/30 bg-teal-500/10';
-      case 'Moderate':
-        return 'text-amber-400 border-amber-500/30 bg-amber-500/10';
-      case 'Precautionary':
-        return 'text-orange-400 border-orange-500/30 bg-orange-500/10';
-      default:
-        return 'text-red-400 border-red-500/30 bg-red-500/10';
-    }
-  };
-
   return (
     <div className="space-y-3">
-      {/* Telemetry Status Bar */}
-      <div className="flex items-center justify-between px-1 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            DFO Skeena River Tyee Test Fishery Telemetry
-          </span>
-          <span className="text-[11px] text-slate-500 hidden sm:inline">
-            &bull; Real-time in-season indices &amp; predictive run modeling
-          </span>
-        </div>
-        <div className="text-xs text-slate-400 font-mono bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
-          Conversion: <strong className="text-cyan-300">1.0 Tyee Index &approx; 220 Adult Steelhead</strong>
-        </div>
-      </div>
+      {/* Glanceable Hero Snapshot */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-sm transition-colors duration-200">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--border-main)] pb-2.5 mb-3.5 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse" />
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--accent-amber)] flex items-center gap-1.5">
+              <span>Field Escapement Telemetry</span>
+              <span>&bull;</span>
+              <span className="font-bold text-sm text-[var(--text-main)] normal-case tracking-normal">{selectedMonthDay}</span>
+            </span>
+          </div>
 
-      {/* 4 Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* ========================================================================= */}
-        {/* CARD 1: UNIFIED RUN ESCAPEMENT (Actual Catch to Date OR Model Projection) */}
-        {/* ========================================================================= */}
-        {!isBeyondRecordedData ? (
-          // STATE A: ACTUAL DFO DATA (On or before last recorded date)
-          <div className="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 rounded-xl p-4 shadow-lg relative overflow-hidden flex flex-col justify-between transition group">
-            <div className="flex items-start justify-between">
-              <div className="space-y-0.5">
-                <span className="text-xs font-medium text-slate-400">Actual Catch to Date</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    DFO Recorded ({selectedMonthDay})
-                  </span>
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition">
-                <Fish className="w-4 h-4" />
-              </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDetailedCards(!showDetailedCards)}
+              className="text-xs px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] font-mono flex items-center gap-1 transition"
+            >
+              <span>{showDetailedCards ? 'Compact' : 'Field Log Details'}</span>
+              {showDetailedCards ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Core Hero Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+          {/* Hero Metric 1: Escapement to Date */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[11px]">
+                {isBeyondRecordedData ? `Forecast on ${selectedMonthDay}` : `Passage to ${selectedMonthDay}`}
+              </span>
+              <Fish className="w-4 h-4 text-[var(--accent-teal)]" />
             </div>
-
-            <div className="my-2.5">
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <div className="my-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] font-mono tracking-tight">
                   {recordedCum.toFixed(1)}
                 </span>
-                <span className="text-sm font-semibold text-cyan-400 font-mono">
-                  (~{currentCumAdults.toLocaleString()} fish)
-                </span>
-              </div>
-              <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-                <span>10-Yr Baseline Avg:</span>
-                <span className="font-mono text-slate-300">
-                  {histAvgCumulative.toFixed(1)} (~{histAvgAdults.toLocaleString()} fish)
+                <span className="text-xs sm:text-sm font-semibold text-[var(--accent-teal)] font-mono">
+                  ~{currentCumAdults.toLocaleString()} Adults
                 </span>
               </div>
             </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-              <div className="flex items-center gap-1">
-                {deltaVsAvgPct >= 0 ? (
-                  <span className="flex items-center gap-0.5 font-bold text-emerald-400">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    +{deltaVsAvgPct}%
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-0.5 font-bold text-red-400">
-                    <TrendingDown className="w-3.5 h-3.5" />
-                    {deltaVsAvgPct}%
-                  </span>
-                )}
-                <span className="text-slate-500 text-[11px]">vs 10-yr pace</span>
-              </div>
-              <div className="text-[11px] text-slate-400 font-mono">
-                EoS Proj: <strong className="text-indigo-300">~{projectedTotal.toFixed(0)}</strong>
-              </div>
+            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] font-mono">
+              <span className="text-[var(--text-muted)]">vs 10-Yr Mean:</span>
+              <span className={`font-bold flex items-center gap-0.5 ${deltaVsAvgPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {deltaVsAvgPct >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {deltaVsAvgPct >= 0 ? `+${deltaVsAvgPct}%` : `${deltaVsAvgPct}%`}
+              </span>
             </div>
           </div>
-        ) : (
-          // STATE B: MODEL PROJECTION (When slider moves beyond last recorded date)
-          <div className="bg-gradient-to-br from-slate-900/95 via-indigo-950/20 to-slate-900/95 border border-indigo-500/40 hover:border-indigo-400/60 rounded-xl p-4 shadow-lg shadow-indigo-950/20 relative overflow-hidden flex flex-col justify-between transition group animate-in fade-in duration-200">
-            <div className="flex items-start justify-between">
-              <div className="space-y-0.5">
-                <span className="text-xs font-medium text-indigo-300">
-                  {isFinalSeasonDay ? 'Final Projected Total' : `Projected on ${selectedMonthDay}`}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                    <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                    Statistical Forecast
-                  </span>
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 group-hover:bg-indigo-500/25 transition">
-                <Target className="w-4 h-4" />
-              </div>
-            </div>
 
-            <div className="my-2.5">
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl sm:text-3xl font-black text-indigo-100 tracking-tight">
-                  {projectedOnSelectedDate.toFixed(1)}
+          {/* Hero Metric 2: Health & Standing */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[11px]">Escapement Health</span>
+              <ShieldCheck className="w-4 h-4 text-[var(--accent-spruce)]" />
+            </div>
+            <div className="my-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="stamp-badge stamp-spruce">
+                  {projection.conservationTier}
                 </span>
-                <span className="text-sm font-semibold text-indigo-300 font-mono">
-                  (~{projectedOnDateAdults.toLocaleString()} fish)
+                <span className="text-xs font-mono text-[var(--text-secondary)] font-semibold">
+                  {projection.escapementTargetPct}% Target
                 </span>
               </div>
-              <div className="text-[11px] text-indigo-300/80 font-mono mt-1">
-                80% CI: {projectedLowOnDate.toFixed(1)} (~{lowOnDateAdults.toLocaleString()}) – {projectedHighOnDate.toFixed(1)} (~{highOnDateAdults.toLocaleString()})
+            </div>
+            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] font-mono text-[var(--text-muted)]">
+              <span>Analog Season:</span>
+              <span className="font-bold text-[var(--accent-amber)] font-mono">{projection.bestFitAnalogYear}</span>
+            </div>
+          </div>
+
+          {/* Hero Metric 3: Projected Season Total */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[11px]">Season Total Forecast</span>
+              <Target className="w-4 h-4 text-[var(--accent-amber)]" />
+            </div>
+            <div className="my-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[var(--accent-amber)] font-mono tracking-tight">
+                  ~{projectedTotal.toFixed(0)}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] font-mono">
+                  ~{projectedAdults.toLocaleString()} Adults
+                </span>
               </div>
             </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-indigo-900/60 text-xs">
-              <span className="text-slate-400 text-[11px]">
-                Confidence: <strong className="text-indigo-300 font-mono">{projection.confidenceLevel}%</strong>
-              </span>
-              <span className="font-bold text-emerald-400 text-[11px] flex items-center gap-0.5">
-                <TrendingUp className="w-3 h-3" />
-                +{projDeltaVsAvgFinalPct}% vs avg
+            <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[var(--border-main)] text-[var(--text-muted)] font-mono">
+              <span>80% CI:</span>
+              <span className="font-mono text-[var(--text-secondary)] font-semibold">
+                ~{lowCIAdults.toLocaleString()} – ~{highCIAdults.toLocaleString()}
               </span>
             </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* CARD 2 (NEW OPEN SLOT): MIGRATION VELOCITY (Daily CPUE & Inflow Pace)      */}
-        {/* ========================================================================= */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 rounded-xl p-4 shadow-lg relative overflow-hidden flex flex-col justify-between transition group">
-          <div className="flex items-start justify-between">
-            <div className="space-y-0.5">
-              <span className="text-xs font-medium text-slate-400">Migration Velocity</span>
-              <div className="flex items-center gap-1.5">
-                {!isBeyondRecordedData ? (
-                  <span
-                    className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border flex items-center gap-1 ${
-                      isAccelerating
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : isDecelerating
-                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                        : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
-                    }`}
-                  >
-                    <Activity className="w-2.5 h-2.5" />
-                    {isAccelerating ? 'Surging Pace ↑' : isDecelerating ? 'Decelerating ↓' : 'Steady Pace →'}
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                    <Sparkles className="w-2.5 h-2.5" />
-                    Modeled Inflow
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:bg-amber-500/20 transition">
-              <Gauge className="w-4 h-4" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            {!isBeyondRecordedData ? (
-              <>
-                <div className="flex items-baseline gap-1.5 flex-wrap">
-                  <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                    +{rolling3DayPace.toFixed(2)}
-                  </span>
-                  <span className="text-xs font-semibold text-amber-400 font-mono">
-                    pts/day (~{rollingAdultsPace.toLocaleString()} fish/day)
-                  </span>
-                </div>
-                <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-                  <span>Single Set ({selectedMonthDay}):</span>
-                  <span className="font-mono text-slate-300 font-bold">
-                    {singleDaySet.toFixed(2)} pts (~{Math.round(singleDaySet * ADULT_EXPANSION_FACTOR).toLocaleString()} fish)
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-baseline gap-1.5 flex-wrap">
-                  <span className="text-2xl sm:text-3xl font-black text-indigo-100 tracking-tight">
-                    ~{projectedDailyEntry.toFixed(2)}
-                  </span>
-                  <span className="text-xs font-semibold text-indigo-300 font-mono">
-                    pts/day (~{projectedDailyAdults.toLocaleString()} fish/day)
-                  </span>
-                </div>
-                <div className="text-xs text-slate-400 mt-1">
-                  Estimated daily river entry pace on {selectedMonthDay}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-            <span className="text-slate-500 text-[11px]">Season Peak Pulse:</span>
-            <span className="font-mono font-bold text-amber-300 text-[11px]">
-              {peakDailyIndex.toFixed(2)} pts ({peakDate})
-            </span>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* CARD 3: MIGRATION TIMING & ANALOG                                         */}
-        {/* ========================================================================= */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-4 shadow-lg relative overflow-hidden flex flex-col justify-between transition group">
-          <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-slate-400">Migration Timing &amp; Analog</span>
-            <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition">
-              <Compass className="w-4 h-4" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>{projection.bestFitAnalogYear}</span>
-              <span className="text-xs font-normal font-sans text-cyan-300 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
-                Best Fit Analog
-              </span>
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              {projection.percentElapsedHistorical < 40
-                ? 'Early migration phase'
-                : projection.percentElapsedHistorical < 80
-                ? 'Peak run passage window'
-                : 'Late season tail passage'}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-            <span className="text-slate-400">Historical Run Elapsed:</span>
-            <span className="font-mono font-bold text-cyan-300">{projection.percentElapsedHistorical}%</span>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* CARD 4: CONSERVATION & ESCAPEMENT TARGET                                 */}
-        {/* ========================================================================= */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-4 shadow-lg relative overflow-hidden flex flex-col justify-between transition group">
-          <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-slate-400">Escapement Status</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-xs px-2.5 py-1 rounded-md font-bold uppercase tracking-wider border ${getStatusColor(
-                  projection.conservationTier
-                )}`}
-              >
-                {projection.conservationTier}
-              </span>
-              <span className="text-xs font-mono text-slate-300 font-bold">
-                {projection.escapementTargetPct}% of Target
-              </span>
-            </div>
-            <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2.5 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  projection.escapementTargetPct >= 100
-                    ? 'bg-emerald-500'
-                    : projection.escapementTargetPct >= 75
-                    ? 'bg-teal-500'
-                    : projection.escapementTargetPct >= 40
-                    ? 'bg-amber-500'
-                    : 'bg-red-500'
-                }`}
-                style={{ width: `${Math.min(100, projection.escapementTargetPct)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-            <span>
-              Target: <strong className="text-slate-200">110 pts (~24.2k Fish)</strong>
-            </span>
-            <span className="text-[11px] text-emerald-400 font-bold">Above Target!</span>
           </div>
         </div>
       </div>
+
+      {/* Progressive Disclosure: Deep-Dive 4-Card Grid */}
+      {showDetailedCards && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Detailed Card 1: To Date Telemetry */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[10px]">Actual DFO Recorded</span>
+              <Fish className="w-4 h-4 text-[var(--accent-teal)]" />
+            </div>
+            <div className="my-2">
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{recordedCum.toFixed(2)} pts</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
+                Baseline Avg: <span className="text-[var(--text-secondary)] font-semibold">{histAvgCumulative.toFixed(1)} pts</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
+              <span>10-Yr Delta:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">+{deltaVsAvgPct}%</span>
+            </div>
+          </div>
+
+          {/* Detailed Card 2: Migration Velocity */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[10px]">Migration Velocity</span>
+              <Gauge className="w-4 h-4 text-[var(--accent-amber)]" />
+            </div>
+            <div className="my-2">
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">+{rolling3DayPace.toFixed(2)} pts/day</div>
+              <div className="text-xs text-[var(--accent-amber)] font-mono mt-0.5">
+                ~{rollingAdultsPace.toLocaleString()} fish/day (3-Day Roll)
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
+              <span>Single Set ({selectedMonthDay}):</span>
+              <span className="text-[var(--text-main)] font-mono font-bold">{singleDaySet.toFixed(2)} pts</span>
+            </div>
+          </div>
+
+          {/* Detailed Card 3: Season Peak Pulse */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[10px]">Peak Migration Pulse</span>
+              <Activity className="w-4 h-4 text-[var(--accent-amber)]" />
+            </div>
+            <div className="my-2">
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">{peakDailyIndex.toFixed(2)} pts</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
+                Recorded on <span className="text-[var(--accent-amber)] font-bold">{peakDate}</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
+              <span>Run Timing Phase:</span>
+              <span className="text-[var(--accent-teal)] font-bold">{projection.percentElapsedHistorical}% Elapsed</span>
+            </div>
+          </div>
+
+          {/* Detailed Card 4: Escapement Multipliers */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
+              <span className="uppercase tracking-wider text-[10px]">Expansion Standard</span>
+              <Compass className="w-4 h-4 text-[var(--accent-teal)]" />
+            </div>
+            <div className="my-2">
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">1.0 &approx; 220</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">Adult Steelhead per pt</div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border-main)] text-[11px] font-mono text-[var(--text-muted)] flex justify-between">
+              <span>Model Confidence:</span>
+              <span className="text-[var(--accent-amber)] font-bold">{projection.confidenceLevel}%</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

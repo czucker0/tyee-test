@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Check, Clock, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, Plus, Check, Clock, Sparkles } from 'lucide-react';
 import { YearRunData } from '../types/steelhead';
 
 interface HistoricalYearArchiveSearchProps {
@@ -40,25 +40,25 @@ export const HistoricalYearArchiveSearch: React.FC<HistoricalYearArchiveSearchPr
   });
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-md">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-sm transition-colors duration-200">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="p-1.5 rounded-lg bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)]">
             <Clock className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-slate-200">
-              Compare Any Historical Year from DFO Archive
+            <h4 className="text-xs font-mono font-bold text-[var(--text-main)]">
+              Compare Any Historical Season from DFO Archive
             </h4>
-            <span className="text-[10px] text-slate-400">
-              Search & overlay historical Skeena Tyee runs (1998–2025)
+            <span className="text-[10px] text-[var(--text-muted)] font-mono">
+              Search &amp; overlay historical Skeena Tyee runs (1998–2025)
             </span>
           </div>
         </div>
 
         {/* Search input */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <div className="relative w-full sm:w-64 font-mono">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
@@ -67,16 +67,16 @@ export const HistoricalYearArchiveSearch: React.FC<HistoricalYearArchiveSearchPr
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            placeholder="Search year (e.g. 1998, 2004, 2010)..."
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            placeholder="Search season (e.g. 1998, 2004)..."
+            className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-amber)]"
           />
         </div>
       </div>
 
       {/* Quick Highlights Pills */}
-      <div className="flex items-center gap-1.5 flex-wrap mt-2 pt-2 border-t border-slate-800/80">
-        <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1 mr-1">
-          <Sparkles className="w-3 h-3 text-amber-400" />
+      <div className="flex items-center gap-1.5 flex-wrap mt-2 pt-2 border-t border-[var(--border-main)] font-mono">
+        <span className="text-[10px] uppercase font-bold text-[var(--accent-amber)] flex items-center gap-1 mr-1">
+          <Sparkles className="w-3 h-3 text-[var(--accent-amber)]" />
           Milestones:
         </span>
         {highlightYears.map((h) => {
@@ -87,61 +87,50 @@ export const HistoricalYearArchiveSearch: React.FC<HistoricalYearArchiveSearchPr
               onClick={() => onSelectYear(h.year)}
               className={`text-[11px] px-2 py-0.5 rounded-md font-mono transition flex items-center gap-1 ${
                 isSelected
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold'
-                  : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/50'
+                  ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] font-bold'
+                  : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--border-light)] border border-[var(--border-main)]'
               }`}
             >
-              {isSelected ? <Check className="w-2.5 h-2.5 text-indigo-400" /> : <Plus className="w-2.5 h-2.5 text-slate-400" />}
+              {isSelected ? <Check className="w-2.5 h-2.5 text-[var(--accent-amber)]" /> : <Plus className="w-2.5 h-2.5 text-[var(--text-muted)]" />}
               <span>{h.year}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Dropdown Results when searching */}
-      {isOpen && searchTerm.trim().length > 0 && (
-        <div className="mt-2 bg-slate-950 border border-slate-700 rounded-xl p-2 max-h-48 overflow-y-auto space-y-1">
-          {filteredYears.length === 0 ? (
-            <div className="text-center py-2 text-xs text-slate-500">
-              No historical years found matching "{searchTerm}".
-            </div>
-          ) : (
+      {/* Dropdown search results if user focused/typed */}
+      {isOpen && searchTerm.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-[var(--border-main)] grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto font-mono text-xs">
+          {filteredYears.length > 0 ? (
             filteredYears.map((yr) => {
-              const yrData = allYearsData.find((d) => d.year === yr);
               const isSelected = selectedYears.includes(yr);
+              const data = allYearsData.find((d) => d.year === yr);
               return (
-                <div
+                <button
                   key={yr}
                   onClick={() => {
                     onSelectYear(yr);
-                    setSearchTerm('');
                     setIsOpen(false);
+                    setSearchTerm('');
                   }}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer transition"
+                  className={`p-1.5 rounded text-left border flex items-center justify-between ${
+                    isSelected
+                      ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)]'
+                      : 'bg-[var(--bg-subtle)] border-[var(--border-main)] hover:border-[var(--border-highlight)] text-[var(--text-secondary)]'
+                  }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-white text-xs">{yr}</span>
-                    <span className="text-[11px] text-slate-400">
-                      Total: <strong className="text-slate-200">{yrData?.totalIndex?.toFixed(1) || '--'} pts</strong> (~{Math.round((yrData?.totalIndex || 0) * 50).toLocaleString()} fish)
-                    </span>
+                  <div>
+                    <span className="font-bold block text-[var(--text-main)]">{yr}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] block truncate">{data?.totalIndex} pts</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">
-                      Peak: {yrData?.peakDate || '--'}
-                    </span>
-                    <button
-                      className={`text-xs px-2 py-0.5 rounded ${
-                        isSelected
-                          ? 'bg-emerald-500/20 text-emerald-300 font-bold'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white font-medium'
-                      }`}
-                    >
-                      {isSelected ? 'Active' : '+ Add to Chart'}
-                    </button>
-                  </div>
-                </div>
+                  {isSelected ? <Check className="w-3 h-3 text-[var(--accent-amber)]" /> : <Plus className="w-3 h-3 text-[var(--text-muted)]" />}
+                </button>
               );
             })
+          ) : (
+            <div className="col-span-full py-2 text-center text-xs text-[var(--text-muted)]">
+              No matching archival seasons found.
+            </div>
           )}
         </div>
       )}
