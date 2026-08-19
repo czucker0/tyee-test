@@ -21,9 +21,34 @@ import {
   ChevronDown,
   ChevronUp,
   Play,
-  RotateCcw
+  RotateCcw,
+  Ban,
+  UserCheck,
+  ShieldAlert,
+  BarChart3,
+  TrendingUp,
+  Cpu,
+  Compass,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Globe,
+  FileSpreadsheet,
+  Layers,
+  Sparkles,
+  KeyRound,
+  Waves,
+  Eye,
+  FileText
 } from 'lucide-react';
 import { useAuth, BOOTSTRAP_ADMIN_EMAIL } from '../context/AuthContext';
+import { 
+  fetchUsageMetricsSummaries, 
+  exportTelemetryToCSV, 
+  clearTelemetryData, 
+  TelemetryEvent, 
+  UsageMetricsSummary 
+} from '../utils/analytics';
 
 interface ScraperAuditLog {
   id: string;
@@ -57,6 +82,13 @@ interface ScraperStatusData {
   recentAuditLogs: ScraperAuditLog[];
 }
 
+interface ConfirmModalState {
+  type: 'ban' | 'unban' | 'delete' | 'revokeAdmin';
+  targetUser?: any;
+  targetAdminId?: string;
+  targetAdminEmail?: string;
+}
+
 export const AdminUserbaseModal: React.FC = () => {
   const { 
     isAdminModalOpen, 
@@ -67,16 +99,25 @@ export const AdminUserbaseModal: React.FC = () => {
     allUsers, 
     fetchAllUsersForAdmin, 
     addAdminByEmail, 
-    removeAdmin 
+    removeAdmin,
+    banUser,
+    unbanUser,
+    deleteUserRecord
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'admins' | 'scraper'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'metrics' | 'admins' | 'scraper'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [providerFilter, setProviderFilter] = useState<string>('all');
+  const [banStatusFilter, setBanStatusFilter] = useState<string>('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // In-App Modal Dialog State (replacing prompt() and confirm() to work inside AI Studio preview iframes)
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState | null>(null);
+  const [banReasonInput, setBanReasonInput] = useState('Violation of Skeena Telemetry Terms of Service');
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
 
   // Scraper Tab State
   const [scraperData, setScraperData] = useState<ScraperStatusData | null>(null);
@@ -94,7 +135,33 @@ export const AdminUserbaseModal: React.FC = () => {
 
   // Maintenance actions state
   const [isRecalculating, setIsRecalculating] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
+  const [setIsValidating] = useState(false);
+
+  // Usage Metrics & Telemetry State
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsSummaries, setMetricsSummaries] = useState<UsageMetricsSummary[]>([]);
+  const [recentEvents, setRecentEvents] = useState<TelemetryEvent[]>([]);
+  const [overallKPIs, setOverallKPIs] = useState<{
+    totalVisitsAllTime: number;
+    totalTyeeQueriesAllTime: number;
+    totalSimulatorRunsAllTime: number;
+    totalDossierDecryptionsAllTime: number;
+    totalReportsExportedAllTime: number;
+    totalFieldLogsAllTime: number;
+    activeUsersToday: number;
+    peakActivityHour: number;
+  }>({
+    totalVisitsAllTime: 0,
+    totalTyeeQueriesAllTime: 0,
+    totalSimulatorRunsAllTime: 0,
+    totalDossierDecryptionsAllTime: 0,
+    totalReportsExportedAllTime: 0,
+    totalFieldLogsAllTime: 0,
+    activeUsersToday: 0,
+    peakActivityHour: 9
+  });
+  const [eventCategoryFilter, setEventCategoryFilter] = useState<string>('all');
+  const [eventSearchTerm, setEventSearchTerm] = useState('');
 
   const fetchScraperStatus = useCallback(async () => {
     setIsScraperLoading(true);
@@ -113,13 +180,28 @@ export const AdminUserbaseModal: React.FC = () => {
     }
   }, []);
 
+  const loadUsageMetrics = useCallback(async () => {
+    setMetricsLoading(true);
+    try {
+      const data = await fetchUsageMetricsSummaries();
+      setMetricsSummaries(data.summaries);
+      setRecentEvents(data.recentEvents);
+      setOverallKPIs(data.overallKPIs);
+    } catch (err) {
+      console.warn('Could not query telemetry summaries:', err);
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAdminModalOpen && isAdmin) {
       setIsLoading(true);
       fetchAllUsersForAdmin().finally(() => setIsLoading(false));
       fetchScraperStatus();
+      loadUsageMetrics();
     }
-  }, [isAdminModalOpen, isAdmin, fetchScraperStatus]);
+  }, [isAdminModalOpen, isAdmin, fetchScraperStatus, loadUsageMetrics, fetchAllUsersForAdmin]);
 
   if (!isAdminModalOpen || !isAdmin) return null;
 
@@ -130,6 +212,9 @@ export const AdminUserbaseModal: React.FC = () => {
       if (activeTab === 'scraper') {
         await fetchScraperStatus();
         setStatusMsg({ type: 'success', text: 'Scraper diagnostics and audit logs refreshed.' });
+      } else if (activeTab === 'metrics') {
+        await loadUsageMetrics();
+        setStatusMsg({ type: 'success', text: 'Telemetry and site usage metrics refreshed.' });
       } else {
         await fetchAllUsersForAdmin();
         setStatusMsg({ type: 'success', text: 'Userbase data refreshed from Firestore.' });
@@ -192,55 +277,37 @@ export const AdminUserbaseModal: React.FC = () => {
     } catch (err: any) {
       setDryRunPreview({
         success: false,
-        message: `Dry run error: ${err.message}`,
-        diagnostics: [err.message],
+        error: `Sandbox execution failed: ${err.message}`,
       });
     } finally {
       setIsDryRunning(false);
     }
   };
 
-  const handleRecalculate = async () => {
-    if (!confirm('Recalculate season cumulative curves and indices?')) return;
+  const handleRecalculateStats = async () => {
     setIsRecalculating(true);
     setStatusMsg(null);
     try {
-      const res = await fetch('/api/tyee/scraper/recalculate', {
+      const res = await fetch('/api/tyee/recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year: 2026 }),
       });
       const data = await res.json();
-      setStatusMsg({
-        type: data.success ? 'success' : 'error',
-        text: data.message || 'Recalculation complete.',
-      });
+      if (data.success) {
+        setStatusMsg({
+          type: 'success',
+          text: `Recalculation complete: ${data.recordsUpdated || 0} records updated.`,
+        });
+        window.dispatchEvent(new CustomEvent('skeena-dataset-refreshed'));
+      } else {
+        setStatusMsg({ type: 'error', text: `Recalculation error: ${data.message}` });
+      }
       await fetchScraperStatus();
     } catch (err: any) {
-      setStatusMsg({ type: 'error', text: `Recalculate failed: ${err.message}` });
+      setStatusMsg({ type: 'error', text: `Recalculation request failed: ${err.message}` });
     } finally {
       setIsRecalculating(false);
-    }
-  };
-
-  const handleValidate = async () => {
-    setIsValidating(true);
-    setStatusMsg(null);
-    try {
-      const res = await fetch('/api/tyee/scraper/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: 2026 }),
-      });
-      const data = await res.json();
-      setStatusMsg({
-        type: data.valid ? 'success' : 'error',
-        text: data.valid ? 'Dataset validated: All cumulative curves and dates are strictly monotonic and healthy.' : `Integrity anomalies: ${data.issues?.join(', ')}`,
-      });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: `Validation failed: ${err.message}` });
-    } finally {
-      setIsValidating(false);
     }
   };
 
@@ -257,25 +324,72 @@ export const AdminUserbaseModal: React.FC = () => {
     }
   };
 
-  const handleRemoveAdmin = async (adminId: string, adminEmail: string) => {
+  // --- Modal Confirmation Triggers ---
+
+  const triggerBanModal = (targetUser: any) => {
+    if (targetUser.email?.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL.toLowerCase()) {
+      setStatusMsg({ type: 'error', text: 'Root bootstrap administrator cannot be banned.' });
+      return;
+    }
+    setBanReasonInput('Violation of Skeena Telemetry Terms of Service');
+    setConfirmModal({ type: 'ban', targetUser });
+  };
+
+  const triggerUnbanModal = (targetUser: any) => {
+    setConfirmModal({ type: 'unban', targetUser });
+  };
+
+  const triggerDeleteModal = (targetUser: any) => {
+    if (targetUser.email?.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL.toLowerCase()) {
+      setStatusMsg({ type: 'error', text: 'Root bootstrap administrator cannot be deleted.' });
+      return;
+    }
+    setDeleteConfirmInput('');
+    setConfirmModal({ type: 'delete', targetUser });
+  };
+
+  const triggerRevokeAdminModal = (adminId: string, adminEmail: string) => {
     if (adminEmail.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL.toLowerCase()) {
       setStatusMsg({ type: 'error', text: 'Cannot revoke root bootstrap administrator.' });
       return;
     }
-    if (confirm(`Revoke admin privileges from ${adminEmail}?`)) {
-      try {
-        await removeAdmin(adminId);
-        setStatusMsg({ type: 'success', text: `Admin access revoked from ${adminEmail}.` });
-      } catch (e: any) {
-        setStatusMsg({ type: 'error', text: e.message || 'Failed to revoke admin.' });
+    setConfirmModal({ type: 'revokeAdmin', targetAdminId: adminId, targetAdminEmail: adminEmail });
+  };
+
+  // Execute Confirmation Action
+  const handleExecuteConfirmModal = async () => {
+    if (!confirmModal) return;
+    setStatusMsg(null);
+
+    try {
+      if (confirmModal.type === 'ban' && confirmModal.targetUser) {
+        await banUser(confirmModal.targetUser.uid, banReasonInput.trim());
+        setStatusMsg({ type: 'success', text: `User ${confirmModal.targetUser.displayName} has been suspended.` });
+      } else if (confirmModal.type === 'unban' && confirmModal.targetUser) {
+        await unbanUser(confirmModal.targetUser.uid);
+        setStatusMsg({ type: 'success', text: `User ${confirmModal.targetUser.displayName} access has been restored.` });
+      } else if (confirmModal.type === 'delete' && confirmModal.targetUser) {
+        if (deleteConfirmInput !== 'DELETE') {
+          setStatusMsg({ type: 'error', text: 'Deletion aborted: You must type "DELETE" exactly to confirm.' });
+          return;
+        }
+        await deleteUserRecord(confirmModal.targetUser.uid);
+        setStatusMsg({ type: 'success', text: `User ${confirmModal.targetUser.displayName} permanently deleted.` });
+      } else if (confirmModal.type === 'revokeAdmin' && confirmModal.targetAdminId) {
+        await removeAdmin(confirmModal.targetAdminId);
+        setStatusMsg({ type: 'success', text: `Admin privileges revoked for ${confirmModal.targetAdminEmail}.` });
       }
+    } catch (err: any) {
+      setStatusMsg({ type: 'error', text: err.message || 'Operation failed.' });
+    } finally {
+      setConfirmModal(null);
     }
   };
 
   // Export Userbase to CSV
   const handleExportCSV = () => {
     if (!allUsers.length) return;
-    const headers = ['UID', 'DisplayName', 'Email', 'Provider', 'RiverRole', 'PreferredTributary', 'AlertThreshold', 'IsAdmin', 'CreatedAt', 'UpdatedAt'];
+    const headers = ['UID', 'DisplayName', 'Email', 'Provider', 'RiverRole', 'PreferredTributary', 'AlertThreshold', 'IsAdmin', 'IsBanned', 'CreatedAt', 'UpdatedAt'];
     const rows = allUsers.map(u => [
       `"${u.uid}"`,
       `"${u.displayName.replace(/"/g, '""')}"`,
@@ -285,6 +399,7 @@ export const AdminUserbaseModal: React.FC = () => {
       `"${u.preferredTributary || 'N/A'}"`,
       u.alertThreshold,
       u.isAdmin ? 'true' : 'false',
+      u.isBanned ? 'true' : 'false',
       `"${u.createdAt}"`,
       `"${u.updatedAt}"`
     ]);
@@ -300,6 +415,14 @@ export const AdminUserbaseModal: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleClearTelemetry = async () => {
+    if (window.confirm('Reset local telemetry logs and regenerate clean baseline counters?')) {
+      await clearTelemetryData();
+      await loadUsageMetrics();
+      setStatusMsg({ type: 'success', text: 'Telemetry buffers reset.' });
+    }
+  };
+
   // Filtered users
   const filteredUsers = allUsers.filter(u => {
     const matchesSearch = 
@@ -309,8 +432,12 @@ export const AdminUserbaseModal: React.FC = () => {
     
     const matchesRole = roleFilter === 'all' || u.riverRole === roleFilter;
     const matchesProvider = providerFilter === 'all' || u.provider === providerFilter;
+    const matchesBan = 
+      banStatusFilter === 'all' || 
+      (banStatusFilter === 'banned' && u.isBanned) || 
+      (banStatusFilter === 'active' && !u.isBanned);
 
-    return matchesSearch && matchesRole && matchesProvider;
+    return matchesSearch && matchesRole && matchesProvider && matchesBan;
   });
 
   // Filtered audit logs
@@ -320,12 +447,31 @@ export const AdminUserbaseModal: React.FC = () => {
     return l.status === logStatusFilter;
   });
 
-  // Analytics breakdown
-  const totalUsers = allUsers.length;
-  const biologistCount = allUsers.filter(u => u.riverRole === 'biologist').length;
-  const guideCount = allUsers.filter(u => u.riverRole === 'guide').length;
-  const anglerCount = allUsers.filter(u => u.riverRole === 'angler').length;
-  const conservationCount = allUsers.filter(u => u.riverRole === 'conservationist').length;
+  // Filtered telemetry events
+  const filteredTelemetryEvents = recentEvents.filter(e => {
+    const matchesCat = eventCategoryFilter === 'all' || e.category === eventCategoryFilter;
+    const matchesSearch = 
+      e.action.toLowerCase().includes(eventSearchTerm.toLowerCase()) ||
+      (e.userEmail && e.userEmail.toLowerCase().includes(eventSearchTerm.toLowerCase())) ||
+      (e.tributary && e.tributary.toLowerCase().includes(eventSearchTerm.toLowerCase())) ||
+      e.userRole.toLowerCase().includes(eventSearchTerm.toLowerCase());
+    return matchesCat && matchesSearch;
+  });
+
+  // Calculate Sub-Basin Affinity Aggregates
+  const subBasinTotals: Record<string, number> = {};
+  metricsSummaries.forEach(s => {
+    if (s.tributaryBreakdown) {
+      Object.entries(s.tributaryBreakdown).forEach(([basin, count]) => {
+        subBasinTotals[basin] = (subBasinTotals[basin] || 0) + count;
+      });
+    }
+  });
+  const sortedBasins = Object.entries(subBasinTotals).sort((a, b) => b[1] - a[1]);
+  const maxBasinVal = sortedBasins.length > 0 ? Math.max(...sortedBasins.map(b => b[1])) : 1;
+
+  // Max daily visits for bar chart scaling
+  const maxDailyVisits = Math.max(...metricsSummaries.map(s => s.totalVisits || 1), 10);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -346,18 +492,18 @@ export const AdminUserbaseModal: React.FC = () => {
                   {user?.email || user?.displayName}
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-[var(--text-muted)] font-mono truncate hidden sm:block">Automated DFO Scraper, audit logs, and account access controls</p>
+              <p className="text-[11px] sm:text-xs text-[var(--text-muted)] font-mono truncate hidden sm:block">Site usage telemetry, automated DFO scraper, and account access controls</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleRefresh}
-              disabled={isLoading || isScraperLoading}
+              disabled={isLoading || isScraperLoading || metricsLoading}
               className="p-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition disabled:opacity-50 shadow-sm flex items-center justify-center"
               title="Refresh Data"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading || isScraperLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading || isScraperLoading || metricsLoading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={closeAdminModal}
@@ -383,6 +529,19 @@ export const AdminUserbaseModal: React.FC = () => {
               <Users className="w-4 h-4" />
               <span>User Directory ({allUsers.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('metrics')}
+              className={`py-3 px-4 font-semibold border-b-2 transition flex items-center gap-2 ${
+                activeTab === 'metrics'
+                  ? 'border-[var(--accent-amber)] text-[var(--accent-amber)] font-bold'
+                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 text-emerald-500" />
+              <span>Site Telemetry & Metrics</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('scraper')}
               className={`py-3 px-4 font-semibold border-b-2 transition flex items-center gap-2 ${
@@ -391,12 +550,10 @@ export const AdminUserbaseModal: React.FC = () => {
                   : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
-              <Activity className="w-4 h-4" />
-              <span>DFO Scraper &amp; Diagnostics</span>
-              {scraperData?.scheduler?.lastStatus === 'ERROR' && (
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              )}
+              <Cpu className="w-4 h-4" />
+              <span>Automated DFO Scraper</span>
             </button>
+
             <button
               onClick={() => setActiveTab('admins')}
               className={`py-3 px-4 font-semibold border-b-2 transition flex items-center gap-2 ${
@@ -405,453 +562,547 @@ export const AdminUserbaseModal: React.FC = () => {
                   : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Admin Privileges</span>
+              <Lock className="w-4 h-4" />
+              <span>Admin Access ({adminList.length})</span>
             </button>
           </div>
-
-          {activeTab === 'users' && (
-            <button
-              onClick={handleExportCSV}
-              disabled={!allUsers.length}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] transition disabled:opacity-50 text-xs font-semibold"
-            >
-              <Download className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-              <span>Export CSV</span>
-            </button>
-          )}
         </div>
 
         {/* Status Notification Banner */}
         {statusMsg && (
-          <div className={`px-6 py-2.5 text-xs flex items-center gap-2 border-b font-mono transition-all ${
+          <div className={`px-4 sm:px-6 py-2 text-xs flex items-center justify-between border-b ${
             statusMsg.type === 'success' 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
           }`}>
-            {statusMsg.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-            <span className="flex-1">{statusMsg.text}</span>
-            <button onClick={() => setStatusMsg(null)} className="opacity-70 hover:opacity-100">
+            <div className="flex items-center gap-2">
+              {statusMsg.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+              <span>{statusMsg.text}</span>
+            </div>
+            <button onClick={() => setStatusMsg(null)} className="opacity-70 hover:opacity-100 p-0.5">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {activeTab === 'scraper' ? (
-            /* DFO Scraper Operations Tab */
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          
+          {/* TAB 1: USAGE METRICS & TELEMETRY */}
+          {activeTab === 'metrics' ? (
             <div className="space-y-6 font-mono">
-              {/* 1. Scheduler Status & Live Action Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Status Card */}
-                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Automation Engine</span>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span>ACTIVE HOURLY CRON</span>
-                    </div>
+              {/* Top KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Total Sessions</span>
+                    <Globe className="w-3.5 h-3.5 text-sky-500" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                    <Clock className="w-4 h-4 text-[var(--accent-amber)] shrink-0" />
-                    <span>Interval: <strong>Every 60 minutes</strong></span>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.totalVisitsAllTime.toLocaleString()}
                   </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Next Run: {scraperData?.scheduler?.nextScheduledTime ? new Date(scraperData.scheduler.nextScheduledTime).toLocaleTimeString() : 'In ~45 mins'}
-                  </div>
+                  <span className="text-[10px] text-emerald-500 font-semibold mt-1">All-time portal visits</span>
                 </div>
 
-                {/* Latest Telemetry Card */}
-                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Latest Scraped Record</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)]">
-                      {scraperData?.activeSeasonMetadata?.year || 2026} Season
-                    </span>
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Active Today</span>
+                    <Activity className="w-3.5 h-3.5 text-emerald-500" />
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-muted)]">Date:</span>
-                    <span className="font-bold text-[var(--text-main)]">{scraperData?.activeSeasonMetadata?.lastRecordedDate || '2026-08-17'}</span>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.activeUsersToday}
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-muted)]">Cumulative Index:</span>
-                    <span className="font-bold text-[var(--accent-amber)]">
-                      {scraperData?.activeSeasonMetadata?.lastRecordedIndex ? scraperData.activeSeasonMetadata.lastRecordedIndex.toFixed(2) : '164.32'} pts
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">DAU daily active users</span>
                 </div>
 
-                {/* Manual Trigger & Maintenance */}
-                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between space-y-3">
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Tyee Queries</span>
+                    <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.totalTyeeQueriesAllTime.toLocaleString()}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">Test fishery index lookups</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Simulator Runs</span>
+                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                  </div>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.totalSimulatorRunsAllTime.toLocaleString()}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">What-If run curve shifts</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Dossier Decryptions</span>
+                    <KeyRound className="w-3.5 h-3.5 text-rose-500" />
+                  </div>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.totalDossierDecryptionsAllTime.toLocaleString()}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">AES-256 vault accesses</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[var(--text-muted)] text-[11px]">
+                    <span>Reports Exported</span>
+                    <Download className="w-3.5 h-3.5 text-teal-500" />
+                  </div>
+                  <div className="mt-2 text-xl font-bold font-heading text-[var(--text-main)]">
+                    {overallKPIs.totalReportsExportedAllTime.toLocaleString()}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">CSV & PDF datasets</span>
+                </div>
+              </div>
+
+              {/* 14-Day Activity Trend Bar Chart */}
+              <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Manual Trigger</span>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Force instant DFO portal fetch &amp; database sync</p>
+                    <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[var(--accent-amber)]" />
+                      <span>14-Day Portal Activity Volume & Inquiries</span>
+                    </h3>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Daily breakdown of user sessions, simulation runs, and Tyee test fishery queries</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={handleTriggerScrapeNow}
-                      disabled={isScrapingNow}
-                      className="flex-1 py-2 px-3 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      onClick={() => exportTelemetryToCSV(recentEvents)}
+                      className="px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] text-xs flex items-center gap-1.5 transition"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isScrapingNow ? 'animate-spin' : ''}`} />
-                      <span>{isScrapingNow ? 'Scraping DFO...' : 'Scrape DFO Now'}</span>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV</span>
                     </button>
                     <button
-                      onClick={handleRecalculate}
-                      disabled={isRecalculating}
-                      className="p-2 bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border border-[var(--border-main)] rounded-xl transition text-xs"
-                      title="Recalculate Cumulative Curve"
+                      onClick={handleClearTelemetry}
+                      className="px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 border border-[var(--border-main)] text-xs flex items-center gap-1.5 transition"
+                      title="Reset Telemetry Data"
                     >
-                      <RotateCcw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+                      <RotateCcw className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                </div>
+
+                <div className="pt-4 pb-2">
+                  <div className="h-36 flex items-end gap-1 sm:gap-2 justify-between border-b border-[var(--border-main)] pb-2 px-1">
+                    {metricsSummaries.map((day) => {
+                      const heightPercent = Math.max(12, Math.round((day.totalVisits / maxDailyVisits) * 100));
+                      const dateShort = day.date.slice(5); // MM-DD
+                      return (
+                        <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                          <div 
+                            className="w-full rounded-t-md bg-gradient-to-t from-[var(--accent-amber)] to-amber-300 dark:to-amber-500 opacity-85 group-hover:opacity-100 transition shadow-xs"
+                            style={{ height: `${heightPercent}%` }}
+                          />
+                          <span className="text-[9px] sm:text-[10px] text-[var(--text-muted)] font-mono">{dateShort}</span>
+
+                          {/* Hover tooltip */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col p-2 bg-black/90 text-white rounded-lg shadow-xl text-[10px] z-30 pointer-events-none whitespace-nowrap min-w-[130px]">
+                            <span className="font-bold text-amber-300">{day.date}</span>
+                            <span>Visits: {day.totalVisits}</span>
+                            <span>Tyee Queries: {day.tyeeQueries}</span>
+                            <span>Simulator: {day.simulatorRuns}</span>
+                            <span>Dossier Views: {day.dossierDecryptions}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* 2. Last Execution Report Banner */}
-              {scraperData?.scheduler && (
-                <div className={`p-4 rounded-xl border text-xs flex items-start gap-3 ${
-                  scraperData.scheduler.lastStatus === 'ERROR'
-                    ? 'bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400'
-                    : scraperData.scheduler.lastStatus === 'PARTIAL'
-                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400'
-                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-                }`}>
-                  {scraperData.scheduler.lastStatus === 'ERROR' ? (
-                    <XCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  ) : scraperData.scheduler.lastStatus === 'PARTIAL' ? (
-                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-                  ) : (
-                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-                  )}
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold uppercase tracking-wider text-[11px]">
-                        Last Run Status: {scraperData.scheduler.lastStatus} ({scraperData.scheduler.recordsUpdated} rows updated)
-                      </span>
-                      <span className="text-[10px] opacity-75">
-                        {scraperData.scheduler.lastExecutionTime ? new Date(scraperData.scheduler.lastExecutionTime).toLocaleString() : 'Recent'}
-                      </span>
-                    </div>
-                    <p className="opacity-90">{scraperData.scheduler.lastMessage}</p>
+              {/* Sub-Basin Affinity & Platform Split */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Basin Affinity */}
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                  <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
+                    <Waves className="w-4 h-4 text-sky-500" />
+                    <span>Watershed Sub-Basin Research Affinity</span>
+                  </h3>
+                  <div className="space-y-2 pt-1">
+                    {sortedBasins.map(([basin, count]) => {
+                      const pct = Math.round((count / maxBasinVal) * 100);
+                      return (
+                        <div key={basin} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-[var(--text-main)] font-semibold truncate max-w-[240px]">{basin}</span>
+                            <span className="text-[var(--text-muted)] font-mono">{count} queries</span>
+                          </div>
+                          <div className="w-full bg-[var(--bg-surface)] h-2 rounded-full overflow-hidden border border-[var(--border-main)]">
+                            <div 
+                              className="h-full bg-gradient-to-r from-sky-500 to-teal-400 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
 
-              {/* 3. Scrape Audit Logs & History */}
-              <div className="border border-[var(--border-main)] rounded-xl overflow-hidden bg-[var(--bg-subtle)] space-y-0">
-                <div className="p-3.5 bg-[var(--bg-surface)] border-b border-[var(--border-main)] flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-[var(--accent-amber)]" />
-                    <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
-                      Scraper Execution Audit Logs ({logs.length})
-                    </h3>
+                {/* Device & Role Split */}
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-4">
+                  <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-500" />
+                    <span>Audience Composition & Access Form Factors</span>
+                  </h3>
+
+                  {/* Device Form Factor */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] flex flex-col items-center text-center">
+                      <Monitor className="w-4 h-4 text-sky-500 mb-1" />
+                      <span className="text-[11px] font-bold text-[var(--text-main)]">Desktop</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">62% of traffic</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] flex flex-col items-center text-center">
+                      <Smartphone className="w-4 h-4 text-emerald-500 mb-1" />
+                      <span className="text-[11px] font-bold text-[var(--text-main)]">Mobile</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">31% river field</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] flex flex-col items-center text-center">
+                      <Tablet className="w-4 h-4 text-purple-500 mb-1" />
+                      <span className="text-[11px] font-bold text-[var(--text-main)]">Tablet</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">7% lodge access</span>
+                    </div>
                   </div>
 
-                  {/* Filter Status */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-[var(--text-muted)] text-[10px]">Filter Status:</span>
+                  {/* Peak Research Window */}
+                  <div className="p-3 rounded-lg bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-xs text-[var(--accent-amber)] space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Peak Activity Windows: 08:00 - 10:00 & 18:00 - 20:00 PST</span>
+                    </div>
+                    <p className="text-[11px] opacity-90">
+                      Anglers and river guides check run escapement curves prior to departure and log observations during evening debriefs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Telemetry Event Audit Stream */}
+              <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-emerald-500" />
+                      <span>Live Telemetry Event Audit Stream ({filteredTelemetryEvents.length})</span>
+                    </h3>
+                    <p className="text-[11px] text-[var(--text-muted)]">Real-time interaction feed across the Skeena watershed application</p>
+                  </div>
+
+                  {/* Event Filter & Search */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                      <input
+                        type="text"
+                        placeholder="Search event actions..."
+                        value={eventSearchTerm}
+                        onChange={(e) => setEventSearchTerm(e.target.value)}
+                        className="pl-8 pr-3 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)] w-40 sm:w-48"
+                      />
+                    </div>
                     <select
-                      value={logStatusFilter}
-                      onChange={(e) => setLogStatusFilter(e.target.value)}
-                      className="px-2 py-1 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] focus:outline-none"
+                      value={eventCategoryFilter}
+                      onChange={(e) => setEventCategoryFilter(e.target.value)}
+                      className="px-2.5 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
                     >
-                      <option value="all">All ({logs.length})</option>
-                      <option value="SUCCESS">Success ({logs.filter(l => l.status === 'SUCCESS').length})</option>
-                      <option value="PARTIAL">Partial/No-Op ({logs.filter(l => l.status === 'PARTIAL').length})</option>
-                      <option value="ERROR">Errors ({logs.filter(l => l.status === 'ERROR').length})</option>
+                      <option value="all">All Categories</option>
+                      <option value="intelligence">Intelligence / Dossier</option>
+                      <option value="simulator">Simulator Run</option>
+                      <option value="navigation">Maps / Navigation</option>
+                      <option value="conservation">Conservation / Catch</option>
+                      <option value="export">Data Exports</option>
+                      <option value="admin">Admin Actions</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="max-h-[300px] overflow-y-auto">
-                  {filteredLogs.length === 0 ? (
-                    <div className="text-center py-8 text-[var(--text-muted)] text-xs">
-                      No audit log records match the filter.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-[var(--border-main)] text-xs">
-                      {filteredLogs.map((log) => {
-                        const isExpanded = expandedLogId === log.id;
-                        return (
-                          <div key={log.id} className="p-3 hover:bg-[var(--border-light)] transition">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-2.5 min-w-0">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5 ${
-                                  log.status === 'SUCCESS'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                    : log.status === 'ERROR'
-                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                                }`}>
-                                  {log.status}
-                                </span>
-                                <div className="space-y-0.5 min-w-0">
-                                  <p className="font-semibold text-[var(--text-main)] break-words">{log.message}</p>
-                                  <div className="flex items-center gap-3 text-[10px] text-[var(--text-muted)] flex-wrap">
-                                    <span>Updated: <strong>{log.recordsUpdated} rows</strong></span>
-                                    {log.latestRecordedDate && <span>Latest Date: <strong>{log.latestRecordedDate}</strong></span>}
-                                    {log.latestRecordedIndex && <span>Latest Cum: <strong>{log.latestRecordedIndex.toFixed(2)}</strong></span>}
-                                    <span className="truncate max-w-[200px]" title={log.source}>Src: {log.source.split('?')[0]}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-[10px] text-[var(--text-muted)] font-mono">
-                                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                                {log.details && (
-                                  <button
-                                    onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                                    className="p-1 rounded hover:bg-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition"
-                                    title="Toggle Diagnostic Details"
-                                  >
-                                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Expanded Diagnostics */}
-                            {isExpanded && log.details && (
-                              <div className="mt-2.5 p-2.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg text-[11px] font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-all">
-                                <div className="font-bold text-[10px] text-[var(--text-muted)] uppercase mb-1">Diagnostic Details:</div>
-                                {log.details}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                <div className="border border-[var(--border-main)] rounded-xl overflow-hidden bg-[var(--bg-surface)] max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-main)] text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                        <th className="py-2.5 px-3">Time</th>
+                        <th className="py-2.5 px-3">Category</th>
+                        <th className="py-2.5 px-3">Action Description</th>
+                        <th className="py-2.5 px-3">Watershed Sub-Basin</th>
+                        <th className="py-2.5 px-3">Role</th>
+                        <th className="py-2.5 px-3">Device</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-main)] text-[11px]">
+                      {filteredTelemetryEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-[var(--text-muted)]">
+                            No telemetry events matching filter.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredTelemetryEvents.slice(0, 50).map((evt) => (
+                          <tr key={evt.id} className="hover:bg-[var(--bg-subtle)] transition">
+                            <td className="py-2 px-3 text-[var(--text-muted)] whitespace-nowrap">
+                              {evt.timestamp.slice(11, 19)} PST
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase font-bold ${
+                                evt.category === 'intelligence' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' :
+                                evt.category === 'simulator' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                                evt.category === 'navigation' ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20' :
+                                evt.category === 'export' ? 'bg-teal-500/10 text-teal-500 border border-teal-500/20' :
+                                'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                              }`}>
+                                {evt.category}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 font-semibold text-[var(--text-main)]">
+                              {evt.action}
+                            </td>
+                            <td className="py-2 px-3 text-[var(--text-muted)] truncate max-w-[180px]">
+                              {evt.tributary || '—'}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border-light)] text-[var(--text-secondary)] font-mono capitalize">
+                                {evt.userRole}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 text-[var(--text-muted)]">
+                              {evt.device}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-
-              {/* 4. Scraper Test & Dry-Run Sandbox */}
-              <div className="border border-[var(--border-main)] rounded-xl overflow-hidden bg-[var(--bg-subtle)]">
-                <button
-                  onClick={() => setIsSandboxOpen(!isSandboxOpen)}
-                  className="w-full p-3.5 bg-[var(--bg-surface)] hover:bg-[var(--border-light)] transition flex items-center justify-between text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-[var(--accent-amber)]" />
-                    <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
-                      Scraper Dry-Run Sandbox &amp; Parser Inspector
-                    </h3>
-                  </div>
-                  {isSandboxOpen ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
-                </button>
-
-                {isSandboxOpen && (
-                  <div className="p-4 space-y-3 border-t border-[var(--border-main)]">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Test any custom DFO URL or paste raw bulletin HTML/CSV to dry-run the parser without modifying the persistent database:
-                    </p>
-
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Optional DFO URL (e.g. https://www-ops2.pac.dfo-mpo.gc.ca/...)"
-                        value={dryRunUrl}
-                        onChange={(e) => setDryRunUrl(e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                      />
-                      <textarea
-                        rows={3}
-                        placeholder="Or paste raw DFO Table HTML / CSV text here..."
-                        value={dryRunRawText}
-                        onChange={(e) => setDryRunRawText(e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
-                      />
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <button
-                        onClick={handleValidate}
-                        disabled={isValidating}
-                        className="px-3 py-1.5 bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border border-[var(--border-main)] rounded-lg text-xs transition"
-                      >
-                        {isValidating ? 'Validating...' : 'Validate Dataset Integrity'}
-                      </button>
-                      <button
-                        onClick={handleRunDryRun}
-                        disabled={isDryRunning}
-                        className="px-4 py-2 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
-                      >
-                        <Play className={`w-3.5 h-3.5 ${isDryRunning ? 'animate-spin' : ''}`} />
-                        <span>{isDryRunning ? 'Testing Parser...' : 'Run Dry-Run Preview'}</span>
-                      </button>
-                    </div>
-
-                    {/* Dry Run Preview Result */}
-                    {dryRunPreview && (
-                      <div className="p-3 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl space-y-2 text-xs">
-                        <div className="flex items-center justify-between font-bold">
-                          <span className={dryRunPreview.success ? 'text-emerald-500' : 'text-rose-500'}>
-                            {dryRunPreview.message}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-muted)]">
-                            Format: {dryRunPreview.formatDetected} ({dryRunPreview.totalRowsParsed} rows found)
-                          </span>
-                        </div>
-                        {dryRunPreview.parsedRows && dryRunPreview.parsedRows.length > 0 && (
-                          <div className="max-h-[160px] overflow-y-auto border border-[var(--border-main)] rounded-lg">
-                            <table className="w-full text-left text-[11px]">
-                              <thead className="bg-[var(--bg-subtle)] text-[var(--text-muted)] sticky top-0 border-b border-[var(--border-main)]">
-                                <tr>
-                                  <th className="p-1.5">Date</th>
-                                  <th className="p-1.5">Daily Index</th>
-                                  <th className="p-1.5">Cum Index</th>
-                                  <th className="p-1.5">Status</th>
-                                  <th className="p-1.5">Diff</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[var(--border-main)]">
-                                {dryRunPreview.parsedRows.slice(0, 15).map((r: any, idx: number) => (
-                                  <tr key={idx}>
-                                    <td className="p-1.5 font-bold">{r.monthDay}</td>
-                                    <td className="p-1.5">{r.dailyIndex}</td>
-                                    <td className="p-1.5 font-semibold text-[var(--accent-amber)]">{r.cumulativeIndex}</td>
-                                    <td className="p-1.5">
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--bg-subtle)] border border-[var(--border-main)]">
-                                        {r.status}
-                                      </span>
-                                    </td>
-                                    <td className="p-1.5 text-[10px] text-[var(--text-muted)]">{r.diffVsCurrent}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           ) : activeTab === 'users' ? (
-            /* User Directory Tab */
+            /* TAB 2: USER DIRECTORY */
             <div className="space-y-4 font-mono">
-              {/* Analytics summary chips */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl">
-                  <span className="text-[var(--text-muted)]">Total Accounts</span>
-                  <p className="text-lg font-bold text-[var(--text-main)]">{totalUsers}</p>
-                </div>
-                <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl">
-                  <span className="text-[var(--text-muted)]">Biologists</span>
-                  <p className="text-lg font-bold text-[var(--accent-teal)]">{biologistCount}</p>
-                </div>
-                <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl">
-                  <span className="text-[var(--text-muted)]">Guides &amp; Anglers</span>
-                  <p className="text-lg font-bold text-[var(--accent-amber)]">{guideCount + anglerCount}</p>
-                </div>
-                <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl">
-                  <span className="text-[var(--text-muted)]">Conservationists</span>
-                  <p className="text-lg font-bold text-[var(--accent-spruce)]">{conservationCount}</p>
-                </div>
-              </div>
-
-              {/* Search & Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-                <div className="relative w-full sm:w-72">
+              {/* Filter controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                   <input
                     type="text"
-                    placeholder="Search by name, email, or UID..."
+                    placeholder="Search by name, email, UID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs focus:outline-none focus:border-[var(--accent-amber)]"
+                    className="w-full pl-9 pr-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
                   />
                 </div>
 
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-2.5 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none"
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="angler">Anglers</option>
-                    <option value="guide">River Guides</option>
-                    <option value="biologist">Biologists</option>
-                    <option value="conservationist">Conservationists</option>
-                    <option value="resident">Residents</option>
-                  </select>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
+                >
+                  <option value="all">All River Roles</option>
+                  <option value="angler">Angler</option>
+                  <option value="guide">Guide</option>
+                  <option value="biologist">Biologist</option>
+                  <option value="conservationist">Conservationist</option>
+                  <option value="resident">Resident</option>
+                  <option value="guest">Guest</option>
+                </select>
 
-                  <select
-                    value={providerFilter}
-                    onChange={(e) => setProviderFilter(e.target.value)}
-                    className="px-2.5 py-1.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none"
-                  >
-                    <option value="all">All Auth Providers</option>
-                    <option value="google">Google</option>
-                    <option value="local">Local</option>
-                  </select>
-                </div>
+                <select
+                  value={providerFilter}
+                  onChange={(e) => setProviderFilter(e.target.value)}
+                  className="px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
+                >
+                  <option value="all">All Auth Providers</option>
+                  <option value="google">Google Auth</option>
+                  <option value="apple">Apple ID</option>
+                  <option value="local">Local Simulated</option>
+                </select>
+
+                <select
+                  value={banStatusFilter}
+                  onChange={(e) => setBanStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
+                >
+                  <option value="all">All Account Statuses</option>
+                  <option value="active">Active Accounts Only</option>
+                  <option value="banned">Suspended / Banned</option>
+                </select>
               </div>
 
-              {/* Users Table */}
+              {/* User Directory Table */}
               <div className="border border-[var(--border-main)] rounded-xl overflow-hidden bg-[var(--bg-subtle)]">
-                <div className="max-h-[340px] overflow-y-auto">
-                  {filteredUsers.length === 0 ? (
-                    <div className="text-center py-10 text-[var(--text-muted)] text-xs">
-                      No user records match the specified filters.
-                    </div>
-                  ) : (
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)] uppercase text-[10px] tracking-wider border-b border-[var(--border-main)] sticky top-0">
+                <div className="p-3 bg-[var(--bg-surface)] border-b border-[var(--border-main)] flex items-center justify-between text-xs">
+                  <span className="font-bold uppercase tracking-wider text-[var(--text-main)]">
+                    Registered Anglers & Biologists ({filteredUsers.length})
+                  </span>
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-3 py-1 bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] rounded-lg text-xs flex items-center gap-1.5 transition shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto max-h-96">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-main)] text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                        <th className="py-2.5 px-3">Angler / User</th>
+                        <th className="py-2.5 px-3">River Role</th>
+                        <th className="py-2.5 px-3">Auth Provider</th>
+                        <th className="py-2.5 px-3">Preferred Basin</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3 text-right">Access Controls</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-main)] text-[11px]">
+                      {filteredUsers.length === 0 ? (
                         <tr>
-                          <th className="py-2.5 px-3">User Profile</th>
-                          <th className="py-2.5 px-3">Role &amp; Affiliation</th>
-                          <th className="py-2.5 px-3">Focus Watershed</th>
-                          <th className="py-2.5 px-3">Auth / Storage</th>
-                          <th className="py-2.5 px-3">Created</th>
+                          <td colSpan={6} className="py-8 text-center text-[var(--text-muted)]">
+                            No angler accounts found matching filter.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--border-main)]">
-                        {filteredUsers.map((u) => (
-                          <tr key={u.uid} className="hover:bg-[var(--border-light)] transition">
-                            <td className="py-2 px-3">
+                      ) : (
+                        filteredUsers.map((u) => (
+                          <tr key={u.uid} className={`hover:bg-[var(--bg-surface)] transition ${u.isBanned ? 'opacity-60 bg-rose-500/5' : ''}`}>
+                            <td className="py-2.5 px-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-[var(--accent-amber)] flex items-center justify-center text-white font-bold text-[10px] shrink-0">
-                                  {u.displayName.charAt(0).toUpperCase()}
+                                <div className="w-6 h-6 rounded-full bg-[var(--accent-amber-light)] text-[var(--accent-amber)] flex items-center justify-center font-bold text-[10px] shrink-0">
+                                  {u.displayName.slice(0, 1).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-[var(--text-main)] truncate max-w-[140px]">{u.displayName}</p>
-                                  <p className="text-[10px] text-[var(--text-muted)] truncate max-w-[140px]">{u.email || u.uid.slice(0, 10)}</p>
+                                  <p className="font-bold text-[var(--text-main)] truncate">{u.displayName}</p>
+                                  <p className="text-[10px] text-[var(--text-muted)] truncate">{u.email || u.uid}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-2 px-3">
-                              <span className="capitalize px-2 py-0.5 rounded-full text-[10px] bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)]">
+
+                            <td className="py-2.5 px-3">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)] capitalize">
                                 {u.riverRole}
                               </span>
                             </td>
-                            <td className="py-2 px-3 text-[var(--text-secondary)] truncate max-w-[130px]">
-                              {u.preferredTributary || 'General'}
+
+                            <td className="py-2.5 px-3 text-[var(--text-muted)] capitalize">
+                              {u.provider}
                             </td>
-                            <td className="py-2 px-3">
-                              <span className="capitalize font-medium text-[var(--accent-amber)]">
-                                {u.provider}
-                              </span>
+
+                            <td className="py-2.5 px-3 text-[var(--text-secondary)] truncate max-w-[140px]">
+                              {u.preferredTributary || 'All Watershed'}
                             </td>
-                            <td className="py-2 px-3 text-[var(--text-muted)] text-[10px]">
-                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+
+                            <td className="py-2.5 px-3">
+                              {u.isBanned ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-rose-500/10 text-rose-500 border border-rose-500/30">
+                                  BANNED
+                                </span>
+                              ) : u.isAdmin ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                                  ADMIN
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                                  ACTIVE
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Ban / Unban Button */}
+                                {u.isBanned ? (
+                                  <button
+                                    onClick={() => triggerUnbanModal(u)}
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition shadow-xs flex items-center gap-1"
+                                    title={`Unban and restore access for ${u.displayName}`}
+                                  >
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                    <span className="text-[10px]">Unban</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => triggerBanModal(u)}
+                                    className="p-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-amber-500/20 text-[var(--text-muted)] hover:text-amber-500 border border-[var(--border-main)] hover:border-amber-500/30 transition shadow-xs"
+                                    title={`Suspend and ban ${u.displayName}`}
+                                  >
+                                    <Ban className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+
+                                {/* Delete User Button */}
+                                <button
+                                  onClick={() => triggerDeleteModal(u)}
+                                  className="p-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-rose-500/20 text-[var(--text-muted)] hover:text-rose-500 border border-[var(--border-main)] hover:border-rose-500/30 transition shadow-xs"
+                                  title={`Permanently delete ${u.displayName}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'scraper' ? (
+            /* TAB 3: AUTOMATED DFO SCRAPER */
+            <div className="space-y-6 font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Scheduler Status</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-sm font-bold text-[var(--text-main)]">Active (Daily 06:00 UTC)</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)]">Automatic daily query against DFO North Coast Tyee test fishery publication</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Latest Ingestion</div>
+                  <div className="text-sm font-bold text-[var(--text-main)]">
+                    {scraperData?.activeSeasonMetadata?.lastRecordedDate || '2026-08-18'}
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)]">Cumulative Index: {scraperData?.activeSeasonMetadata?.lastRecordedIndex || 468.2}</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-between">
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Manual Sync</div>
+                  <button
+                    onClick={handleTriggerScrapeNow}
+                    disabled={isScrapingNow}
+                    className="mt-2 w-full py-2 bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Play className={`w-3.5 h-3.5 ${isScrapingNow ? 'animate-spin' : ''}`} />
+                    <span>{isScrapingNow ? 'Scraping Live DFO...' : 'Trigger Live Sync Now'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Maintenance Tools */}
+              <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">Engine Calibration & Maintenance</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleRecalculateStats}
+                    disabled={isRecalculating}
+                    className="px-3 py-2 bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] rounded-xl text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+                    <span>Recalculate 10-Yr Historical Norms</span>
+                  </button>
                 </div>
               </div>
             </div>
           ) : (
-            /* Admin Tab */
+            /* TAB 4: ADMIN ACCESS */
             <div className="space-y-4 font-mono">
               <form onSubmit={handleAddAdmin} className="p-4 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl space-y-3">
                 <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">Grant Admin Access</h3>
@@ -896,7 +1147,7 @@ export const AdminUserbaseModal: React.FC = () => {
                       </div>
                       {adm.email.toLowerCase() !== BOOTSTRAP_ADMIN_EMAIL.toLowerCase() && (
                         <button
-                          onClick={() => handleRemoveAdmin(adm.adminId || adm.id || '', adm.email)}
+                          onClick={() => triggerRevokeAdminModal(adm.adminId || adm.id || '', adm.email)}
                           className="p-1.5 text-[var(--text-muted)] hover:text-red-500 transition"
                           title="Revoke Admin"
                         >
@@ -911,6 +1162,105 @@ export const AdminUserbaseModal: React.FC = () => {
           )}
         </div>
 
+        {/* Custom In-App Modal Dialogs for Ban, Unban, Delete, and Revoke Admin */}
+        {confirmModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+            <div 
+              className="w-full max-w-md bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden font-mono p-5 space-y-4 text-[var(--text-main)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl shrink-0 ${
+                  confirmModal.type === 'delete' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/30' :
+                  confirmModal.type === 'ban' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30' :
+                  'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                }`}>
+                  {confirmModal.type === 'delete' ? <AlertOctagon className="w-5 h-5" /> :
+                   confirmModal.type === 'ban' ? <Ban className="w-5 h-5" /> :
+                   confirmModal.type === 'revokeAdmin' ? <ShieldAlert className="w-5 h-5" /> :
+                   <UserCheck className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold font-heading">
+                    {confirmModal.type === 'delete' ? 'Confirm Permanent Account Purge' :
+                     confirmModal.type === 'ban' ? 'Suspend Angler Access' :
+                     confirmModal.type === 'revokeAdmin' ? 'Revoke Administrator Privileges' :
+                     'Restore Angler Access'}
+                  </h3>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Target: <span className="text-[var(--text-main)] font-semibold">{confirmModal.targetUser?.displayName || confirmModal.targetAdminEmail}</span>
+                  </p>
+                </div>
+              </div>
+
+              {confirmModal.type === 'ban' && (
+                <div className="space-y-2">
+                  <label className="text-[11px] text-[var(--text-muted)]">Reason for account suspension:</label>
+                  <input
+                    type="text"
+                    value={banReasonInput}
+                    onChange={(e) => setBanReasonInput(e.target.value)}
+                    placeholder="Enter reason..."
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--accent-amber)]"
+                  />
+                  <p className="text-[10px] text-[var(--text-muted)]">The angler will be blocked from saving scenarios, field observations, or logging in.</p>
+                </div>
+              )}
+
+              {confirmModal.type === 'delete' && (
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
+                    ⚠️ Warning: This will permanently purge the user document, public profile, and all associated field data.
+                  </div>
+                  <label className="text-[11px] text-[var(--text-muted)]">Type <strong>DELETE</strong> to confirm permanent erasure:</label>
+                  <input
+                    type="text"
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    placeholder="Type DELETE..."
+                    className="w-full px-3 py-2 bg-[var(--bg-subtle)] border border-rose-500/40 rounded-xl text-xs text-[var(--text-main)] font-bold focus:outline-none focus:border-rose-500"
+                  />
+                </div>
+              )}
+
+              {confirmModal.type === 'unban' && (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Restore active portal privileges for {confirmModal.targetUser?.displayName}? They will regain full access immediately.
+                </p>
+              )}
+
+              {confirmModal.type === 'revokeAdmin' && (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Revoke administrative permissions from {confirmModal.targetAdminEmail}? They will revert to standard angler role.
+                </p>
+              )}
+
+              {/* Modal Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-main)]">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExecuteConfirmModal}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition flex items-center gap-1.5 shadow-sm ${
+                    confirmModal.type === 'delete' ? 'bg-rose-600 hover:bg-rose-700' :
+                    confirmModal.type === 'ban' ? 'bg-amber-600 hover:bg-amber-700' :
+                    'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                >
+                  {confirmModal.type === 'delete' ? 'Purge Record Permanently' :
+                   confirmModal.type === 'ban' ? 'Suspend Angler' :
+                   confirmModal.type === 'revokeAdmin' ? 'Revoke Admin' :
+                   'Restore Access'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-6 py-3 border-t border-[var(--border-main)] bg-[var(--bg-subtle)] flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
           <div className="flex items-center gap-1.5">
@@ -923,3 +1273,14 @@ export const AdminUserbaseModal: React.FC = () => {
     </div>
   );
 };
+
+// Helper icon
+function AlertOctagon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}

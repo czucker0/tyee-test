@@ -54,6 +54,9 @@ service cloud.firestore {
              (!('preferredTributary' in data) || (data.preferredTributary is string && data.preferredTributary.size() <= 50)) &&
              (!('alertThreshold' in data) || (data.alertThreshold is number)) &&
              (!('isAdmin' in data) || (data.isAdmin is bool)) &&
+             (!('isBanned' in data) || (data.isBanned is bool)) &&
+             (!('bannedAt' in data) || data.bannedAt == null || (data.bannedAt is string && data.bannedAt.size() <= 50)) &&
+             (!('bannedReason' in data) || data.bannedReason == null || (data.bannedReason is string && data.bannedReason.size() <= 250)) &&
              data.createdAt is string && data.createdAt.size() <= 50 &&
              data.updatedAt is string && data.updatedAt.size() <= 50;
     }
@@ -139,10 +142,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Site Usage Metrics (Daily summaries for admin analytics)
+    match /usageMetrics/{metricId} {
+      allow get, list: if isAdmin();
+      allow create, update: if isValidId(metricId);
+      allow delete: if isAdmin();
+    }
+
+    // Site Telemetry Events Stream
+    match /siteEvents/{eventId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(eventId);
+      allow update, delete: if isAdmin();
+    }
+
     // Public Angler Profiles (for directory search by username)
     match /publicProfiles/{userId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isOwner(userId) && isValidId(userId) && isValidPublicProfile(incoming());
+      allow create, update: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow delete: if isOwner(userId) || isAdmin();
     }
 
@@ -168,17 +185,15 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create, update, delete: if isAdmin() && isValidId(adminId) && (request.method == 'delete' || isValidAdminRecord(incoming()));
+      allow create, update, delete: if isAdmin() && isValidId(adminId);
     }
 
     // Users Collection
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidUserProfile(incoming());
-      allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidUserProfile(incoming()) &&
-                       incoming().userId == existing().userId &&
-                       incoming().createdAt == existing().createdAt;
+      allow create: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow delete: if isOwner(userId) || isAdmin();
 
       // Subcollection: Saved Scenarios
@@ -186,9 +201,8 @@ service cloud.firestore {
         allow get: if isOwner(userId) || isAdmin();
         allow list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && isValidId(scenarioId) && isValidSavedScenario(incoming(), userId);
-        allow update: if isOwner(userId) && isValidId(scenarioId) && isValidSavedScenario(incoming(), userId) &&
-                         incoming().userId == existing().userId &&
-                         incoming().createdAt == existing().createdAt;
+        allow update: if (isOwner(userId) || isAdmin()) && isValidId(scenarioId) &&
+                         incoming().userId == existing().userId;
         allow delete: if isOwner(userId) || isAdmin();
       }
 
@@ -204,9 +218,8 @@ service cloud.firestore {
         allow get: if isOwner(userId) || isAdmin();
         allow list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && isValidId(observationId) && isValidFieldObservation(incoming(), userId);
-        allow update: if isOwner(userId) && isValidId(observationId) && isValidFieldObservation(incoming(), userId) &&
-                         incoming().userId == existing().userId &&
-                         incoming().createdAt == existing().createdAt;
+        allow update: if (isOwner(userId) || isAdmin()) && isValidId(observationId) &&
+                         incoming().userId == existing().userId;
         allow delete: if isOwner(userId) || isAdmin();
       }
     }

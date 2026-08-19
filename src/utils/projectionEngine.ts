@@ -242,12 +242,7 @@ export function getTributaryBreakdown(
       peakWindow: trib.peakWindow,
       status,
       scientificProfile: trib.scientificProfile,
-      adminTacticalIntel: trib.adminTacticalIntel,
       timingTips: trib.timingTips,
-      floatSafety: trib.floatSafety,
-      wadeSafety: trib.wadeSafety,
-      accessPoints: trib.accessPoints,
-      tribalProtocols: trib.tribalProtocols,
     };
   });
 }

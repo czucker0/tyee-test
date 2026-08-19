@@ -28,6 +28,7 @@ import {
 } from '../firebase/config';
 import { UserAccount, UserSavedScenario, RiverRole, AuthProviderType, AdminRecord } from '../types/auth';
 
+export { auth, db };
 export const BOOTSTRAP_ADMIN_EMAIL = 'chris.zucker@gmail.com';
 
 interface AuthContextType {
@@ -58,6 +59,9 @@ interface AuthContextType {
   fetchAllUsersForAdmin: () => Promise<UserAccount[]>;
   addAdminByEmail: (email: string) => Promise<void>;
   removeAdmin: (adminId: string) => Promise<void>;
+  banUser: (targetUid: string, reason?: string) => Promise<void>;
+  unbanUser: (targetUid: string) => Promise<void>;
+  deleteUserRecord: (targetUid: string) => Promise<void>;
 }
 
 const LOCAL_USER_STORAGE_KEY = 'skeena_steelhead_local_user';
@@ -143,6 +147,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const snapshot = await getDoc(userDocRef);
       if (snapshot.exists()) {
         const data = snapshot.data();
+
+        // Check if user is banned
+        if (data.isBanned) {
+          await fbSignOut(auth);
+          setAuthNotice('Your account has been suspended by a Skeena System administrator.');
+          throw new Error('USER_BANNED');
+        }
+
         userAccount = {
           uid: fbUser.uid,
           displayName: data.displayName || fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Skeena River Angler'),
@@ -154,6 +166,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           alertThreshold: typeof data.alertThreshold === 'number' ? data.alertThreshold : 20000,
           isLocalOnly: false,
           isAdmin: isUserAdmin || data.isAdmin || false,
+          isBanned: data.isBanned || false,
+          bannedAt: data.bannedAt,
+          bannedReason: data.bannedReason,
           createdAt: data.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -177,6 +192,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           alertThreshold: 20000,
           isLocalOnly: false,
           isAdmin: isUserAdmin,
+          isBanned: false,
           createdAt: now,
           updatedAt: now
         };
@@ -191,6 +207,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           preferredTributary: userAccount.preferredTributary,
           alertThreshold: userAccount.alertThreshold,
           isAdmin: isUserAdmin,
+          isBanned: false,
           createdAt: userAccount.createdAt,
           updatedAt: userAccount.updatedAt
         });
@@ -551,6 +568,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           alertThreshold: typeof d.alertThreshold === 'number' ? d.alertThreshold : 20000,
           isLocalOnly: false,
           isAdmin: d.isAdmin || false,
+          isBanned: d.isBanned || false,
+          bannedAt: d.bannedAt,
+          bannedReason: d.bannedReason,
           createdAt: d.createdAt || new Date().toISOString(),
           updatedAt: d.updatedAt || new Date().toISOString()
         });
@@ -559,6 +579,101 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return list;
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, 'users');
+    }
+  };
+
+  // Ban User
+  const banUser = async (targetUid: string, reason?: string) => {
+    if (!user?.isAdmin) throw new Error('Unauthorized');
+    if (!targetUid) return;
+
+    const now = new Date().toISOString();
+    const finalReason = reason?.trim() || 'Violation of Skeena Telemetry Terms of Service';
+
+    // 1. Immediately update local in-memory and storage state
+    setAllUsers(prev => prev.map(u => u.uid === targetUid ? {
+      ...u,
+      isBanned: true,
+      bannedAt: now,
+      bannedReason: finalReason,
+      updatedAt: now
+    } : u));
+
+    // 2. Persist to Firestore if online
+    try {
+      const userRef = doc(db, 'users', targetUid);
+      await setDoc(userRef, {
+        isBanned: true,
+        bannedAt: now,
+        bannedReason: finalReason,
+        updatedAt: now
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Firestore update for banUser skipped/errored:', err);
+    }
+  };
+
+  // Unban User
+  const unbanUser = async (targetUid: string) => {
+    if (!user?.isAdmin) throw new Error('Unauthorized');
+    if (!targetUid) return;
+
+    const now = new Date().toISOString();
+
+    // 1. Immediately update local state
+    setAllUsers(prev => prev.map(u => u.uid === targetUid ? {
+      ...u,
+      isBanned: false,
+      bannedAt: undefined,
+      bannedReason: undefined,
+      updatedAt: now
+    } : u));
+
+    // 2. Persist to Firestore if online
+    try {
+      const userRef = doc(db, 'users', targetUid);
+      await setDoc(userRef, {
+        isBanned: false,
+        bannedAt: null,
+        bannedReason: null,
+        updatedAt: now
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Firestore update for unbanUser skipped/errored:', err);
+    }
+  };
+
+  // Delete User Record permanently from Firestore & Local State
+  const deleteUserRecord = async (targetUid: string) => {
+    if (!user?.isAdmin) throw new Error('Unauthorized');
+    if (!targetUid) return;
+
+    // 1. Immediately update local in-memory state
+    setAllUsers(prev => prev.filter(u => u.uid !== targetUid));
+
+    // 2. Delete from Firestore
+    try {
+      // 1. Delete main user document
+      const userRef = doc(db, 'users', targetUid);
+      await deleteDoc(userRef);
+
+      // 2. Delete public profile document if exists
+      try {
+        const pubRef = doc(db, 'publicProfiles', targetUid);
+        await deleteDoc(pubRef);
+      } catch {
+        // ignore
+      }
+
+      // 3. Delete admin document if exists
+      try {
+        const adminRef = doc(db, 'admins', targetUid);
+        await deleteDoc(adminRef);
+      } catch {
+        // ignore
+      }
+    } catch (err) {
+      console.warn('Firestore purge for user skipped/errored:', err);
     }
   };
 
@@ -726,7 +841,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         allUsers,
         fetchAllUsersForAdmin,
         addAdminByEmail,
-        removeAdmin
+        removeAdmin,
+        banUser,
+        unbanUser,
+        deleteUserRecord
       }}
     >
       {children}

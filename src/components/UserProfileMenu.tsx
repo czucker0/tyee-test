@@ -14,7 +14,6 @@ import {
   Check,
   Edit3,
   HelpCircle,
-  Sparkles,
   Compass
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
