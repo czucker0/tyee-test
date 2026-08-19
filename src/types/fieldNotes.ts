@@ -42,7 +42,50 @@ export interface FieldNote {
   storageMode: FieldNoteStorageMode;
   syncStatus: FieldNoteSyncStatus;
   lastSyncedAt?: string;
+
+  // Peer-to-Peer Sharing Metadata
+  isShared?: boolean;
+  sharedWithUserIds?: string[];
+  sharedWithNames?: Record<string, string>; // mapping of userId -> displayName
+  isGpsCloaked?: boolean;
   
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicAnglerProfile {
+  userId: string;
+  displayName: string;
+  riverRole: 'angler' | 'guide' | 'biologist' | 'conservationist' | 'resident' | 'guest';
+  preferredTributary?: string;
+  photoURL?: string;
+  updatedAt: string;
+}
+
+export interface SharedFieldNote {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorRole?: string;
+  authorPhotoURL?: string;
+  sharedWithUserIds: string[];
+  sharedWithNames?: Record<string, string>;
+  title: string;
+  tributary: string;
+  date: string; // YYYY-MM-DD
+  time?: string;
+  waterClarity?: WaterClarityType;
+  waterTempC?: number;
+  waterLevelGauge?: string;
+  flyPattern?: string;
+  steelheadHooked?: number;
+  steelheadLanded?: number;
+  notes: string;
+  photos?: string[];
+  isGpsCloaked?: boolean;
+  poolName?: string;
+  lat?: number;
+  lng?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,12 +1,17 @@
-import { FieldNote, EncryptedFieldNoteRecord } from '../types/fieldNotes';
+import { FieldNote, EncryptedFieldNoteRecord, PublicAnglerProfile, SharedFieldNote } from '../types/fieldNotes';
+import { UserAccount } from '../types/auth';
 import { encryptObject, decryptObject } from './cryptoVault';
-import { db } from '../firebase/config';
+import { db, handleFirestoreError, OperationType } from '../firebase/config';
 import { 
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   getDocs, 
-  deleteDoc 
+  deleteDoc,
+  query,
+  where,
+  onSnapshot
 } from 'firebase/firestore';
 
 const DB_NAME = 'SkeenaFieldVault_DB';
@@ -289,7 +294,179 @@ export async function deleteFieldNoteBoth(userId: string, noteId: string): Promi
       addPendingDeletion(noteId);
       console.warn('Note deleted locally, remote deletion queued:', err);
     }
+
+    // Also remove from shared collection if it was shared
+    try {
+      const sharedDocRef = doc(db, 'sharedFieldNotes', noteId);
+      await deleteDoc(sharedDocRef);
+    } catch {
+      // ignore
+    }
   } else {
     addPendingDeletion(noteId);
   }
 }
+
+/**
+ * Searches the public directory of registered anglers by username/display name
+ */
+export async function searchPublicAnglers(
+  searchTerm: string, 
+  excludeUid?: string
+): Promise<PublicAnglerProfile[]> {
+  try {
+    const colRef = collection(db, 'publicProfiles');
+    const snapshot = await getDocs(colRef);
+    const results: PublicAnglerProfile[] = [];
+    const term = searchTerm.toLowerCase().trim();
+
+    snapshot.forEach((d) => {
+      const data = d.data() as PublicAnglerProfile;
+      if (excludeUid && data.userId === excludeUid) return;
+      
+      if (!term || 
+          data.displayName?.toLowerCase().includes(term) || 
+          data.preferredTributary?.toLowerCase().includes(term) ||
+          data.riverRole?.toLowerCase().includes(term)) {
+        results.push({
+          userId: data.userId || d.id,
+          displayName: data.displayName || 'Angler',
+          riverRole: data.riverRole || 'angler',
+          preferredTributary: data.preferredTributary || 'Skeena Watershed',
+          photoURL: data.photoURL || undefined,
+          updatedAt: data.updatedAt || new Date().toISOString()
+        });
+      }
+    });
+
+    return results;
+  } catch (err) {
+    console.warn('Could not query publicProfiles:', err);
+    return [];
+  }
+}
+
+/**
+ * Shares or updates sharing permissions for a field note to specific user IDs
+ */
+export async function shareFieldNoteWithUsers(
+  note: FieldNote,
+  sharedWithUserIds: string[],
+  sharedWithNames: Record<string, string>,
+  isGpsCloaked: boolean,
+  author: UserAccount
+): Promise<void> {
+  const noteDocRef = doc(db, 'sharedFieldNotes', note.id);
+  const now = new Date().toISOString();
+
+  // Prepare sanitized shared record
+  const sharedRecord: SharedFieldNote = {
+    id: note.id,
+    authorId: author.uid,
+    authorName: author.displayName || 'Skeena Angler',
+    authorRole: author.riverRole || 'angler',
+    authorPhotoURL: author.photoURL || undefined,
+    sharedWithUserIds: Array.from(new Set(sharedWithUserIds)),
+    sharedWithNames,
+    title: note.title,
+    tributary: note.tributary,
+    date: note.date,
+    time: note.time,
+    waterClarity: note.waterClarity,
+    waterTempC: note.waterTempC,
+    waterLevelGauge: note.waterLevelGauge,
+    flyPattern: note.flyPattern,
+    steelheadHooked: note.steelheadHooked,
+    steelheadLanded: note.steelheadLanded,
+    notes: note.notes,
+    photos: (note.photos || []).slice(0, 3), // max 3 photos
+    isGpsCloaked,
+    poolName: isGpsCloaked ? undefined : note.location?.poolName,
+    lat: isGpsCloaked ? undefined : note.location?.lat,
+    lng: isGpsCloaked ? undefined : note.location?.lng,
+    createdAt: note.createdAt || now,
+    updatedAt: now
+  };
+
+  try {
+    await setDoc(noteDocRef, sharedRecord);
+
+    // Update local note with sharing metadata
+    const updatedLocalNote: FieldNote = {
+      ...note,
+      isShared: sharedWithUserIds.length > 0,
+      sharedWithUserIds,
+      sharedWithNames,
+      isGpsCloaked,
+      updatedAt: now
+    };
+    await saveFieldNoteLocal(updatedLocalNote);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `sharedFieldNotes/${note.id}`);
+  }
+}
+
+/**
+ * Unshares a field note completely (removes all peer access)
+ */
+export async function unshareFieldNote(note: FieldNote): Promise<void> {
+  try {
+    const sharedDocRef = doc(db, 'sharedFieldNotes', note.id);
+    await deleteDoc(sharedDocRef);
+
+    // Update local note
+    const updatedLocalNote: FieldNote = {
+      ...note,
+      isShared: false,
+      sharedWithUserIds: [],
+      sharedWithNames: {},
+      updatedAt: new Date().toISOString()
+    };
+    await saveFieldNoteLocal(updatedLocalNote);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `sharedFieldNotes/${note.id}`);
+  }
+}
+
+/**
+ * Subscribes in real-time to all field notes shared with the current user
+ */
+export function subscribeToNotesSharedWithUser(
+  currentUserId: string,
+  onUpdate: (notes: SharedFieldNote[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!currentUserId || currentUserId === 'anonymous_local_vault') {
+    onUpdate([]);
+    return () => {};
+  }
+
+  try {
+    const sharedCol = collection(db, 'sharedFieldNotes');
+    const q = query(
+      sharedCol, 
+      where('sharedWithUserIds', 'array-contains', currentUserId)
+    );
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const notes: SharedFieldNote[] = [];
+        snapshot.forEach((docSnap) => {
+          notes.push(docSnap.data() as SharedFieldNote);
+        });
+        // Sort descending by date
+        notes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        onUpdate(notes);
+      },
+      (err) => {
+        console.warn('Subscription error for shared field notes:', err);
+        onError?.(err);
+      }
+    );
+  } catch (err: any) {
+    console.warn('Could not attach shared notes subscription:', err);
+    return () => {};
+  }
+}
+

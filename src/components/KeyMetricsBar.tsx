@@ -267,7 +267,7 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
               <Compass className="w-4 h-4 text-[var(--accent-teal)]" />
             </div>
             <div className="my-2">
-              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">1.0 &approx; 220</div>
+              <div className="text-2xl font-bold font-mono text-[var(--text-main)]">1.0 ≈ 220</div>
               <div className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono font-medium">Adult Steelhead per pt</div>
             </div>
             <div className="pt-2 border-t border-[var(--border-main)] text-xs font-mono text-[var(--text-secondary)] flex justify-between">

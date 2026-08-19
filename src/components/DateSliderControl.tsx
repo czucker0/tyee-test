@@ -252,18 +252,39 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
           </div>
 
           {/* Month labels along track */}
-          <div className="flex justify-between px-1 text-xs font-editorial text-[var(--text-secondary)] font-semibold">
-            {monthStarts.map((m) => (
-              <button
-                key={m.label}
-                onClick={() => onDayChange(m.startIdx)}
-                className={`hover:text-[var(--text-main)] transition ${
-                  currentDayIndex >= m.startIdx ? 'text-[var(--accent-amber)] font-bold' : ''
-                }`}
-              >
-                {m.label} 01
-              </button>
-            ))}
+          <div className="flex justify-between px-1 text-[11px] sm:text-xs font-editorial text-[var(--text-secondary)] font-semibold select-none">
+            <button
+              onClick={() => onDayChange(0)}
+              className={`hover:text-[var(--text-main)] transition ${
+                currentDayIndex >= 0 && currentDayIndex < 21 ? 'text-[var(--accent-amber)] font-bold' : ''
+              }`}
+            >
+              Jun 10
+            </button>
+            <button
+              onClick={() => onDayChange(21)}
+              className={`hover:text-[var(--text-main)] transition ${
+                currentDayIndex >= 21 && currentDayIndex < 52 ? 'text-[var(--accent-amber)] font-bold' : ''
+              }`}
+            >
+              Jul 01
+            </button>
+            <button
+              onClick={() => onDayChange(52)}
+              className={`hover:text-[var(--text-main)] transition ${
+                currentDayIndex >= 52 && currentDayIndex < 83 ? 'text-[var(--accent-amber)] font-bold' : ''
+              }`}
+            >
+              Aug 01
+            </button>
+            <button
+              onClick={() => onDayChange(83)}
+              className={`hover:text-[var(--text-main)] transition ${
+                currentDayIndex >= 83 ? 'text-[var(--accent-amber)] font-bold' : ''
+              }`}
+            >
+              Sep 01
+            </button>
             <button
               onClick={() => onDayChange(SEASON_DAYS.length - 1)}
               className="hover:text-[var(--text-main)] transition"

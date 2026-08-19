@@ -89,10 +89,8 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 }) => {
   const { isAdmin } = useAuth();
 
-  // Store expanded card IDs (defaults to expanding the #1 Bulkley / Morice on load)
-  const [expandedTribs, setExpandedTribs] = useState<{ [key: string]: boolean }>({
-    'Bulkley / Morice River System': true,
-  });
+  // Store expanded card IDs (all collapsed by default)
+  const [expandedTribs, setExpandedTribs] = useState<{ [key: string]: boolean }>({});
 
   // Admin tactical mode toggle (only togglable if user is admin)
   const [showAdminTacticalIntel, setShowAdminTacticalIntel] = useState<boolean>(true);

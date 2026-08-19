@@ -23,23 +23,34 @@ import {
   Layers, 
   ChevronRight, 
   Eye, 
+  EyeOff,
   Share2, 
+  Users,
+  UserCheck,
+  UserPlus,
   AlertCircle,
   Fish,
   Thermometer,
   Droplets,
   HelpCircle,
   ExternalLink,
-  Copy
+  Copy,
+  Inbox,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { FieldNote, WaterClarityType, FieldNoteStorageMode } from '../types/fieldNotes';
+import { FieldNote, WaterClarityType, FieldNoteStorageMode, PublicAnglerProfile, SharedFieldNote } from '../types/fieldNotes';
 import { 
   saveFieldNoteLocal, 
   getAllFieldNotesLocal, 
   deleteFieldNoteBoth, 
   encryptAndSyncFieldNotes, 
-  compressImageFile 
+  compressImageFile,
+  searchPublicAnglers,
+  shareFieldNoteWithUsers,
+  unshareFieldNote,
+  subscribeToNotesSharedWithUser
 } from '../utils/fieldNotesDb';
 
 const TRIBUTARIES_COORDINATES: Record<string, { lat: number; lng: number; x: number; y: number; color: string; desc: string }> = {
@@ -75,12 +86,26 @@ export const FieldNotesView: React.FC = () => {
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   
   // Modals & UI
+  const [activeTab, setActiveTab] = useState<'my_vault' | 'shared_with_me'>('my_vault');
+  const [sharedNotes, setSharedNotes] = useState<SharedFieldNote[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDisclosureOpen, setIsDisclosureOpen] = useState<boolean>(false);
   const [selectedNote, setSelectedNote] = useState<FieldNote | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [selectedTributaryFilter, setSelectedTributaryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Peer Sharing Modal State
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [shareTargetNote, setShareTargetNote] = useState<FieldNote | null>(null);
+  const [shareSearchQuery, setShareSearchQuery] = useState<string>('');
+  const [anglerSearchResults, setAnglerSearchResults] = useState<PublicAnglerProfile[]>([]);
+  const [searchingAnglers, setSearchingAnglers] = useState<boolean>(false);
+  const [selectedShareRecipients, setSelectedShareRecipients] = useState<PublicAnglerProfile[]>([]);
+  const [isShareGpsCloaked, setIsShareGpsCloaked] = useState<boolean>(false);
+  const [savingShare, setSavingShare] = useState<boolean>(false);
+  const [copiedReportId, setCopiedReportId] = useState<string | null>(null);
+  const { openAuthModal } = useAuth();
   
   // New Note Form State
   const [formTributary, setFormTributary] = useState<string>('Bulkley River');
@@ -144,6 +169,231 @@ export const FieldNotesView: React.FC = () => {
   useEffect(() => {
     loadNotes();
   }, [userId]);
+
+  // Subscribe to notes shared with this user in real time
+  useEffect(() => {
+    if (!user || user.isLocalOnly) {
+      setSharedNotes([]);
+      return;
+    }
+
+    const unsubscribe = subscribeToNotesSharedWithUser(
+      user.uid,
+      (incomingSharedNotes) => {
+        setSharedNotes(incomingSharedNotes);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user]);
+
+  // Search Anglers for sharing
+  const handleSearchAnglers = async (term: string) => {
+    setShareSearchQuery(term);
+    if (!term.trim()) {
+      setAnglerSearchResults([]);
+      return;
+    }
+    setSearchingAnglers(true);
+    try {
+      const results = await searchPublicAnglers(term, user?.uid);
+      setAnglerSearchResults(results);
+    } catch (err) {
+      console.warn('Angler search failed:', err);
+    } finally {
+      setSearchingAnglers(false);
+    }
+  };
+
+  // Open Share Modal for a specific note
+  const handleOpenShareModal = async (note: FieldNote) => {
+    setShareTargetNote(note);
+    setIsShareGpsCloaked(Boolean(note.isGpsCloaked));
+    setShareSearchQuery('');
+    setAnglerSearchResults([]);
+
+    // Populate currently shared recipients if any
+    if (note.sharedWithUserIds && note.sharedWithUserIds.length > 0) {
+      const currentList: PublicAnglerProfile[] = note.sharedWithUserIds.map((uid) => ({
+        userId: uid,
+        displayName: note.sharedWithNames?.[uid] || 'Angler',
+        riverRole: 'angler',
+        preferredTributary: 'Skeena Watershed',
+        updatedAt: new Date().toISOString()
+      }));
+      setSelectedShareRecipients(currentList);
+    } else {
+      setSelectedShareRecipients([]);
+    }
+
+    setIsShareModalOpen(true);
+
+    // Pre-fetch default angler directory
+    try {
+      setSearchingAnglers(true);
+      const initialAnglers = await searchPublicAnglers('', user?.uid);
+      setAnglerSearchResults(initialAnglers.slice(0, 8));
+    } catch {
+      // ignore
+    } finally {
+      setSearchingAnglers(false);
+    }
+  };
+
+  // Add recipient to sharing list
+  const handleAddRecipient = (angler: PublicAnglerProfile) => {
+    if (!selectedShareRecipients.some((r) => r.userId === angler.userId)) {
+      setSelectedShareRecipients((prev) => [...prev, angler]);
+    }
+  };
+
+  // Remove recipient from sharing list
+  const handleRemoveRecipient = (userIdToRemove: string) => {
+    setSelectedShareRecipients((prev) => prev.filter((r) => r.userId !== userIdToRemove));
+  };
+
+  // Save sharing configuration to Firestore
+  const handleSaveSharing = async () => {
+    if (!shareTargetNote || !user) return;
+
+    setSavingShare(true);
+    try {
+      if (selectedShareRecipients.length === 0) {
+        // Unshare if recipient list is cleared
+        await unshareFieldNote(shareTargetNote);
+        setSyncNotice(`Field note "${shareTargetNote.title}" is now private (unshared).`);
+      } else {
+        const uids = selectedShareRecipients.map((r) => r.userId);
+        const nameMap: Record<string, string> = {};
+        selectedShareRecipients.forEach((r) => {
+          nameMap[r.userId] = r.displayName;
+        });
+
+        await shareFieldNoteWithUsers(
+          shareTargetNote,
+          uids,
+          nameMap,
+          isShareGpsCloaked,
+          user
+        );
+        setSyncNotice(`Shared note with ${uids.length} selected angler(s).`);
+      }
+
+      await loadNotes();
+      setIsShareModalOpen(false);
+      setTimeout(() => setSyncNotice(null), 4000);
+    } catch (err: any) {
+      console.error('Failed to save sharing:', err);
+      alert('Error updating sharing permissions: ' + (err.message || 'Check connection'));
+    } finally {
+      setSavingShare(false);
+    }
+  };
+
+  // Completely unshare from modal
+  const handleRevokeAllSharing = async () => {
+    if (!shareTargetNote || !user) return;
+    if (!confirm('Remove all angler access and make this note strictly private?')) return;
+
+    setSavingShare(true);
+    try {
+      await unshareFieldNote(shareTargetNote);
+      await loadNotes();
+      setIsShareModalOpen(false);
+      setSyncNotice(`Field note "${shareTargetNote.title}" is now private.`);
+      setTimeout(() => setSyncNotice(null), 4000);
+    } catch (err: any) {
+      alert('Failed to revoke access: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSavingShare(false);
+    }
+  };
+
+  // Copy formatted river report text
+  const handleCopyFormattedReport = (note: FieldNote | SharedFieldNote, isSharedRecord = false) => {
+    const authorHeader = isSharedRecord 
+      ? `🎣 Shared River Report by ${(note as SharedFieldNote).authorName} (${(note as SharedFieldNote).authorRole || 'Angler'})\n`
+      : `📓 Skeena Field Log: ${note.title}\n`;
+
+    const clarityText = note.waterClarity ? `Water Clarity: ${CLARITY_LABELS[note.waterClarity]?.label || note.waterClarity}` : '';
+    const tempText = note.waterTempC !== undefined ? `Water Temp: ${note.waterTempC}°C` : '';
+    const gaugeText = note.waterLevelGauge ? `Gauge Height: ${note.waterLevelGauge}` : '';
+    const flyText = note.flyPattern ? `Fly/Tackle: ${note.flyPattern}` : '';
+    const fishText = (note.steelheadHooked !== undefined || note.steelheadLanded !== undefined)
+      ? `Steelhead: ${note.steelheadHooked || 0} hooked, ${note.steelheadLanded || 0} landed`
+      : '';
+
+    const poolNameStr = 'poolName' in note && note.poolName 
+      ? note.poolName 
+      : ('location' in note && note.location?.poolName) 
+        ? note.location.poolName 
+        : '';
+
+    const lines = [
+      authorHeader,
+      `📍 Tributary: ${note.tributary}`,
+      poolNameStr ? `🌊 Pool: ${poolNameStr}` : '',
+      `📅 Date: ${note.date} ${note.time || ''}`,
+      clarityText,
+      tempText,
+      gaugeText,
+      flyText,
+      fishText,
+      note.notes ? `\n📝 Field Notes:\n${note.notes}` : '',
+      `\n🔗 Skeena Steelhead Run Tracker`
+    ].filter(Boolean).join('\n');
+
+    navigator.clipboard?.writeText(lines);
+    setCopiedReportId(note.id);
+    setTimeout(() => setCopiedReportId(null), 2500);
+  };
+
+  // Clone shared note into personal local vault
+  const handleCloneToMyVault = async (sharedNote: SharedFieldNote) => {
+    const cloneId = `note_cloned_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const nowIso = new Date().toISOString();
+
+    const clonedNote: FieldNote = {
+      id: cloneId,
+      userId: userId,
+      title: `[Shared by ${sharedNote.authorName}] ${sharedNote.title}`,
+      tributary: sharedNote.tributary,
+      location: {
+        lat: sharedNote.lat || TRIBUTARIES_COORDINATES[sharedNote.tributary]?.lat || 54.78,
+        lng: sharedNote.lng || TRIBUTARIES_COORDINATES[sharedNote.tributary]?.lng || -127.17,
+        riverSystem: sharedNote.tributary,
+        poolName: sharedNote.poolName
+      },
+      date: sharedNote.date,
+      time: sharedNote.time,
+      waterClarity: sharedNote.waterClarity,
+      waterTempC: sharedNote.waterTempC,
+      waterLevelGauge: sharedNote.waterLevelGauge,
+      flyPattern: sharedNote.flyPattern,
+      steelheadHooked: sharedNote.steelheadHooked,
+      steelheadLanded: sharedNote.steelheadLanded,
+      notes: `--- Shared by ${sharedNote.authorName} (${sharedNote.authorRole || 'Angler'}) ---\n${sharedNote.notes}`,
+      photos: sharedNote.photos || [],
+      storageMode: 'cloud_encrypted',
+      syncStatus: isOnline ? 'pending_sync' : 'pending_sync',
+      isShared: false,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    try {
+      await saveFieldNoteLocal(clonedNote);
+      await loadNotes();
+      setSyncNotice(`Saved copy of "${sharedNote.title}" to your personal vault.`);
+      setTimeout(() => setSyncNotice(null), 4000);
+      setActiveTab('my_vault');
+    } catch (err) {
+      console.error('Failed to clone shared note:', err);
+      alert('Could not save note to local vault.');
+    }
+  };
 
   // Encrypt & Sync Handler
   const handleEncryptAndSync = async () => {
@@ -330,6 +580,20 @@ export const FieldNotesView: React.FC = () => {
     });
   }, [notes, selectedTributaryFilter, searchQuery]);
 
+  // Filtered Shared Notes
+  const filteredSharedNotes = useMemo(() => {
+    return sharedNotes.filter((sn) => {
+      const matchRiver = selectedTributaryFilter === 'all' || sn.tributary === selectedTributaryFilter;
+      const matchQuery = !searchQuery.trim() ||
+        sn.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sn.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sn.notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sn.poolName && sn.poolName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (sn.flyPattern && sn.flyPattern.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchRiver && matchQuery;
+    });
+  }, [sharedNotes, selectedTributaryFilter, searchQuery]);
+
   const pendingCount = notes.filter(n => n.storageMode === 'cloud_encrypted' && n.syncStatus === 'pending_sync').length;
 
   return (
@@ -344,7 +608,7 @@ export const FieldNotesView: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-heading font-black tracking-tight text-[var(--text-main)] uppercase">
-                  Private Field Notes &bull; River Vault
+                  Field Notes
                 </h1>
                 <div className="flex items-center gap-2 mt-0.5 text-xs font-mono text-[var(--text-muted)]">
                   <span className="flex items-center gap-1 text-emerald-500">
@@ -616,12 +880,52 @@ export const FieldNotesView: React.FC = () => {
 
         {/* Right Column: Notes Library, Search & Filtered Cards (7 Cols) */}
         <div className="lg:col-span-7 space-y-4">
+          
+          {/* Main Navigation Tabs: My Vault vs Shared With Me */}
+          <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl gap-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveTab('my_vault')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-mono font-bold transition flex items-center justify-center gap-2 ${
+                activeTab === 'my_vault'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>My Field Vault</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'my_vault' ? 'bg-white/20 text-white' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
+              }`}>
+                {notes.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('shared_with_me')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-mono font-bold transition flex items-center justify-center gap-2 ${
+                activeTab === 'shared_with_me'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5" />
+              <span>Shared With Me</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'shared_with_me' ? 'bg-white/20 text-white' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
+              }`}>
+                {sharedNotes.length}
+              </span>
+            </button>
+          </div>
+
           {/* Search and River Filter Bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search notes, pool names, fly patterns, GPS..."
+                placeholder={activeTab === 'my_vault' ? "Search notes, pool names, fly patterns, GPS..." : "Search shared notes, author name, flies..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3.5 py-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs font-mono focus:outline-none focus:border-[var(--accent-amber)] transition"
@@ -641,213 +945,711 @@ export const FieldNotesView: React.FC = () => {
             )}
           </div>
 
-          {/* Notes Grid */}
-          {loading ? (
-            <div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--accent-amber)]" />
-              <p>Decrypting and loading your local field vault...</p>
-            </div>
-          ) : filteredNotes.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-[var(--accent-amber)] border border-amber-500/30 flex items-center justify-center mx-auto">
-                <Fish className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-heading font-extrabold text-[var(--text-main)]">
-                {searchQuery || selectedTributaryFilter !== 'all' ? 'No Matching Field Notes' : 'Your Field Vault is Empty'}
-              </h3>
-              <p className="text-xs text-[var(--text-muted)] font-sans max-w-md mx-auto leading-relaxed">
-                Record secret river pools, GPS coordinates, water clarity, hooked fish stats, and compressed photos. Everything is saved locally and encrypted with AES-256.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setFormTributary(selectedTributaryFilter === 'all' ? 'Bulkley River' : selectedTributaryFilter);
-                  setIsModalOpen(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-bold text-xs font-mono shadow-sm hover:opacity-90 transition inline-flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create First Field Note</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              {filteredNotes.map((note) => {
-                const clarityInfo = note.waterClarity ? CLARITY_LABELS[note.waterClarity] : null;
-
-                return (
-                  <div
-                    key={note.id}
-                    className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-[var(--accent-amber)]/60 rounded-2xl p-4 sm:p-5 shadow-sm transition space-y-3 relative group"
+          {/* ========================================================================= */}
+          {/* TAB 1: MY FIELD VAULT */}
+          {/* ========================================================================= */}
+          {activeTab === 'my_vault' && (
+            <>
+              {loading ? (
+                <div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--accent-amber)]" />
+                  <p>Decrypting and loading your local field vault...</p>
+                </div>
+              ) : filteredNotes.length === 0 ? (
+                <div className="p-8 sm:p-12 text-center bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-[var(--accent-amber)] border border-amber-500/30 flex items-center justify-center mx-auto">
+                    <Fish className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-heading font-extrabold text-[var(--text-main)]">
+                    {searchQuery || selectedTributaryFilter !== 'all' ? 'No Matching Field Notes' : 'Your Field Vault is Empty'}
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-sans max-w-md mx-auto leading-relaxed">
+                    Record secret river pools, GPS coordinates, water clarity, hooked fish stats, and compressed photos. Everything is saved locally and encrypted with AES-256.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormTributary(selectedTributaryFilter === 'all' ? 'Bulkley River' : selectedTributaryFilter);
+                      setIsModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-bold text-xs font-mono shadow-sm hover:opacity-90 transition inline-flex items-center gap-1.5"
                   >
-                    {/* Top Header of Card */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--accent-amber)] font-mono text-[11px] font-bold">
-                            📍 {note.tributary}
-                          </span>
-                          {note.location.poolName && (
-                            <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-main)] font-mono text-[11px] font-medium border border-[var(--border-main)]">
-                              Pool: {note.location.poolName}
+                    <Plus className="w-4 h-4" />
+                    <span>Create First Field Note</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredNotes.map((note) => {
+                    const clarityInfo = note.waterClarity ? CLARITY_LABELS[note.waterClarity] : null;
+                    const sharedCount = note.sharedWithUserIds?.length || 0;
+
+                    return (
+                      <div
+                        key={note.id}
+                        className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-[var(--accent-amber)]/60 rounded-2xl p-4 sm:p-5 shadow-sm transition space-y-3 relative group"
+                      >
+                        {/* Top Header of Card */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2.5 py-0.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--accent-amber)] font-mono text-[11px] font-bold">
+                                📍 {note.tributary}
+                              </span>
+                              {note.location.poolName && (
+                                <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-main)] font-mono text-[11px] font-medium border border-[var(--border-main)]">
+                                  Pool: {note.location.poolName}
+                                </span>
+                              )}
+                              <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                                {note.date} {note.time ? `• ${note.time}` : ''}
+                              </span>
+                            </div>
+                            <h3 className="text-base font-heading font-extrabold text-[var(--text-main)] tracking-tight">
+                              {note.title}
+                            </h3>
+                          </div>
+
+                          {/* Sync Status Badge & Delete Button */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {note.storageMode === 'local_only' ? (
+                              <span className="px-2 py-0.5 rounded-md bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 text-[10px] font-mono flex items-center gap-1">
+                                <Lock className="w-3 h-3" /> Local Only
+                              </span>
+                            ) : note.syncStatus === 'synced' ? (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-mono flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3" /> Encrypted &amp; Synced
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-mono flex items-center gap-1">
+                                <RefreshCw className="w-3 h-3" /> Pending Sync
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition"
+                              title="Delete note"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Coordinates & Water Conditions Badges */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                          {note.location.lat && note.location.lng && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCoords(note.location.lat, note.location.lng, note.id)}
+                                className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] text-[11px] flex items-center gap-1 transition"
+                                title="Click to copy exact GPS coordinates"
+                              >
+                                <Compass className="w-3 h-3 text-[var(--accent-amber)]" />
+                                <span>GPS: {note.location.lat.toFixed(4)}, {note.location.lng.toFixed(4)}</span>
+                                {copiedNoteId === note.id ? (
+                                  <span className="text-emerald-500 font-bold text-[10px] ml-0.5">Copied!</span>
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                )}
+                              </button>
+
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${note.location.lat},${note.location.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
+                                title="Open in Google Maps"
+                              >
+                                <span>Google Maps</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+
+                              <a
+                                href={`https://maps.apple.com/?q=${encodeURIComponent(note.title || note.tributary)}&ll=${note.location.lat},${note.location.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-1.5 py-0.5 rounded bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-zinc-300 border border-zinc-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
+                                title="Open in Apple Maps"
+                              >
+                                <span>Apple Maps</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </div>
+                          )}
+
+                          {clarityInfo && (
+                            <span className={`px-2 py-0.5 rounded-md border text-[11px] flex items-center gap-1 ${clarityInfo.badge}`}>
+                              <span>{clarityInfo.icon}</span>
+                              <span>{clarityInfo.label}</span>
                             </span>
                           )}
-                          <span className="text-[11px] font-mono text-[var(--text-muted)]">
-                            {note.date} {note.time ? `• ${note.time}` : ''}
-                          </span>
+
+                          {note.waterTempC !== undefined && (
+                            <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[11px] flex items-center gap-1">
+                              <Thermometer className="w-3 h-3" />
+                              <span>{note.waterTempC}°C</span>
+                            </span>
+                          )}
+
+                          {note.waterLevelGauge && (
+                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[11px] flex items-center gap-1">
+                              <Droplets className="w-3 h-3" />
+                              <span>Gauge: {note.waterLevelGauge}</span>
+                            </span>
+                          )}
                         </div>
-                        <h3 className="text-base font-heading font-extrabold text-[var(--text-main)] tracking-tight">
-                          {note.title}
-                        </h3>
-                      </div>
 
-                      {/* Sync Status Badge */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {note.storageMode === 'local_only' ? (
-                          <span className="px-2 py-0.5 rounded-md bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 text-[10px] font-mono flex items-center gap-1">
-                            <Lock className="w-3 h-3" /> Local Only
-                          </span>
-                        ) : note.syncStatus === 'synced' ? (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-mono flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> Encrypted &amp; Synced
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-mono flex items-center gap-1">
-                            <RefreshCw className="w-3 h-3" /> Pending Sync
-                          </span>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition"
-                          title="Delete note"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Coordinates & Water Conditions Badges */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                      {note.location.lat && note.location.lng && (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyCoords(note.location.lat, note.location.lng, note.id)}
-                            className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] text-[11px] flex items-center gap-1 transition"
-                            title="Click to copy exact GPS coordinates"
-                          >
-                            <Compass className="w-3 h-3 text-[var(--accent-amber)]" />
-                            <span>GPS: {note.location.lat.toFixed(4)}, {note.location.lng.toFixed(4)}</span>
-                            {copiedNoteId === note.id ? (
-                              <span className="text-emerald-500 font-bold text-[10px] ml-0.5">Copied!</span>
-                            ) : (
-                              <Copy className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                        {/* Fly Pattern & Catch Stats */}
+                        {(note.flyPattern || (note.steelheadHooked !== undefined && note.steelheadHooked > 0) || (note.steelheadLanded !== undefined && note.steelheadLanded > 0)) && (
+                          <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] text-xs font-mono flex flex-wrap items-center gap-3">
+                            {note.flyPattern && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[var(--text-muted)]">Pattern:</span>
+                                <span className="text-[var(--text-main)] font-semibold">{note.flyPattern}</span>
+                              </div>
                             )}
-                          </button>
+                            {(note.steelheadHooked !== undefined || note.steelheadLanded !== undefined) && (
+                              <div className="flex items-center gap-2 border-l border-[var(--border-main)] pl-3">
+                                <span className="text-[var(--text-muted)]">Fish:</span>
+                                <span className="text-amber-500 font-bold">{note.steelheadHooked || 0} Hooked</span>
+                                <span>&bull;</span>
+                                <span className="text-emerald-500 font-bold">{note.steelheadLanded || 0} Landed</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${note.location.lat},${note.location.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
-                            title="Open in Google Maps"
-                          >
-                            <span>Google Maps</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
+                        {/* Note Content Text */}
+                        {note.notes && (
+                          <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-sans leading-relaxed whitespace-pre-line">
+                            {note.notes}
+                          </p>
+                        )}
 
-                          <a
-                            href={`https://maps.apple.com/?q=${encodeURIComponent(note.title || note.tributary)}&ll=${note.location.lat},${note.location.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-1.5 py-0.5 rounded bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-zinc-300 border border-zinc-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
-                            title="Open in Apple Maps"
-                          >
-                            <span>Apple Maps</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        </div>
-                      )}
+                        {/* Attached Photos Gallery */}
+                        {note.photos && note.photos.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {note.photos.map((photoUrl, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => setLightboxPhoto(photoUrl)}
+                                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-[var(--border-main)] cursor-pointer group/photo shadow-sm hover:border-[var(--accent-amber)] transition"
+                              >
+                                <img 
+                                  src={photoUrl} 
+                                  alt={`Field note attachment ${idx + 1}`}
+                                  className="w-full h-full object-cover group-hover/photo:scale-105 transition duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center text-white">
+                                  <Eye className="w-4 h-4" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                      {clarityInfo && (
-                        <span className={`px-2 py-0.5 rounded-md border text-[11px] flex items-center gap-1 ${clarityInfo.badge}`}>
-                          <span>{clarityInfo.icon}</span>
-                          <span>{clarityInfo.label}</span>
-                        </span>
-                      )}
+                        {/* Card Bottom Bar: Sharing Status & Actions */}
+                        <div className="pt-2 border-t border-[var(--border-main)] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            {note.isShared && sharedCount > 0 ? (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>Shared with {sharedCount} Angler{sharedCount > 1 ? 's' : ''}</span>
+                                {note.isGpsCloaked && (
+                                  <span className="text-[10px] text-amber-500 font-normal">(GPS Cloaked)</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)] text-[11px] flex items-center gap-1">
+                                <Lock className="w-3 h-3" />
+                                <span>Private Vault Only</span>
+                              </span>
+                            )}
+                          </div>
 
-                      {note.waterTempC !== undefined && (
-                        <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[11px] flex items-center gap-1">
-                          <Thermometer className="w-3 h-3" />
-                          <span>{note.waterTempC}°C</span>
-                        </span>
-                      )}
-
-                      {note.waterLevelGauge && (
-                        <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[11px] flex items-center gap-1">
-                          <Droplets className="w-3 h-3" />
-                          <span>Gauge: {note.waterLevelGauge}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Fly Pattern & Catch Stats */}
-                    {(note.flyPattern || (note.steelheadHooked !== undefined && note.steelheadHooked > 0) || (note.steelheadLanded !== undefined && note.steelheadLanded > 0)) && (
-                      <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] text-xs font-mono flex flex-wrap items-center gap-3">
-                        {note.flyPattern && (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[var(--text-muted)]">Pattern:</span>
-                            <span className="text-[var(--text-main)] font-semibold">{note.flyPattern}</span>
-                          </div>
-                        )}
-                        {(note.steelheadHooked !== undefined || note.steelheadLanded !== undefined) && (
-                          <div className="flex items-center gap-2 border-l border-[var(--border-main)] pl-3">
-                            <span className="text-[var(--text-muted)]">Fish:</span>
-                            <span className="text-amber-500 font-bold">{note.steelheadHooked || 0} Hooked</span>
-                            <span>&bull;</span>
-                            <span className="text-emerald-500 font-bold">{note.steelheadLanded || 0} Landed</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyFormattedReport(note)}
+                              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1 text-[11px]"
+                              title="Copy report text to clipboard"
+                            >
+                              <Copy className="w-3 h-3" />
+                              <span>{copiedReportId === note.id ? 'Copied Log!' : 'Copy Summary'}</span>
+                            </button>
 
-                    {/* Note Content Text */}
-                    {note.notes && (
-                      <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-sans leading-relaxed whitespace-pre-line">
-                        {note.notes}
-                      </p>
-                    )}
-
-                    {/* Attached Photos Gallery */}
-                    {note.photos && note.photos.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {note.photos.map((photoUrl, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => setLightboxPhoto(photoUrl)}
-                            className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-[var(--border-main)] cursor-pointer group/photo shadow-sm hover:border-[var(--accent-amber)] transition"
-                          >
-                            <img 
-                              src={photoUrl} 
-                              alt={`Field note attachment ${idx + 1}`}
-                              className="w-full h-full object-cover group-hover/photo:scale-105 transition duration-300"
-                            />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center text-white">
-                              <Eye className="w-4 h-4" />
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenShareModal(note)}
+                              className="px-3 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 border border-sky-500/30 transition flex items-center gap-1.5 text-[11px] font-bold"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                              <span>{note.isShared ? 'Manage Sharing' : 'Share with Anglers'}</span>
+                            </button>
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 2: SHARED WITH ME (Peer-to-Peer Angler Reports) */}
+          {/* ========================================================================= */}
+          {activeTab === 'shared_with_me' && (
+            <>
+              {(!user || user.isLocalOnly) ? (
+                <div className="p-8 sm:p-12 text-center bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 border border-sky-500/30 flex items-center justify-center mx-auto">
+                    <Users className="w-6 h-6" />
                   </div>
-                );
-              })}
-            </div>
+                  <h3 className="text-base font-heading font-extrabold text-[var(--text-main)]">
+                    Sign In to Receive Shared Field Notes
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-sans max-w-md mx-auto leading-relaxed">
+                    Other anglers can share specific river logs, clarity checks, and fly setups directly to your username. Sign in or create an account to discover incoming reports.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal()}
+                    className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs font-mono shadow-sm transition inline-flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Sign In or Register</span>
+                  </button>
+                </div>
+              ) : filteredSharedNotes.length === 0 ? (
+                <div className="p-8 sm:p-12 text-center bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 border border-sky-500/30 flex items-center justify-center mx-auto">
+                    <Inbox className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-heading font-extrabold text-[var(--text-main)]">
+                    {searchQuery || selectedTributaryFilter !== 'all' ? 'No Matching Shared Notes' : 'No Field Notes Shared With You Yet'}
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-sans max-w-md mx-auto leading-relaxed">
+                    When fellow anglers, guides, or biologists share field notes specifically with your username (<strong>{user.displayName || user.email}</strong>), they will appear here in real time.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredSharedNotes.map((sn) => {
+                    const clarityInfo = sn.waterClarity ? CLARITY_LABELS[sn.waterClarity] : null;
+
+                    return (
+                      <div
+                        key={sn.id}
+                        className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-sky-500/50 rounded-2xl p-4 sm:p-5 shadow-sm transition space-y-3 relative group"
+                      >
+                        {/* Top Header with Author Profile */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Author Badge */}
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-500 border border-sky-500/20 text-xs font-mono font-bold">
+                                <span>🎣</span>
+                                <span>{sn.authorName}</span>
+                                {sn.authorRole && (
+                                  <span className="text-[10px] text-[var(--text-muted)] uppercase font-normal ml-0.5">
+                                    ({sn.authorRole})
+                                  </span>
+                                )}
+                              </div>
+
+                              <span className="px-2.5 py-0.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--accent-amber)] font-mono text-[11px] font-bold">
+                                📍 {sn.tributary}
+                              </span>
+
+                              {sn.poolName ? (
+                                <span className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[var(--text-main)] font-mono text-[11px] font-medium border border-[var(--border-main)]">
+                                  Pool: {sn.poolName}
+                                </span>
+                              ) : sn.isGpsCloaked ? (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 font-mono text-[10px] flex items-center gap-1">
+                                  <EyeOff className="w-3 h-3" />
+                                  <span>Exact Spot Cloaked</span>
+                                </span>
+                              ) : null}
+
+                              <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                                {sn.date} {sn.time ? `• ${sn.time}` : ''}
+                              </span>
+                            </div>
+
+                            <h3 className="text-base font-heading font-extrabold text-[var(--text-main)] tracking-tight">
+                              {sn.title}
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Conditions & Coordinates */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                          {!sn.isGpsCloaked && sn.lat && sn.lng && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCoords(sn.lat!, sn.lng!, sn.id)}
+                                className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] text-[11px] flex items-center gap-1 transition"
+                                title="Click to copy GPS coordinates"
+                              >
+                                <Compass className="w-3 h-3 text-[var(--accent-amber)]" />
+                                <span>GPS: {sn.lat.toFixed(4)}, {sn.lng.toFixed(4)}</span>
+                                {copiedNoteId === sn.id ? (
+                                  <span className="text-emerald-500 font-bold text-[10px] ml-0.5">Copied!</span>
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                )}
+                              </button>
+
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${sn.lat},${sn.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] flex items-center gap-0.5 transition font-semibold"
+                              >
+                                <span>Google Maps</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </div>
+                          )}
+
+                          {clarityInfo && (
+                            <span className={`px-2 py-0.5 rounded-md border text-[11px] flex items-center gap-1 ${clarityInfo.badge}`}>
+                              <span>{clarityInfo.icon}</span>
+                              <span>{clarityInfo.label}</span>
+                            </span>
+                          )}
+
+                          {sn.waterTempC !== undefined && (
+                            <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[11px] flex items-center gap-1">
+                              <Thermometer className="w-3 h-3" />
+                              <span>{sn.waterTempC}°C</span>
+                            </span>
+                          )}
+
+                          {sn.waterLevelGauge && (
+                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[11px] flex items-center gap-1">
+                              <Droplets className="w-3 h-3" />
+                              <span>Gauge: {sn.waterLevelGauge}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Fly Pattern & Fish Count */}
+                        {(sn.flyPattern || (sn.steelheadHooked !== undefined && sn.steelheadHooked > 0) || (sn.steelheadLanded !== undefined && sn.steelheadLanded > 0)) && (
+                          <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] text-xs font-mono flex flex-wrap items-center gap-3">
+                            {sn.flyPattern && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[var(--text-muted)]">Pattern:</span>
+                                <span className="text-[var(--text-main)] font-semibold">{sn.flyPattern}</span>
+                              </div>
+                            )}
+                            {(sn.steelheadHooked !== undefined || sn.steelheadLanded !== undefined) && (
+                              <div className="flex items-center gap-2 border-l border-[var(--border-main)] pl-3">
+                                <span className="text-[var(--text-muted)]">Fish:</span>
+                                <span className="text-amber-500 font-bold">{sn.steelheadHooked || 0} Hooked</span>
+                                <span>&bull;</span>
+                                <span className="text-emerald-500 font-bold">{sn.steelheadLanded || 0} Landed</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Notes text */}
+                        {sn.notes && (
+                          <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-sans leading-relaxed whitespace-pre-line">
+                            {sn.notes}
+                          </p>
+                        )}
+
+                        {/* Photos */}
+                        {sn.photos && sn.photos.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {sn.photos.map((photoUrl, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => setLightboxPhoto(photoUrl)}
+                                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-[var(--border-main)] cursor-pointer group/photo shadow-sm hover:border-sky-500 transition"
+                              >
+                                <img 
+                                  src={photoUrl} 
+                                  alt={`Shared note attachment ${idx + 1}`}
+                                  className="w-full h-full object-cover group-hover/photo:scale-105 transition duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center text-white">
+                                  <Eye className="w-4 h-4" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="pt-2 border-t border-[var(--border-main)] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                          <span className="text-[11px] text-[var(--text-muted)]">
+                            Shared directly with your account &bull; Real-time sync
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyFormattedReport(sn, true)}
+                              className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1 text-[11px]"
+                            >
+                              <Copy className="w-3 h-3" />
+                              <span>{copiedReportId === sn.id ? 'Copied!' : 'Copy Summary'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleCloneToMyVault(sn)}
+                              className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 text-[11px] font-bold shadow-sm"
+                            >
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span>Save to My Vault</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL: Share Field Note with Selected Anglers (Searchable by Username) */}
+      {/* ========================================================================= */}
+      {isShareModalOpen && shareTargetNote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="relative w-full max-w-xl bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-[var(--text-main)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-main)] bg-[var(--bg-subtle)]">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/30">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
+                    Share Field Note
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)] font-mono">
+                    Select specific anglers by username &bull; Private peer-to-peer sharing
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 text-xs font-mono">
+              
+              {/* Note Summary banner */}
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1">
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Selected Field Note</p>
+                <p className="font-heading font-bold text-sm text-[var(--text-main)]">{shareTargetNote.title}</p>
+                <p className="text-[11px] text-[var(--accent-amber)] font-mono">
+                  📍 {shareTargetNote.tributary} {shareTargetNote.location.poolName ? `• Pool: ${shareTargetNote.location.poolName}` : ''} &bull; {shareTargetNote.date}
+                </p>
+              </div>
+
+              {/* Username Search Input */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                  Search Registered Anglers by Username
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Type an angler username, role, or river..."
+                    value={shareSearchQuery}
+                    onChange={(e) => handleSearchAnglers(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl text-[var(--text-main)] text-xs font-mono focus:outline-none focus:border-sky-500 transition"
+                  />
+                  <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-3 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Search Results Dropdown/List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                  <span>Angler Directory</span>
+                  {searchingAnglers && <span className="text-sky-500 animate-pulse">Searching...</span>}
+                </div>
+
+                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 border border-[var(--border-main)] rounded-xl p-2 bg-[var(--bg-subtle)]/50">
+                  {anglerSearchResults.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-[var(--text-muted)]">
+                      {shareSearchQuery.trim() ? 'No anglers found matching your search term.' : 'Search for a username above or select from active anglers.'}
+                    </div>
+                  ) : (
+                    anglerSearchResults.map((angler) => {
+                      const isAdded = selectedShareRecipients.some((r) => r.userId === angler.userId);
+
+                      return (
+                        <div
+                          key={angler.userId}
+                          className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-sky-500/40 transition"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-sky-500/20 text-sky-500 font-bold flex items-center justify-center text-xs">
+                              {angler.displayName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-[var(--text-main)] text-xs">{angler.displayName}</p>
+                              <p className="text-[10px] text-[var(--text-muted)]">
+                                {angler.riverRole} &bull; {angler.preferredTributary || 'Skeena Watershed'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => isAdded ? handleRemoveRecipient(angler.userId) : handleAddRecipient(angler)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${
+                              isAdded 
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/30'
+                                : 'bg-sky-600 hover:bg-sky-700 text-white'
+                            }`}
+                          >
+                            {isAdded ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Selected</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3 h-3" />
+                                <span>Add</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Recipients Tag List */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                  Selected Recipients ({selectedShareRecipients.length})
+                </label>
+
+                {selectedShareRecipients.length === 0 ? (
+                  <div className="p-3 rounded-xl border border-dashed border-[var(--border-main)] text-center text-xs text-[var(--text-muted)] font-mono">
+                    No anglers selected yet. Select usernames from the directory above.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)]">
+                    {selectedShareRecipients.map((recipient) => (
+                      <span
+                        key={recipient.userId}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] text-sky-500 border border-sky-500/30 text-xs font-mono font-semibold"
+                      >
+                        <UserCheck className="w-3 h-3 text-sky-500" />
+                        <span>{recipient.displayName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRecipient(recipient.userId)}
+                          className="p-0.5 hover:text-rose-500 text-[var(--text-muted)] transition"
+                          title="Remove angler"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* GPS Privacy & Cloaking Switch */}
+              <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isShareGpsCloaked ? (
+                      <EyeOff className="w-4 h-4 text-amber-500 shrink-0" />
+                    ) : (
+                      <Compass className="w-4 h-4 text-[var(--accent-amber)] shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-bold text-[var(--text-main)] text-xs">GPS &amp; Secret Spot Cloaking</p>
+                      <p className="text-[11px] text-[var(--text-muted)] font-sans">
+                        {isShareGpsCloaked 
+                          ? 'Protected: Exact GPS coordinates & pool names are hidden. Only tributary name and water conditions are shared.'
+                          : 'Exact Pin: Latitude, longitude, and pool name will be viewable by selected recipients.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsShareGpsCloaked(!isShareGpsCloaked)}
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition shrink-0 ${
+                      isShareGpsCloaked 
+                        ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    {isShareGpsCloaked ? '🛡️ GPS Cloaked' : '📍 Share Exact GPS'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--border-main)] gap-2">
+                {shareTargetNote.isShared ? (
+                  <button
+                    type="button"
+                    onClick={handleRevokeAllSharing}
+                    disabled={savingShare}
+                    className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 text-xs font-mono font-bold transition disabled:opacity-50"
+                  >
+                    Revoke All Access
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] font-bold text-xs"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveSharing}
+                    disabled={savingShare}
+                    className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs font-mono shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>{savingShare ? 'Saving Permissions...' : 'Save & Share Note'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL: Create New Field Entry */}
