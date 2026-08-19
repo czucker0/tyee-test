@@ -26,11 +26,11 @@ export const SteelieDanChatCard: React.FC<SteelieDanChatCardProps> = ({
       role: 'assistant',
       text: `*Splashes tailfin and flashes bright chrome scales!*
 
-Greetings, two-legger! I'm **Steelie Dan**, a 38-inch wild Skeena summer-run steelhead swimming up from Chatham Sound. 
+Greetings, two-legger! I'm **Steelie Dan**, a 38-inch wild Skeena summer-run steelhead, certified Spey snob, and connoisseur of swinging delicious tube flies!
 
-As of **${selectedMonthDay}**, our run is pushing a cumulative Tyee index of **${projection.currentCumulative.toFixed(1)} points** (~${projection.projectedBaselineAdults.toLocaleString()} of my wild chromer brothers & sisters projected this season!). We are tracking in the **${projection.conservationTier.toUpperCase()}** tier! 
+As of **${selectedMonthDay}**, our run is pushing a cumulative Tyee index of **${projection.currentCumulative.toFixed(1)} points** (~${projection.projectedBaselineAdults.toLocaleString()} wild chromers projected this season in the **${projection.conservationTier.toUpperCase()}** tier!). 
 
-What do you want to ask a real Skeena steelhead? Ask me about dodging the Tyee test nets, the scent of Babine gravel, favorite fly patterns, water temps, or our journey up the canyon!`,
+What do you want to ask a real Skeena steelhead? Ask me about irresistible tube flies, why I can't stand bobber nymphing, Spey casting tips, or how we dodge the Tyee nets!`,
     },
   ]);
 
@@ -38,12 +38,12 @@ What do you want to ask a real Skeena steelhead? Ask me about dodging the Tyee t
   const [isAsking, setIsAsking] = useState<boolean>(false);
 
   const promptSuggestions = [
+    'Why can’t you resist a swinging tube fly?',
+    'What do you honestly think of indicator nymphing?',
+    'What is your favorite tube fly recipe?',
     'How are you dodging the Tyee test nets this year?',
+    'What is your best Spey casting tip?',
     'Are you heading for the Babine, Kispiox, or Bulkley?',
-    'What fly patterns do you actually look at when swinging?',
-    'How does the water temperature feel right now?',
-    'How does 2026 feel compared to the 2018 record year?',
-    'What is your advice for catch-and-release anglers?',
   ];
 
   const handleSendMessage = async (customPrompt?: string) => {

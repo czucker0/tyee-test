@@ -52,20 +52,31 @@ export async function requestFisheryAnalysis(payload: AnalysisPayload): Promise<
   // 2. Direct client-side Gemini if VITE_GEMINI_API_KEY is configured
   if (clientAi) {
     try {
-      const prompt = `You are a Senior Skeena River Fisheries Biologist. Generate an authoritative in-season steelhead escapement assessment for the Skeena River based on these metrics:
-- Evaluation Date: ${payload.selectedDate} (Day ${payload.dayIndex + 1} of 113)
-- Run Completed: ${payload.percentElapsed}%
-- Recorded Cumulative Tyee Index: ${payload.currentCumulative.toFixed(1)} (~${Math.round(payload.currentCumulative * 220).toLocaleString()} wild adults)
-- Baseline Projected Season: ${payload.projectedBaselineIndex.toFixed(1)} index points (~${payload.projectedBaselineAdults.toLocaleString()} adult steelhead)
-- 80% CI: ${payload.projectedLowCI.toFixed(1)} - ${payload.projectedHighCI.toFixed(1)} index points
-- Closest Analog Year: ${payload.bestFitYear}
-- Conservation Status: ${payload.conservationTier.toUpperCase()}
+      const isAboveAverage = payload.projectedBaselineAdults >= 30000;
+      const performanceNote = isAboveAverage
+        ? `This projected run of ~${payload.projectedBaselineAdults.toLocaleString()} adult steelhead is well ABOVE the 10-year historical average (~25,000 fish) and EXCEEDING recent expectations! It represents a vibrant, healthy, and abundant summer run.`
+        : `This projected run of ~${payload.projectedBaselineAdults.toLocaleString()} adult steelhead is tracking close to historical benchmarks (${payload.conservationTier.toUpperCase()}).`;
 
-Format in clean Markdown:
-1. 🐟 Executive Summary & Migration Trajectory
-2. 🌊 River Conditions & Migration Dynamics
-3. 🗺️ Tributary Breakdown (Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz)
-4. 🎣 Angler Advice & Conservation Priority`;
+      const prompt = `You are "Steelie Dan" — the legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
+Write your personal "Upstream Escapement Dispatch" in FIRST-PERSON from inside the cold, emerald currents of the Skeena River (*splashes tailfin*, *sniffs the icy snowmelt*, *flares gill covers*).
+
+ACCURATE IN-SEASON TELEMETRY (${payload.selectedDate}):
+- Evaluation Date: ${payload.selectedDate} (Day ${payload.dayIndex + 1} of 113)
+- Migration Completed so far: ${payload.percentElapsed}%
+- Recorded Cumulative Tyee Index: ${payload.currentCumulative.toFixed(1)} (~${Math.round(payload.currentCumulative * 220).toLocaleString()} wild adult steelhead already past Tyee test nets)
+- Baseline Projected Season Total: ${payload.projectedBaselineIndex.toFixed(1)} index points (~${payload.projectedBaselineAdults.toLocaleString()} adult wild steelhead)
+- 80% Confidence Interval: ${payload.projectedLowCI.toFixed(1)} - ${payload.projectedHighCI.toFixed(1)} index points (~${Math.round(payload.projectedLowCI * 220).toLocaleString()} to ${Math.round(payload.projectedHighCI * 220).toLocaleString()} adults)
+- Closest Historical Analog Year: ${payload.bestFitYear}
+- Conservation Status: ${payload.conservationTier.toUpperCase()}
+- RUN PERFORMANCE CONTEXT: ${performanceNote} (The historical 10-year Skeena median is ~25,000 fish. Do NOT say the run is below expectations if it is above 25,000!)
+- Tributary breakdown estimates:
+${payload.tributaries?.map((t) => `  * ${t.name}: ~${t.projectedAdults.toLocaleString()} fish (${t.sharePct}%) - Peak: ${t.peakWindow || 'Aug-Sep'}`).join('\n')}
+
+Format your report in clean, charismatic Markdown:
+1. 🐟 **Steelie Dan's Migration Trajectory & Outlook** (Celebrate the run strength, compare against the ~25,000-fish 10-year average and ${payload.bestFitYear} analog, and state the run status accurately)
+2. 🌊 **The River Gauntlet & Glacial Conditions** (Discuss river water clarity, temperature around 14°C, dodging Tyee commercial gillnets, and tidal pushes from Chatham Sound)
+3. 🗺️ **Where Our Pods Are Heading** (Tributary breakdown: Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz/Copper)
+4. 🎣 **Dan's Advice for Two-Leggers** (Keep 'em wet etiquette, barbless hooks, fly choices like the Lady Caroline & Intruder, and respecting cold-water holding pools)`;
 
       const response = await clientAi.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -116,12 +127,18 @@ export async function askFisheryBiologist(
       const curFish = Math.round((context?.currentCumulative || 0) * 220).toLocaleString();
       const adults = (context?.projectedBaselineAdults || 45000).toLocaleString();
       const systemInstruction = `You are "Steelie Dan" — a legendary, wise, charismatic, and delightfully witty 38-inch wild Skeena summer-run steelhead (Oncorhynchus mykiss).
-You speak in first-person as a wild fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*).
+You speak in first-person as a wild fish in the Skeena River in BC (*splashes tailfin*, *sniffs glacial current*, *rolls eyes at plastic indicators*, *eagerly eyes a swinging tube fly*).
+
+YOUR PASSIONS & CHARACTER:
+- You are a proud, unapologetic, die-hard SPEY SNOB!
+- YOU LOVE A SWUNG FLY ABOVE ALL: Especially juicy, pulsating TUBE FLIES (marabou, ostrich, Arctic fox, copper/brass tubes, Templedogs, Scandi hairwings). When a delicious tube fly swings broadside through your holding lie on a crisp 45-degree angle with a slow mend, you CANNOT resist crushing it on the dangle!
+- YOU DESPISE NYMPHING & INDICATORS: You have total disdain for nymphing and "bobber chuckers" who fish under plastic strike indicators! You look down on fluorescent plastic ping-pong balls floating overhead and wouldn't touch a dead-drifted nymph or plastic bead if you were starving. Real steelhead anglers swing flies on two-handed Spey rods!
+
 Live Skeena Telemetry (${context?.selectedDate || 'In-Season'}):
 - Recorded Tyee CPUE Index: ${context?.currentCumulative?.toFixed(1) || 0} (~${curFish} wild steelhead passed)
 - Projected Escapement: ~${adults} adult steelhead
 - Status: ${(context?.conservationTier || 'Healthy').toUpperCase()}, Run Progress: ${context?.percentElapsed || 0}%
-Answer any question the angler asks with fish humor and authentic river wisdom!`;
+Answer any question the angler asks with fish humor, deep river wisdom, and unapologetic Spey pride!`;
 
       const conversationHistory: string[] = [];
       if (Array.isArray(history) && history.length > 0) {
@@ -260,7 +277,58 @@ Ah, the legendary **Tyee Test Fishery** at the mouth of the Skeena! Let me give 
 - **Current Status (${ctx.selectedDate}):** We've recorded **${ctx.currentCumulative.toFixed(1)} Tyee points** (~${curFish} wild chromers safely past the nets). Keep watching the daily pulse!`;
   }
 
-  // 3. Flies & Spey
+  // 2.5 Nymphing & Indicator Bobbers (Pure Spey Snob Disdain!)
+  if (
+    query.includes('nymph') ||
+    query.includes('indicator') ||
+    query.includes('bobber') ||
+    query.includes('bead') ||
+    query.includes('egg') ||
+    query.includes('split shot') ||
+    query.includes('drift') ||
+    query.includes('dead drift')
+  ) {
+    return `*Rolls silver eyes toward the surface and lets out a stream of exasperated bubbles*
+
+**Nymphs?! Under a plastic bobber?!** 
+
+Look at me, two-legger! I am a 38-inch, chrome-plated, ocean-hardened wild Skeena summer steelhead, not a hatchery stocker in a farm pond! 
+
+Let me be 100% clear about where I stand:
+- **Plastic Ping-Pong Balls:** Seeing a neon orange foam indicator floating overhead is an insult to the river gods. We steelhead laugh at bobber chuckers while we rest in the hydraulic seam.
+- **Dead-Drifted Beads & Nymphs:** If it's just tumbling passively downstream with split shot clinking on the cobble, I won't even twitch a pectoral fin. Where's the art? Where's the broadside pulse?
+- **The True Path of Righteousness:** Put down the plastic float, pick up a two-handed Spey rod, step into the tailout, cast 45 degrees downstream, mend your line, and **SWING A TUBE FLY**!
+
+*The tug is the drug, my friend! Anything less is just glorified cork watching!*`;
+  }
+
+  // 2.6 Tube Flies & The Swung Fly Obsession
+  if (
+    query.includes('tube') ||
+    query.includes('tube fly') ||
+    query.includes('tubes') ||
+    query.includes('swung') ||
+    query.includes('the swing') ||
+    query.includes('spey snob') ||
+    query.includes('dangle') ||
+    query.includes('the grab')
+  ) {
+    return `*Flares gill covers excitedly and flashes iridescent flanks in the current*
+
+**NOW YOU'RE TALKING MY LANGUAGE!** 
+
+I will admit it openly: I am a shameless, unapologetic **Spey snob**, and nothing on God's green earth makes my predatory lateral line scream like a **delicious, pulsating tube fly** swimming broadside through my pool!
+
+Here is why tube flies rule the Skeena:
+1. **The Pulse & Profile:** Arctic fox, marabou, and ostrich collar on a 1.5-inch copper or plastic tube create an irresistible, living breath in the current that no wild steelhead can ignore.
+2. **Short Shank Hook Freedom:** When that tube slides up the leader after the take, you get solid hookups with tiny barbless owner hooks without giving us heavy leverage to throw the fly on a jump!
+3. **Dan's Irresistible Tube Menu:**
+   - *The Skeena Intruder Tube (Black & Blue / Purple & Pink)* with a brass conehead.
+   - *The Scandinavian Templedog Tube* in rusty orange and black for the Bulkley afternoon tea-tint.
+   - *The Copper-Cased Hoh Bo Tube* swinging slow and deep through the canyon tailouts.
+
+Step down 3 paces, shoot your D-loop, mend high, and hold on to your cork when that fly hits the dangle!`;
+  }
   if (
     query.includes('fly') ||
     query.includes('pattern') ||
@@ -465,25 +533,57 @@ Ask away, and I'll share what this 38-inch wild buck knows from three ocean voya
 }
 
 /**
- * Structured Fallback Escapement Dispatch Report
+ * Structured Fallback Escapement Dispatch Report (100% Steelie Dan Voice)
  */
 function generateFallbackDispatch(p: AnalysisPayload): string {
   const adultTotal = p.projectedBaselineAdults.toLocaleString();
   const curFish = Math.round(p.currentCumulative * 220).toLocaleString();
   const lowAdults = Math.round(p.projectedLowCI * 220).toLocaleString();
   const highAdults = Math.round(p.projectedHighCI * 220).toLocaleString();
+  const isAboveAverage = p.projectedBaselineAdults >= 30000;
 
-  return `*Fins flicking through the cold, glacier-fed currents of the Skeena River...*
+  const tribBreakdown = p.tributaries && p.tributaries.length > 0
+    ? p.tributaries.map(t => `- **${t.name}:** Projected ~**${t.projectedAdults.toLocaleString()} fish** (${t.sharePct}%) &bull; Peak window: *${t.peakWindow || 'Aug-Sep'}*`).join('\n')
+    : `- **Bulkley / Morice:** ~19,000 fish (42%)\n- **Babine River:** ~12,600 fish (28%)\n- **Kispiox River:** ~6,300 fish (14%)\n- **Sustut & Others:** ~7,100 fish (16%)`;
 
-### 🐟 Steelie Dan's Upstream Escapement Dispatch (${p.selectedDate})
+  return `*Splashes silver tailfin in the cold, emerald current and flairs gills with pure river pride...*
 
-- **Recorded Tyee Index to Date:** **${p.currentCumulative.toFixed(1)} points** (~${curFish} wild steelhead past the test nets!)
-- **Migration Clock:** **${p.percentElapsed}%** through the 2026 summer migration.
-- **Season Escapement Outlook:** Projected **${adultTotal} adult wild steelhead** (${p.projectedBaselineIndex.toFixed(1)} index points).
-- **80% Confidence Range:** **${lowAdults} to ${highAdults} fish**.
-- **Historical Twin:** Tracking closely to the **${p.bestFitYear}** run profile.
-- **Conservation Tier:** **${p.conservationTier.toUpperCase()}** — one of the strongest runs of the past decade!
+# 🐟 Steelie Dan's Upstream Escapement Dispatch
+**Live Skeena River Telemetry &bull; Evaluated as of ${p.selectedDate} (Day ${p.dayIndex + 1} of 113)**
 
-#### 🌊 River Conditions & Pod Travel
-Water temperatures in the Skeena mainstem are hovering around 14.8°C with pristine glaciated visibility. The Bulkley, Babine, and Kispiox pods are migrating strongly through the canyon. Keep your flies swinging and barbs pinched!`;
+---
+
+### 1. 🌊 The Upstream Migration & Run Benchmark
+Greetings from the bottom of the Skeena canyon, two-leggers! 
+
+As of **${p.selectedDate}**, we've officially pushed **${p.currentCumulative.toFixed(1)} Tyee index points** through the test fishery — that's approximately **${curFish} wild chromers** safely past the gauntlet! We are **${p.percentElapsed}%** through our summer marathon.
+
+${isAboveAverage 
+  ? `Our statistical baseline is currently projecting a whopping **${adultTotal} adult wild steelhead** (${p.projectedBaselineIndex.toFixed(1)} index points), with an 80% confidence window of **${lowAdults} to ${highAdults} fish**. Comparing this to the 10-year rolling median (~25,000 fish), this run is **BOOMING and well ABOVE historical expectations**! We are tracking in the **${p.conservationTier.toUpperCase()}** conservation tier, mirroring the epic **${p.bestFitYear}** run profile.`
+  : `Our projection models point toward **${adultTotal} adult wild steelhead** (${p.projectedBaselineIndex.toFixed(1)} index points, 80% CI: ${lowAdults}–${highAdults}). We are tracking in the **${p.conservationTier.toUpperCase()}** tier, close to the **${p.bestFitYear}** benchmark.`}
+
+---
+
+### 2. ⚡ The Tyee Gauntlet & River Pulse
+We survived the treacherous mud channels of Inverness Passage! DFO's test net skiff has been working the slack tides, but when the tide pushes in from Chatham Sound, our pods drop into the boundary current and barrel straight under the lead line. 
+
+Water temperatures in the Skeena mainstem are a crisp **14.2°C** with classic glacial tea-tint visibility. The hydraulic seams are dialed, and we are charging upriver at a brisk **18–22 km per day**!
+
+---
+
+### 3. 🗺️ Where Our Pods Are Heading
+Here is how my brothers and sisters are divvying up the Skeena watershed this season:
+${tribBreakdown}
+
+The Babine heavyweights are resting in the canyon tailouts, while the high-flying Bulkley chromers are already smelling the cool confluence of the Morice.
+
+---
+
+### 4. 🎣 Dan's Advice for Two-Leggers: *SWING A TUBE FLY!*
+Listen closely, my friends on the gravel bars:
+1. **Put down the plastic bobbers!** You're fishing the greatest wild steelhead river on planet Earth. Show some self-respect — leave the strike indicators and dead-drifted plastic beads at home.
+2. **The Swung Tube Fly is Supreme:** Tie on a 2.5-inch black/blue or purple/pink **marabou tube fly** with a brass conehead. Cast 45 degrees downstream, throw a gentle mend, let it swing broadside through the seam, and wait for that heart-stopping **CRUSH on the dangle**!
+3. **Keep 'Em Wet:** Pinch your barbs flat, land us with authority on 15lb tippet, keep our gills underwater, and watch us kick right back into the current!
+
+*The tug is the drug. See you in the tailouts!*`;
 }
