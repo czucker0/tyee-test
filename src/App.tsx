@@ -33,6 +33,7 @@ import { AuthModal } from './components/AuthModal';
 import { AuthGate } from './components/AuthGate';
 import { AdminUserbaseModal } from './components/AdminUserbaseModal';
 import { MultiplierDebateModal, MultiplierMode } from './components/MultiplierDebateModal';
+import { UserGuideModal } from './components/UserGuideModal';
 import { useAuth } from './context/AuthContext';
 import { Footer } from './components/Footer';
 import {
@@ -129,6 +130,7 @@ export default function App() {
   // Modals
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
+  const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState<boolean>(false);
   const [isSandboxOpen, setIsSandboxOpen] = useState<boolean>(false);
 
   // Select year presets
@@ -333,6 +335,7 @@ export default function App() {
       <Header
         onOpenAI={() => setIsAIModalOpen(true)}
         onOpenAbout={() => setIsAboutModalOpen(true)}
+        onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
         onToggleSandbox={() => setIsSandboxOpen(!isSandboxOpen)}
         isSandboxOpen={isSandboxOpen}
         onExportCSV={handleExportCSV}
@@ -584,6 +587,7 @@ export default function App() {
       <Footer
         onOpenAbout={() => setIsAboutModalOpen(true)}
         onOpenAI={() => setIsAIModalOpen(true)}
+        onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
         onExportCSV={handleExportCSV}
       />
 
@@ -610,6 +614,13 @@ export default function App() {
       <AboutTyeeModal
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
+      />
+
+      {/* Skeena Field Manual & User Guide Master Modal */}
+      <UserGuideModal
+        isOpen={isUserGuideModalOpen}
+        onClose={() => setIsUserGuideModalOpen(false)}
+        onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
       />
 
       {/* The Multiplier & Escapement Debate Modal */}

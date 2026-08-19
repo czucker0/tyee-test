@@ -27,6 +27,7 @@ import { ClassicSalmonFlyIcon } from './ClassicSalmonFlyIcon';
 interface HeaderProps {
   onOpenAI: () => void;
   onOpenAbout: () => void;
+  onOpenUserGuide?: () => void;
   onToggleSandbox: () => void;
   isSandboxOpen: boolean;
   onExportCSV: () => void;
@@ -38,6 +39,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenAI,
   onOpenAbout,
+  onOpenUserGuide,
   onToggleSandbox,
   isSandboxOpen,
   onExportCSV,
@@ -172,6 +174,18 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
+
+                {/* Field Guide & Manual */}
+                {onOpenUserGuide && (
+                  <button
+                    onClick={onOpenUserGuide}
+                    title="Open Skeena Field Manual & Master Reference"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] text-xs font-mono font-bold transition shrink-0"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                    <span className="hidden xl:inline">Field Manual</span>
+                  </button>
+                )}
 
                 {/* About */}
                 <button
@@ -320,6 +334,20 @@ export const Header: React.FC<HeaderProps> = ({
                   <Download className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>Export 10-Yr CSV</span>
                 </button>
+
+                {/* Field Guide & Manual */}
+                {onOpenUserGuide && (
+                  <button
+                    onClick={() => {
+                      onOpenUserGuide();
+                      setIsSidePanelOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono"
+                  >
+                    <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
+                    <span>Field Manual &amp; Reference</span>
+                  </button>
+                )}
 
                 {/* About Tyee */}
                 <button
