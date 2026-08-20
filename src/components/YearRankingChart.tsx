@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import {
   CURRENT_YEAR,
   ADULT_EXPANSION_FACTOR,
+  HISTORICAL_ERAS,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
-import { Trophy } from 'lucide-react';
+import { Trophy, Filter, ChevronDown } from 'lucide-react';
 
 interface YearRankingChartProps {
   currentDayIndex: number;
@@ -25,11 +26,23 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
   allYears = [],
 }) => {
   const [viewMode, setViewMode] = useState<'onDate' | 'seasonTotal'>('onDate');
-  const [filterToSelectedOnly, setFilterToSelectedOnly] = useState<boolean>(false);
+  const [activeEra, setActiveEra] = useState<string>('all');
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
 
+  // Selected era configuration
+  const currentEraObj = HISTORICAL_ERAS.find((e) => e.id === activeEra) || HISTORICAL_ERAS[0];
+
+  // Filter years according to selected era or active cohort
+  const eraFilteredYears = allYears.filter((y) => {
+    if (activeEra === 'selected' && selectedYears && selectedYears.length > 0) {
+      return selectedYears.includes(y.year);
+    }
+    if (activeEra === 'all') return true;
+    return currentEraObj.years.includes(y.year);
+  });
+
   // Build ranking items
-  let rankingData = allYears.map((y) => {
+  let rankingData = eraFilteredYears.map((y) => {
     let valOnDate = y.data[currentDayIndex]?.cumulativeIndex || 0;
     let seasonTotal = y.totalIndex;
 
@@ -54,20 +67,26 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
     };
   });
 
-  if (filterToSelectedOnly && selectedYears && selectedYears.length > 0) {
-    rankingData = rankingData.filter((d) => selectedYears.includes(d.year));
-  }
-
   // Sort descending by active value
   rankingData.sort((a, b) => b.activeVal - a.activeVal);
 
   const maxVal = Math.max(...rankingData.map((d) => d.activeVal), 1);
   const currentRank = rankingData.findIndex((d) => d.isCurrent) + 1;
 
+  // Compute all-time rank for context
+  const allTimeRanking = allYears.map((y) => {
+    const v = viewMode === 'onDate' 
+      ? (y.isCurrentYear ? projection.currentCumulative : y.data[currentDayIndex]?.cumulativeIndex || 0)
+      : (y.isCurrentYear ? projection.projectedBaselineIndex : y.totalIndex);
+    return { year: y.year, val: v, isCurrent: y.isCurrentYear || y.year === CURRENT_YEAR };
+  }).sort((a, b) => b.val - a.val);
+
+  const allTimeRank = allTimeRanking.findIndex((d) => d.isCurrent) + 1;
+
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 transition-colors duration-200">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)]">
@@ -78,7 +97,7 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
                 Annual Escapement &amp; CPUE Standings
               </h3>
               <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
-                Relative historical ranking: 2026 sits at #{currentRank} of {rankingData.length} recorded seasons
+                2026 sits at <strong className="text-[var(--accent-amber)]">#{currentRank}</strong> of {rankingData.length} in <span className="text-[var(--text-main)] font-semibold">{activeEra === 'selected' ? 'Active Cohort' : currentEraObj.shortLabel}</span> (All-time: <strong className="text-[var(--text-main)]">#{allTimeRank} of 71</strong>)
               </p>
             </div>
           </div>
@@ -89,7 +108,7 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
           <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1">
             <button
               onClick={() => setViewMode('onDate')}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
                 viewMode === 'onDate'
                   ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
@@ -99,7 +118,7 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
             </button>
             <button
               onClick={() => setViewMode('seasonTotal')}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
                 viewMode === 'seasonTotal'
                   ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
@@ -108,24 +127,45 @@ export const YearRankingChart: React.FC<YearRankingChartProps> = ({
               Full Season Final
             </button>
           </div>
+        </div>
+      </div>
 
-          {selectedYears && selectedYears.length > 0 && (
-            <button
-              onClick={() => setFilterToSelectedOnly(!filterToSelectedOnly)}
-              className={`text-xs px-2.5 py-2 rounded-xl border font-medium transition ${
-                filterToSelectedOnly
-                  ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)] text-[var(--accent-teal)] font-bold'
-                  : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-              }`}
-            >
-              {filterToSelectedOnly ? 'Selected Only' : 'All Years'}
-            </button>
-          )}
+      {/* Standardized Era / Cohort Filter Dropdown (Matches rest of application) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 font-mono text-xs">
+        <div className="flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+          <span className="text-xs font-bold text-[var(--text-main)]">
+            Cohort / Era Filter:
+          </span>
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <select
+            value={activeEra}
+            onChange={(e) => setActiveEra(e.target.value)}
+            aria-label="Filter escapement standings by historical era"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] text-[var(--text-main)] font-mono text-xs font-semibold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer pr-8"
+          >
+            {selectedYears && selectedYears.length > 1 && (
+              <option value="selected">
+                ★ Active Comparison Cohort ({selectedYears.length} Selected Seasons)
+              </option>
+            )}
+            <option value="all">
+              All 70 Recorded Seasons (1956–2025 Complete Archive)
+            </option>
+            {HISTORICAL_ERAS.filter((e) => e.id !== 'all').map((era) => (
+              <option key={era.id} value={era.id}>
+                {era.label} ({era.years.length} Seasons)
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
       {/* Ranking Bars Container */}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
         {rankingData.map((item, idx) => {
           const rank = idx + 1;
           const barWidthPct = Math.max(4, Math.round((item.activeVal / maxVal) * 100));

@@ -11,6 +11,7 @@ import {
 import {
   CURRENT_YEAR,
   HISTORICAL_AVERAGE_CURVE,
+  ALL_TIME_AVERAGE_CURVE,
   SEASON_DAYS,
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
@@ -19,6 +20,7 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -78,127 +80,124 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
 
   // Synthetic All-Time Archive Average (1956–Present)
   const ALL_TIME_AVG_RECORD: YearRunData = useMemo(() => {
-    const allTimeTotal = 118.4; // 1956-present long term archive mean
+    const finalAllTime = ALL_TIME_AVERAGE_CURVE[ALL_TIME_AVERAGE_CURVE.length - 1]?.avgCumulative || 165.2;
     return {
       year: -2,
       isCurrentYear: false,
-      totalIndex: allTimeTotal,
-      projectedTotal: allTimeTotal,
-      peakDate: 'Aug 16',
-      peakDailyIndex: 3.8,
-      medianDate: 'Aug 16',
+      totalIndex: finalAllTime,
+      projectedTotal: finalAllTime,
+      peakDate: 'Aug 14',
+      peakDailyIndex: 4.8,
+      medianDate: 'Aug 15',
       conservationStatus: 'Healthy',
       color: isDark ? '#38bdf8' : '#0284c7',
-      notes: 'All-Time DFO Archive Mean (1956–Present Long-Term Baseline)',
-      data: HISTORICAL_AVERAGE_CURVE.map((c, idx) => {
+      notes: 'All-Time DFO Tyee Archive Mean (1956–2025 70-Year Long-Term Baseline)',
+      data: ALL_TIME_AVERAGE_CURVE.map((c, idx) => {
         const sDay = SEASON_DAYS[idx] || { month: 8, day: 16, monthDay: c.monthDay };
-        const scaling = allTimeTotal / 95.7;
         return {
           dayOfYear: idx + 1,
           dateStr: `2026-${sDay.month < 10 ? '0' + sDay.month : sDay.month}-${sDay.day < 10 ? '0' + sDay.day : sDay.day}`,
           monthDay: c.monthDay,
           month: sDay.month,
           day: sDay.day,
-          dailyIndex: Math.round(c.avgDaily * scaling * 100) / 100,
-          cumulativeIndex: Math.round(c.avgCumulative * scaling * 100) / 100,
-          waterTempC: 14.8,
-          dischargeM3s: 2150,
+          dailyIndex: c.avgDaily,
+          cumulativeIndex: c.avgCumulative,
+          waterTempC: 15.0,
+          dischargeM3s: 2200,
         };
       }),
     };
   }, [isDark]);
 
-  const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
-  const isTenYearAvg = benchmarkYear === -1;
-  const isAllTimeAvg = benchmarkYear === -2;
+  // Active current year record (2026)
+  const currentYearRecord = useMemo(() => {
+    return allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
+  }, [allYears]);
 
-  const benchmarkRecord = isTenYearAvg
-    ? TEN_YEAR_AVG_RECORD
-    : isAllTimeAvg
-    ? ALL_TIME_AVG_RECORD
-    : allYears.find((y) => y.year === benchmarkYear) || TEN_YEAR_AVG_RECORD;
+  // Active benchmark record
+  const benchmarkRecord = useMemo(() => {
+    if (benchmarkYear === -1) return TEN_YEAR_AVG_RECORD;
+    if (benchmarkYear === -2) return ALL_TIME_AVG_RECORD;
+    return allYears.find((y) => y.year === benchmarkYear) || allYears.find((y) => y.year === 2024) || TEN_YEAR_AVG_RECORD;
+  }, [benchmarkYear, allYears, TEN_YEAR_AVG_RECORD, ALL_TIME_AVG_RECORD]);
 
-  const benchmarkDisplayName = isTenYearAvg
-    ? '10-Yr DFO Avg'
-    : isAllTimeAvg
-    ? 'All-Time Avg (1956+)'
-    : `${benchmarkYear} Season`;
+  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || 'Aug 16';
 
-  // Find last recorded day index
+  // Benchmark display label
+  const benchmarkDisplayName = useMemo(() => {
+    if (benchmarkYear === -1) return '10-Yr DFO Rolling Avg';
+    if (benchmarkYear === -2) return '70-Yr All-Time Baseline';
+    return `${benchmarkYear} Season`;
+  }, [benchmarkYear]);
+
+  // Latest recorded index in current year
   const lastRecordedDayIndex = useMemo(() => {
-    let lastRec = 67;
-    if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
-      for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
-        const d: any = currentYearRecord.data[i];
-        if (d.isRecorded === true || (d.dailyIndex > 0 && d.cumulativeIndex > 0)) {
-          lastRec = i;
-          break;
-        }
+    if (!currentYearRecord?.data) return 67;
+    for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
+      const d: any = currentYearRecord.data[i];
+      if (d.isRecorded === true || (d.dailyIndex > 0 && d.cumulativeIndex > 0)) {
+        return i;
       }
     }
-    return lastRec;
+    return 67;
   }, [currentYearRecord]);
 
-  const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
-
-  // Comparison metrics calculation
+  // Comparison metrics calculations
   const comparisonStats = useMemo(() => {
-    const currentOnDateRaw =
-      currentDayIndex <= lastRecordedDayIndex
-        ? (currentYearRecord?.data[currentDayIndex]?.cumulativeIndex ?? projection.currentCumulative)
-        : projection.projectedDailyTrajectory[currentDayIndex]?.projectedCumulative ?? projection.currentCumulative;
+    const isBeyond = currentDayIndex > lastRecordedDayIndex;
+    const curVal = isBeyond
+      ? (projection.projectedDailyTrajectory.find((t) => t.dayOfYear - 1 === currentDayIndex)?.projectedCumulative || projection.currentCumulative)
+      : (currentYearRecord?.data[currentDayIndex]?.cumulativeIndex || projection.currentCumulative);
 
-    const benchmarkOnDateRaw = benchmarkRecord.data[currentDayIndex]?.cumulativeIndex ?? 0;
+    const benchVal = benchmarkRecord?.data[currentDayIndex]?.cumulativeIndex || 0;
+    const curDisplay = Math.round(curVal * mult);
+    const benchDisplay = Math.round(benchVal * mult);
+    const diff = curDisplay - benchDisplay;
+    const pctDiff = benchDisplay > 0 ? Math.round((diff / benchDisplay) * 100) : 0;
 
-    const currentVal = Math.round(currentOnDateRaw * mult * 10) / 10;
-    const benchmarkVal = Math.round(benchmarkOnDateRaw * mult * 10) / 10;
-    const diff = Math.round((currentVal - benchmarkVal) * 10) / 10;
-    const pctDiff = benchmarkVal > 0 ? Math.round(((currentVal - benchmarkVal) / benchmarkVal) * 100) : 0;
+    const curProj = Math.round(projection.projectedBaselineIndex * mult);
+    const benchTotal = Math.round(benchmarkRecord.totalIndex * mult);
+    const totalDiff = curProj - benchTotal;
+    const totalPctDiff = benchTotal > 0 ? Math.round((totalDiff / benchTotal) * 100) : 0;
 
-    const currentProjectedTotal = Math.round(projection.projectedBaselineIndex * mult * 10) / 10;
-    const benchmarkTotal = Math.round(benchmarkRecord.totalIndex * mult * 10) / 10;
-    const totalDiff = Math.round((currentProjectedTotal - benchmarkTotal) * 10) / 10;
-    const totalPctDiff = benchmarkTotal > 0 ? Math.round(((currentProjectedTotal - benchmarkTotal) / benchmarkTotal) * 100) : 0;
+    const curPeakDate = currentYearRecord?.peakDate || 'Aug 16';
+    const benchPeakDate = benchmarkRecord?.peakDate || 'Aug 14';
 
-    const benchmarkPctElapsedOnDate =
-      benchmarkRecord.totalIndex > 0
-        ? Math.round((benchmarkOnDateRaw / benchmarkRecord.totalIndex) * 100)
-        : 0;
+    const curPctRunPassed = Math.min(100, Math.round((curVal / (projection.projectedBaselineIndex || 1)) * 100));
+    const benchPctRunPassed = Math.min(100, Math.round((benchVal / (benchmarkRecord.totalIndex || 1)) * 100));
 
     return {
-      currentVal,
-      benchmarkVal,
+      currentVal: curDisplay,
+      benchmarkVal: benchDisplay,
       diff,
       pctDiff,
-      currentProjectedTotal,
-      benchmarkTotal,
+      currentProjectedTotal: curProj,
+      benchmarkTotal: benchTotal,
       totalDiff,
       totalPctDiff,
-      benchmarkPctElapsedOnDate,
+      curPeakDate,
+      benchPeakDate,
+      curPctRunPassed,
+      benchPctRunPassed,
+      isBeyond,
     };
-  }, [currentDayIndex, lastRecordedDayIndex, currentYearRecord, projection, benchmarkRecord, mult]);
+  }, [currentDayIndex, lastRecordedDayIndex, projection, currentYearRecord, benchmarkRecord, mult]);
 
-  // Differential line chart dataset
-  const diffChartData = useMemo(() => {
-    const trajectoryMap = new Map<number, typeof projection.projectedDailyTrajectory[0]>();
-    projection.projectedDailyTrajectory.forEach((t) => {
-      trajectoryMap.set(t.dayOfYear - 1, t);
-    });
-
+  // Chart data points
+  const chartData = useMemo(() => {
     return SEASON_DAYS.map((sDay, idx) => {
-      const isPastOrRecorded = idx <= lastRecordedDayIndex;
-      let cur2026 = 0;
-      if (isPastOrRecorded) {
-        cur2026 = currentYearRecord?.data[idx]?.cumulativeIndex ?? 0;
+      let curVal: number | null = null;
+      if (idx <= lastRecordedDayIndex) {
+        curVal = currentYearRecord?.data[idx]?.cumulativeIndex ?? null;
       } else {
-        const projItem = trajectoryMap.get(idx);
-        cur2026 = projItem?.projectedCumulative ?? 0;
+        const projItem = projection.projectedDailyTrajectory.find((t) => t.dayOfYear - 1 === idx);
+        curVal = projItem ? projItem.projectedCumulative : null;
       }
 
-      const benchVal = benchmarkRecord.data[idx]?.cumulativeIndex ?? 0;
-      const curDisplay = Math.round(cur2026 * mult * 10) / 10;
+      const benchVal = benchmarkRecord?.data[idx]?.cumulativeIndex ?? 0;
+      const curDisplay = curVal !== null ? Math.round(curVal * mult * 10) / 10 : null;
       const benchDisplay = Math.round(benchVal * mult * 10) / 10;
-      const delta = Math.round((curDisplay - benchDisplay) * 10) / 10;
+      const delta = curDisplay !== null ? Math.round((curDisplay - benchDisplay) * 10) / 10 : null;
 
       return {
         dayIndex: idx,
@@ -236,50 +235,118 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     );
   };
 
+  // Benchmark quick pick list
+  const BENCHMARK_QUICK_PICKS = [
+    { label: '10-Yr Avg', val: -1 },
+    { label: '70-Yr Avg', val: -2 },
+    { label: '1998 Record', val: 1998 },
+    { label: '1985 Golden Age', val: 1985 },
+    { label: '2004 Peak', val: 2004 },
+    { label: '2010 Cold Run', val: 2010 },
+    { label: '2021 Crisis Low', val: 2021 },
+    { label: '2024 Prior', val: 2024 },
+  ];
+
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
-      {/* Header - Single line title */}
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--border-main)] pb-3">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3">
         <div className="flex items-center gap-2 min-w-0">
           <Scale className="w-5 h-5 text-[var(--accent-amber)] shrink-0" />
-          <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight truncate">
-            Head-to-Head Benchmark Matchup
-          </h3>
+          <div>
+            <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight truncate">
+              Head-to-Head Benchmark Matchup
+            </h3>
+            <p className="text-[11px] text-[var(--text-muted)] font-mono">
+              Compare 2026 live run trajectory side-by-side against any season in the 70-year DFO archive.
+            </p>
+          </div>
         </div>
 
-        {/* Dropdown for any historical year organized by standout eras and full 1956-2025 archive */}
+        {/* Dropdown for any historical year organized by era across all 70 seasons */}
         <div className="flex items-center gap-1.5 shrink-0 font-mono">
           <select
             value={benchmarkYear}
             onChange={(e) => setBenchmarkYear(parseInt(e.target.value, 10))}
-            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2 sm:px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer shadow-xs max-w-[200px] sm:max-w-[260px] truncate"
+            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2 sm:px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer shadow-xs max-w-[220px] sm:max-w-[300px] truncate"
             aria-label="Select historical year for head-to-head comparison"
           >
-            <optgroup label="Core Baselines">
+            <optgroup label="Official Baselines">
               <option value={-1}>📊 10-Yr DFO Rolling Avg (2016–2025)</option>
-              <option value={-2}>📈 All-Time Archive Avg (1956–2025)</option>
+              <option value={-2}>📈 70-Yr All-Time Baseline (1956–2025)</option>
             </optgroup>
-            <optgroup label="Standout Historical Eras">
-              <option value={1998}>🏆 1998 All-Time Record High (306.4 pts)</option>
-              <option value={2021}>🚨 2021 Severe Crisis Low (22.3 pts)</option>
-              <option value={1985}>🌿 1985 Pre-Interception Peak (218.0 pts)</option>
-              <option value={2016}>🔥 2016 Modern Strong Year (189.7 pts)</option>
-              <option value={2019}>📉 2019 Historic Drought Return (34.1 pts)</option>
-              <option value={2025}>⏱️ 2025 Prior Season (116.8 pts)</option>
-              <option value={2024}>🌊 2024 Season (128.4 pts)</option>
+            <optgroup label="Benchmark Milestones">
+              <option value={1998}>🏆 1998 Mega El Niño Record (260 pts)</option>
+              <option value={2004}>🌊 2004 Historic Peak (243 pts)</option>
+              <option value={1985}>🌿 1985 Golden Age (246 pts)</option>
+              <option value={2010}>❄️ 2010 Cold Cohort (215 pts)</option>
+              <option value={2018}>🔥 2018 Decade Peak (178 pts)</option>
+              <option value={2021}>🚨 2021 Crisis Low (22 pts)</option>
+              <option value={2024}>⏱️ 2024 Prior Season (182 pts)</option>
+              <option value={1956}>🏛️ 1956 Inaugural Year (145 pts)</option>
             </optgroup>
-            <optgroup label="Full Historical Archive (1956–2025)">
+            <optgroup label="Modern Era (2016–2025)">
               {allYears
-                .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
+                .filter((y) => !y.isCurrentYear && y.year >= 2016 && y.year <= 2025)
                 .sort((a, b) => b.year - a.year)
                 .map((y) => (
                   <option key={y.year} value={y.year}>
-                    {y.year} Season ({y.totalIndex} pts)
+                    {y.year} Season ({y.totalIndex.toFixed(1)} pts)
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="2000s & 2010s Seasons">
+              {allYears
+                .filter((y) => !y.isCurrentYear && y.year >= 2000 && y.year < 2016)
+                .sort((a, b) => b.year - a.year)
+                .map((y) => (
+                  <option key={y.year} value={y.year}>
+                    {y.year} Season ({y.totalIndex.toFixed(1)} pts)
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="1980s & 1990s Seasons">
+              {allYears
+                .filter((y) => !y.isCurrentYear && y.year >= 1980 && y.year < 2000)
+                .sort((a, b) => b.year - a.year)
+                .map((y) => (
+                  <option key={y.year} value={y.year}>
+                    {y.year} Season ({y.totalIndex.toFixed(1)} pts)
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Vintage 1956–1979 Seasons">
+              {allYears
+                .filter((y) => !y.isCurrentYear && y.year >= 1956 && y.year < 1980)
+                .sort((a, b) => b.year - a.year)
+                .map((y) => (
+                  <option key={y.year} value={y.year}>
+                    {y.year} Season ({y.totalIndex.toFixed(1)} pts)
                   </option>
                 ))}
             </optgroup>
           </select>
         </div>
+      </div>
+
+      {/* Quick Landmark Benchmark Chips */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 font-mono text-xs scrollbar-thin">
+        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold shrink-0">
+          Quick Match:
+        </span>
+        {BENCHMARK_QUICK_PICKS.map((b) => (
+          <button
+            key={b.val}
+            onClick={() => setBenchmarkYear(b.val)}
+            className={`px-2 py-1 rounded-lg transition whitespace-nowrap cursor-pointer text-xs font-semibold ${
+              benchmarkYear === b.val
+                ? 'bg-[var(--accent-amber)] text-white shadow-xs font-bold'
+                : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)]'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
       </div>
 
       {/* Benchmark Head-to-Head Telemetry Cards */}
@@ -308,7 +375,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         {/* Projected Season Total Delta */}
         <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
-            <span>Projected Season Total</span>
+            <span>Season Total Benchmark</span>
             <span className="font-bold text-[var(--text-main)]">Forecast</span>
           </div>
           <div className="flex items-baseline justify-between">
@@ -328,75 +395,79 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
         {/* Run Timing Completion */}
         <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
-            <span>Historical Elapsed Share</span>
-            <span className="font-bold text-[var(--text-main)]">{benchmarkDisplayName}</span>
+            <span>Timing Completion</span>
+            <span className="font-bold text-[var(--accent-amber)]">{selectedMonthDay}</span>
           </div>
-          <p className="text-base sm:text-lg font-mono font-bold text-[var(--text-secondary)]">
-            {comparisonStats.benchmarkPctElapsedOnDate}% completed <span className="text-xs font-normal text-[var(--text-muted)]">by {selectedMonthDay}</span>
-          </p>
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm font-mono font-bold text-[var(--text-main)]">
+              2026: {comparisonStats.curPctRunPassed}% | Bench: {comparisonStats.benchPctRunPassed}%
+            </span>
+            <span className="text-[11px] font-mono text-[var(--text-secondary)]">
+              Peak: {comparisonStats.curPeakDate} vs {comparisonStats.benchPeakDate}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Head to Head Trajectory Line Chart */}
-      <div className="h-[260px] w-full pt-1">
+      {/* Interactive Head-to-Head Comparison Chart */}
+      <div className="h-[280px] sm:h-[340px] w-full pt-1">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={diffChartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 15, left: 0, bottom: 15 }}>
             <XAxis
               dataKey="monthDay"
               stroke={isDark ? '#475569' : '#a39b8c'}
-              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
               tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
               interval="preserveStartEnd"
-              minTickGap={28}
+              minTickGap={24}
             />
+
             <YAxis
               stroke={isDark ? '#475569' : '#a39b8c'}
-              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 10, fontFamily: 'monospace' }}
               tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
               domain={[0, 'auto']}
             />
+
             <Tooltip content={<CustomTooltip />} />
 
+            {/* Current day scrubber reference line */}
             <ReferenceLine
               x={selectedMonthDay}
-              stroke={isDark ? '#f59e0b' : '#c56a25'}
-              strokeWidth={2}
+              stroke="var(--accent-amber)"
               strokeDasharray="3 3"
+              strokeWidth={2}
               label={{
-                value: selectedMonthDay,
-                fill: isDark ? '#f59e0b' : '#c56a25',
+                value: `📍 ${selectedMonthDay}`,
+                fill: 'var(--accent-amber)',
                 fontSize: 10,
                 position: 'top',
-                fontWeight: 'bold',
               }}
             />
 
-            {/* Benchmark Trajectory */}
+            {/* Benchmark season line */}
             <Line
               type="monotone"
               dataKey="benchmark"
-              stroke={isDark ? '#2dd4bf' : '#1a6467'}
-              strokeWidth={2}
-              dot={false}
               name={benchmarkDisplayName}
+              stroke={benchmarkRecord.color || (isDark ? '#38bdf8' : '#0284c7')}
+              strokeWidth={2.5}
+              dot={false}
+              isAnimationActive={false}
             />
 
-            {/* 2026 Campaign */}
+            {/* 2026 Live run line */}
             <Line
               type="monotone"
               dataKey="current2026"
-              stroke={isDark ? '#3b82f6' : '#c56a25'}
-              strokeWidth={3}
+              name="2026 Season"
+              stroke="var(--accent-amber)"
+              strokeWidth={3.5}
               dot={false}
-              name="2026 Live Campaign"
+              isAnimationActive={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
-
-      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-t border-[var(--border-main)] pt-2 font-mono">
-        <span>Active Benchmark: <strong className="text-[var(--text-main)]">{benchmarkDisplayName}</strong> ({benchmarkRecord.notes || `${benchmarkRecord.totalIndex} pts`})</span>
-        <span>Selected: <strong className="text-[var(--accent-amber)]">{selectedMonthDay}</strong></span>
       </div>
     </div>
   );

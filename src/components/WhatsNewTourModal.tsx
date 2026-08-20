@@ -107,7 +107,7 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
       description:
         'Prominently identifies cold-water optimal swung-fly temperatures (8.0°C – 14.5°C) and flags the 18°C (64.4°F) catch-and-release handling threshold to protect wild summer steelhead from warm-water mortality.',
       takeaway: 'Adhere to thermal safety ethics when water temps rise in mid-summer.',
-      actionText: 'View Field Manual Guidelines',
+      actionText: 'View Reference Guidelines',
       action: () => {
         handleClose();
         if (onOpenFieldManual) onOpenFieldManual();
@@ -118,12 +118,12 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
       badge: 'Privacy & Security',
       badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
       icon: Lock,
-      title: 'Zero-Knowledge Field Notes Vault',
+      title: 'Zero-Knowledge Notes Vault',
       subtitle: 'Client-Side AES-GCM 256-Bit Cryptography',
       description:
         'Military-grade browser-native AES-GCM 256-bit client-side encryption with PBKDF2 passphrases. Keep private GPS coordinates, honey holes, and fly patterns completely unreadable by third parties.',
       takeaway: 'Your private beats and catch data stay encrypted on your device.',
-      actionText: 'Open Field Notes Vault',
+      actionText: 'Open Notes Vault',
       action: () => {
         handleClose();
         if (onNavigateToTab) onNavigateToTab('field-notes');
@@ -131,11 +131,11 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
     },
     {
       featureNumber: '05',
-      badge: 'Field Reference',
+      badge: 'Reference Manual',
       badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
       icon: Compass,
       title: '10-Chapter Skeena Master Reference Manual',
-      subtitle: 'Complete Field Guide to Runs, Biology & Tactics',
+      subtitle: 'Complete Guide to Runs, Biology & Tactics',
       description:
         'Deep dive into test fishery physics, the 40-point emergency closure metric, genetic stock identification (GSI), Spey tactics, and First Nations territory access protocols.',
       takeaway: 'Comprehensive scientific handbook available on and offline.',
@@ -165,7 +165,7 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
         handleClose();
         if (onNavigateToTab) onNavigateToTab('overview');
       },
-      actionLabel: 'Go to Overview & Telemetry',
+      actionLabel: 'Go to Overview',
     },
     {
       stepNumber: '02',
@@ -176,7 +176,7 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
         'Genetic Stock Identification (GSI) partitions the run across the Bulkley/Morice, Babine, Kispiox, Sustut, Zymoetz, and Kalum sub-basins. Inspect live water temps, discharge (m³/s), clarity estimates, and 5-day weather forecasts.',
       highlights: [
         'Multi-decade GSI stock proportion baselines',
-        'Live hydrometric telemetry from WSC monitoring stations',
+        'Live hydrometric data from WSC monitoring stations',
         '18°C thermal stress safety indicators',
       ],
       quickAction: () => {
@@ -205,7 +205,7 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
     },
     {
       stepNumber: '04',
-      title: 'Zero-Knowledge Field Notes Vault',
+      title: 'Zero-Knowledge Notes Vault',
       subtitle: 'AES-GCM 256-Bit Encrypted Angler Logbook',
       icon: Lock,
       content:
@@ -219,15 +219,15 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
         handleClose();
         if (onNavigateToTab) onNavigateToTab('field-notes');
       },
-      actionLabel: 'Go to Field Notes Vault',
+      actionLabel: 'Go to Notes Vault',
     },
     {
       stepNumber: '05',
-      title: 'Steelie Dan AI & Field Reference',
+      title: 'Steelie Dan AI & Help Reference',
       subtitle: 'Watershed Intelligence, Spey Tactics & Classified Waters',
       icon: Bot,
       content:
-        'Chat with Steelie Dan, an AI field assistant grounded in real-time Skeena telemetry, river discharge, fly selection ethics, Classified Waters regulations, and First Nations access protocols.',
+        'Chat with Steelie Dan, an AI advisor grounded in real-time Skeena readings, river discharge, fly selection ethics, Classified Waters regulations, and First Nations access protocols.',
       highlights: [
         'Real-time hydro and weather-grounded AI responses',
         'Spey sink-tip, fly pattern, and holding reach guidance',

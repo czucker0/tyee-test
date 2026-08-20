@@ -66,11 +66,11 @@ export const Header: React.FC<HeaderProps> = ({
   }, [isSidePanelOpen]);
 
   const navLinks = [
-    { id: 'overview' as MainTabType, label: 'Overview & Telemetry', icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'overview' as MainTabType, label: 'Overview', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'forecast' as MainTabType, label: 'Forecast & Projections', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'compare' as MainTabType, label: 'Historical Comparison', icon: <ArrowRightLeft className="w-4 h-4" /> },
     { id: 'tributaries' as MainTabType, label: 'Watershed Escapement & Sub-Basin Stocks', icon: <MapPin className="w-4 h-4" /> },
-    { id: 'field-notes' as MainTabType, label: 'Field Notes 🔒', icon: <Lock className="w-4 h-4" /> },
+    { id: 'field-notes' as MainTabType, label: 'Notes 🔒', icon: <Lock className="w-4 h-4" /> },
   ];
 
   return (
@@ -168,47 +168,17 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="xl:hidden">Steelie</span>
                 </button>
 
-                {/* Export CSV */}
-                <button
-                  onClick={onExportCSV}
-                  title="Download 10-Year Dataset (CSV)"
-                  className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-
-                {/* What's New & Tour Modal Trigger */}
-                {onOpenTourModal && (
+                {/* Help & Reference */}
+                {(onOpenUserGuide || onOpenAbout) && (
                   <button
-                    onClick={onOpenTourModal}
-                    title="What's New in v3.0 & Quick Feature Tour"
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--accent-amber-light)] hover:bg-[var(--accent-amber)] text-[var(--accent-amber)] hover:text-white border border-[var(--accent-amber-border)] text-xs font-mono font-bold transition shrink-0"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span className="hidden xl:inline">What&apos;s New</span>
-                  </button>
-                )}
-
-                {/* Field Guide & Manual */}
-                {onOpenUserGuide && (
-                  <button
-                    onClick={onOpenUserGuide}
-                    title="Open Skeena Field Manual & Master Reference"
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] text-xs font-mono font-bold transition shrink-0"
+                    onClick={onOpenUserGuide || onOpenAbout}
+                    title="Open Skeena Help, Reference & Documentation"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] text-xs font-mono font-bold transition shrink-0 shadow-sm"
                   >
                     <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
-                    <span className="hidden xl:inline">Field Manual</span>
+                    <span>Help</span>
                   </button>
                 )}
-
-                {/* About */}
-                <button
-                  onClick={onOpenAbout}
-                  title="About Tyee Test Fishery & Methodology"
-                  className="p-1.5 rounded-lg bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition shrink-0"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
               </div>
 
               {/* Quick Mobile Theme Toggle */}
@@ -294,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <div className="pt-3 border-t border-[var(--border-main)] my-2">
                 <div className="px-2 py-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)]">
-                  Field Tools &amp; Actions
+                  Tools &amp; Actions
                 </div>
 
                 {/* Day / Night Theme Button */}
@@ -313,13 +283,18 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </button>
 
+                {/* Section: Real-Time Field Tools */}
+                <div className="px-1 pb-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--accent-amber)]">
+                  Interactive Tools
+                </div>
+
                 {/* What-If Sandbox */}
                 <button
                   onClick={() => {
                     onToggleSandbox();
                     setIsSidePanelOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono font-medium"
                 >
                   <Sliders className="w-4 h-4 text-[var(--accent-amber)]" />
                   <span>Run What-If Sandbox</span>
@@ -331,35 +306,28 @@ export const Header: React.FC<HeaderProps> = ({
                     onOpenAI();
                     setIsSidePanelOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono font-medium"
                 >
                   <Sparkles className="w-4 h-4 text-[var(--accent-amber)]" />
-                  <span>Ask Steelie Dan (AI Modal)</span>
+                  <span>Ask Steelie Dan (AI Biologist)</span>
                 </button>
 
-                {/* CSV Export */}
-                <button
-                  onClick={() => {
-                    onExportCSV();
-                    setIsSidePanelOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
-                >
-                  <Download className="w-4 h-4 text-[var(--text-muted)]" />
-                  <span>Export 10-Yr CSV</span>
-                </button>
+                {/* Section: Documentation & Help */}
+                <div className="px-1 pt-2 pb-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)] border-t border-[var(--border-main)] mt-1">
+                  Help &amp; Reference
+                </div>
 
-                {/* Field Guide & Manual */}
+                {/* Help & Reference Modal */}
                 {onOpenUserGuide && (
                   <button
                     onClick={() => {
                       onOpenUserGuide();
                       setIsSidePanelOpen(false);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-main)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono bg-[var(--bg-subtle)]/60 border border-[var(--border-main)]"
                   >
                     <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
-                    <span>Field Manual &amp; Reference</span>
+                    <span>Help &amp; Reference</span>
                   </button>
                 )}
 
@@ -370,10 +338,10 @@ export const Header: React.FC<HeaderProps> = ({
                       onOpenTourModal();
                       setIsSidePanelOpen(false);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--accent-amber)] font-bold hover:bg-[var(--bg-subtle)] transition font-mono"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>What&apos;s New &amp; Quick Tour</span>
+                    <Sparkles className="w-4 h-4 text-[var(--text-muted)]" />
+                    <span>What&apos;s New in v3.0</span>
                   </button>
                 )}
 
@@ -383,10 +351,27 @@ export const Header: React.FC<HeaderProps> = ({
                     onOpenAbout();
                     setIsSidePanelOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono"
                 >
                   <HelpCircle className="w-4 h-4 text-[var(--text-muted)]" />
-                  <span>About Tyee Methodology</span>
+                  <span>About Tyee Test Fishery</span>
+                </button>
+
+                {/* Section: Data Exports */}
+                <div className="px-1 pt-2 pb-1 text-[10px] font-bold font-mono uppercase tracking-wider text-[var(--text-muted)] border-t border-[var(--border-main)] mt-1">
+                  Data &amp; Archive
+                </div>
+
+                {/* CSV Export */}
+                <button
+                  onClick={() => {
+                    onExportCSV();
+                    setIsSidePanelOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition font-mono"
+                >
+                  <Download className="w-4 h-4 text-[var(--text-muted)]" />
+                  <span>Export 70-Year Dataset (CSV)</span>
                 </button>
 
                 {isAdmin && (

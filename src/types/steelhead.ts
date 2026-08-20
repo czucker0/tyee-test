@@ -121,30 +121,57 @@ export interface TribalAccessProtocol {
   etiquette: string;
 }
 
+export interface SafeReach {
+  name: string;
+  description: string;
+  recommendedCraft?: string;
+  skillLevel?: string;
+  accessBounds?: string;
+}
+
+export interface HazardReach {
+  name: string;
+  dangerLevel: 'Caution' | 'High Risk' | 'Lethal / Unrunnable' | string;
+  description: string;
+  mandatoryTakeout?: string;
+  gpsOrKmMarker?: string;
+}
+
+export interface SafeWadingReach {
+  name: string;
+  terrainType: string;
+  description: string;
+  wadingDifficulty: 'Easy' | 'Moderate' | string;
+}
+
+export interface HazardWadingReach {
+  name: string;
+  hazardType: string;
+  description: string;
+  riskLevel: 'Moderate Caution' | 'High Risk' | 'Extremely Treacherous' | string;
+}
+
 export interface FloatSafetyProfile {
-  rating:
-    | 'Heavy Powercraft / Jetboat Only (Severe Volume)'
-    | 'Reach-Dependent: Upper Drift / Lower Lethal Canyon'
-    | 'Reach-Dependent: Drift Friendly / Mid-Canyon Hazard'
-    | 'Premier Drift Boat & Raft Friendly'
-    | 'Intermediate Float with Sweeper Hazards'
-    | 'Expert Whitewater Expedition Rafts Only'
-    | 'Fly-In Alpine Wilderness / Shallow Jetboat'
-    | 'Personal Raft Friendly'
-    | 'Intermediate Float with Hazards'
-    | 'Extreme Whitewater Canyon'
-    | 'Walk-In / Jetboat Only';
+  rating: string;
+  ratingRange?: string;
   whitewaterClass: string;
   suitableCraft: string;
   hazardWarnings: string[];
   typicalFloatTimes: string;
+  safeReaches?: SafeReach[];
+  hazardReaches?: HazardReach[];
+  summaryNote?: string;
 }
 
 export interface WadeSafetyProfile {
-  difficulty: 'Easy' | 'Moderate' | 'Challenging / Treacherous';
+  difficulty: 'Easy' | 'Moderate' | 'Challenging / Treacherous' | string;
+  difficultyRange?: string;
   footwearRecommendation: string;
   bankAccessibility: string;
   wadingStaffAdvice: string;
+  safeWadingReaches?: SafeWadingReach[];
+  hazardWadingReaches?: HazardWadingReach[];
+  summaryNote?: string;
 }
 
 export interface TributaryAdminTacticalIntel {

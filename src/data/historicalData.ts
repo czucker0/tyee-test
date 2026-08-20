@@ -117,6 +117,7 @@ export const ALL_YEARS_DATA: YearRunData[] = Object.keys(RAW_DFO_DATA).map((yKey
 });
 
 // Compute 10-year historical average curve (2016-2025)
+// 10-Year Rolling Decade Average Baseline (2016-2025)
 export const HISTORICAL_AVERAGE_CURVE: {
   dayIndex: number;
   monthDay: string;
@@ -128,8 +129,61 @@ export const HISTORICAL_AVERAGE_CURVE: {
   pctElapsed: number; // average % of run complete by this day
 }[] = [];
 
+// 70-Year All-Time Baseline Curve (1956-2025)
+export const ALL_TIME_AVERAGE_CURVE: {
+  dayIndex: number;
+  monthDay: string;
+  avgDaily: number;
+  avgCumulative: number;
+  minCumulative: number;
+  maxCumulative: number;
+  medianCumulative: number;
+  pctElapsed: number;
+}[] = [];
+
+// Curated Era Definitions
+export const HISTORICAL_ERAS = [
+  {
+    id: 'all',
+    label: 'All-Time (1956–2026)',
+    shortLabel: 'All 70 Yrs',
+    description: 'Complete 70-year historical DFO Tyee test fishery record.',
+    years: ALL_YEARS_DATA.map((y) => y.year),
+  },
+  {
+    id: 'modern',
+    label: 'Modern Decade (2016–2026)',
+    shortLabel: 'Modern 10-Yr',
+    description: 'Recent decade characterized by marine heatwaves and variable marine survival.',
+    years: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],
+  },
+  {
+    id: 'milestones',
+    label: 'Benchmark Milestones',
+    shortLabel: 'Milestones',
+    description: 'Key ecological records: 1998 Record, 2004 Peak, 2010 Cold Cohort, 2018 High, 2021 Crisis, 2024 Baseline, 2026 Live.',
+    years: [1956, 1985, 1998, 2004, 2010, 2018, 2021, 2024, 2026],
+  },
+  {
+    id: 'vintage',
+    label: 'Vintage Heritage (1956–1989)',
+    shortLabel: 'Vintage (1956–89)',
+    description: 'Classic cold-ocean era, inaugural test fishery seasons, and Golden Age returns.',
+    years: [1956, 1960, 1968, 1974, 1978, 1985, 1989, 2026],
+  },
+  {
+    id: 'millennial',
+    label: 'Millennial Super-Runs (1990–2014)',
+    shortLabel: '1990–2014',
+    description: 'Mega El Niño returns and major multi-basin wild steelhead abundance.',
+    years: [1994, 1998, 2001, 2004, 2008, 2010, 2012, 2014, 2026],
+  },
+];
+
+// Hydrate 10-Yr Decade Baseline
 (() => {
-  const prevYears = ALL_YEARS_DATA.filter((y) => !y.isCurrentYear);
+  const decadeYears = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+  const prevYears = ALL_YEARS_DATA.filter((y) => decadeYears.includes(y.year));
   const numYears = prevYears.length || 1;
 
   for (let d = 0; d < SEASON_DAYS.length; d++) {
@@ -168,6 +222,50 @@ export const HISTORICAL_AVERAGE_CURVE: {
   const finalAvgTotal = HISTORICAL_AVERAGE_CURVE[HISTORICAL_AVERAGE_CURVE.length - 1].avgCumulative || 1;
   for (let d = 0; d < HISTORICAL_AVERAGE_CURVE.length; d++) {
     HISTORICAL_AVERAGE_CURVE[d].pctElapsed = Math.round((HISTORICAL_AVERAGE_CURVE[d].avgCumulative / finalAvgTotal) * 1000) / 10;
+  }
+})();
+
+// Hydrate 70-Yr All-Time Baseline
+(() => {
+  const allHistoricalYears = ALL_YEARS_DATA.filter((y) => !y.isCurrentYear);
+  const numYears = allHistoricalYears.length || 1;
+
+  for (let d = 0; d < SEASON_DAYS.length; d++) {
+    let dailySum = 0;
+    let cumSum = 0;
+    let minCum = Infinity;
+    let maxCum = -Infinity;
+    const cumList: number[] = [];
+
+    for (const y of allHistoricalYears) {
+      const r = y.data[d];
+      if (r) {
+        dailySum += r.dailyIndex;
+        cumSum += r.cumulativeIndex;
+        if (r.cumulativeIndex < minCum) minCum = r.cumulativeIndex;
+        if (r.cumulativeIndex > maxCum) maxCum = r.cumulativeIndex;
+        cumList.push(r.cumulativeIndex);
+      }
+    }
+
+    cumList.sort((a, b) => a - b);
+    const medianCum = cumList.length > 0 ? cumList[Math.floor(cumList.length / 2)] : 0;
+
+    ALL_TIME_AVERAGE_CURVE.push({
+      dayIndex: d,
+      monthDay: SEASON_DAYS[d].monthDay,
+      avgDaily: Math.round((dailySum / numYears) * 100) / 100,
+      avgCumulative: Math.round((cumSum / numYears) * 100) / 100,
+      minCumulative: minCum !== Infinity ? Math.round(minCum * 100) / 100 : 0,
+      maxCumulative: maxCum !== -Infinity ? Math.round(maxCum * 100) / 100 : 0,
+      medianCumulative: Math.round(medianCum * 100) / 100,
+      pctElapsed: 0,
+    });
+  }
+
+  const finalAllTimeTotal = ALL_TIME_AVERAGE_CURVE[ALL_TIME_AVERAGE_CURVE.length - 1].avgCumulative || 1;
+  for (let d = 0; d < ALL_TIME_AVERAGE_CURVE.length; d++) {
+    ALL_TIME_AVERAGE_CURVE[d].pctElapsed = Math.round((ALL_TIME_AVERAGE_CURVE[d].avgCumulative / finalAllTimeTotal) * 1000) / 10;
   }
 })();
 
