@@ -123,9 +123,28 @@ export function useTyeeData() {
       fetchDataset();
     };
 
+    // Listen for custom refreshed events
     window.addEventListener('skeena-dataset-refreshed', handleGlobalRefresh);
+
+    // Re-fetch when user returns or tabs back to the app window
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDataset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleGlobalRefresh);
+
+    // Periodic auto-check every 30 seconds to pick up scheduled hourly scraper updates seamlessly
+    const pollInterval = setInterval(() => {
+      fetchDataset();
+    }, 30000);
+
     return () => {
       window.removeEventListener('skeena-dataset-refreshed', handleGlobalRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleGlobalRefresh);
+      clearInterval(pollInterval);
     };
   }, [fetchDataset]);
 

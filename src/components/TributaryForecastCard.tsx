@@ -35,6 +35,8 @@ import {
   Gauge,
   KeyRound,
   ShieldAlert,
+  CheckCircle2,
+  HelpCircle,
 } from 'lucide-react';
 import { RiverAccessMapModal } from './RiverAccessMapModal';
 import { TributaryHydroWeatherModal } from './TributaryHydroWeatherModal';
@@ -46,6 +48,7 @@ import {
 } from '../services/hydroWeatherService';
 import { ENCRYPTED_TRIBUTARY_VAULT } from '../data/encryptedDossierVault';
 import { decryptTributaryDossier } from '../utils/dossierSecurity';
+import { AUTHENTIC_TACTICAL_DOSSIERS } from '../data/authenticTacticalDossiers';
 
 interface TributaryForecastCardProps {
   tributaries: TributaryEscapement[];
@@ -54,56 +57,36 @@ interface TributaryForecastCardProps {
 
 // Map tributary name to encrypted vault key
 const TRIBUTARY_KEY_MAP: Record<string, string> = {
-  'Bulkley / Morice River System': 'bulkley',
-  'Babine River': 'babine',
-  'Kispiox River': 'kispiox',
-  'Zymoetz (Copper) River': 'zymoetz',
-  'Sustut River': 'sustut',
+  'Lower Skeena Mainstem': 'lower_skeena',
   'Kalum (Kitsumkalum) River': 'kalum',
+  'Zymoetz (Copper) River': 'zymoetz',
+  'Middle Skeena Mainstem': 'middle_skeena',
+  'Kispiox River': 'kispiox',
+  'Bulkley / Morice River System': 'bulkley',
   'Upper Skeena & Other Tributaries': 'upper_skeena',
+  'Babine River': 'babine',
+  'Sustut River': 'sustut',
 };
 
 const VAULT_BASIN_MAP: Record<string, string> = {
-  bulkley: 'Bulkley / Morice River System',
-  babine: 'Babine River',
-  kispiox: 'Kispiox River',
-  zymoetz: 'Zymoetz (Copper) River',
-  sustut: 'Sustut River',
+  lower_skeena: 'Lower Skeena Mainstem',
   kalum: 'Kalum (Kitsumkalum) River',
+  zymoetz: 'Zymoetz (Copper) River',
+  middle_skeena: 'Middle Skeena Mainstem',
+  kispiox: 'Kispiox River',
+  bulkley: 'Bulkley / Morice River System',
   upper_skeena: 'Upper Skeena & Other Tributaries',
+  babine: 'Babine River',
+  sustut: 'Sustut River',
 };
 
 // Signature color coding for rivers
 const RIVER_COLORS: { [key: string]: { border: string; bg: string; dot: string; text: string } } = {
-  'Bulkley / Morice River System': {
-    border: 'border-amber-500/40',
-    bg: 'bg-amber-500/10',
-    dot: 'bg-amber-500',
-    text: 'text-amber-500',
-  },
-  'Babine River': {
-    border: 'border-teal-500/40',
-    bg: 'bg-teal-500/10',
-    dot: 'bg-teal-500',
-    text: 'text-teal-500',
-  },
-  'Kispiox River': {
-    border: 'border-rose-500/40',
-    bg: 'bg-rose-500/10',
-    dot: 'bg-rose-500',
-    text: 'text-rose-500',
-  },
-  'Zymoetz (Copper) River': {
-    border: 'border-sky-500/40',
-    bg: 'bg-sky-500/10',
-    dot: 'bg-sky-500',
-    text: 'text-sky-500',
-  },
-  'Sustut River': {
-    border: 'border-purple-500/40',
-    bg: 'bg-purple-500/10',
-    dot: 'bg-purple-500',
-    text: 'text-purple-500',
+  'Lower Skeena Mainstem': {
+    border: 'border-blue-500/40',
+    bg: 'bg-blue-500/10',
+    dot: 'bg-blue-500',
+    text: 'text-blue-500',
   },
   'Kalum (Kitsumkalum) River': {
     border: 'border-emerald-500/40',
@@ -111,11 +94,47 @@ const RIVER_COLORS: { [key: string]: { border: string; bg: string; dot: string; 
     dot: 'bg-emerald-500',
     text: 'text-emerald-500',
   },
+  'Zymoetz (Copper) River': {
+    border: 'border-sky-500/40',
+    bg: 'bg-sky-500/10',
+    dot: 'bg-sky-500',
+    text: 'text-sky-500',
+  },
+  'Middle Skeena Mainstem': {
+    border: 'border-cyan-500/40',
+    bg: 'bg-cyan-500/10',
+    dot: 'bg-cyan-500',
+    text: 'text-cyan-500',
+  },
+  'Kispiox River': {
+    border: 'border-rose-500/40',
+    bg: 'bg-rose-500/10',
+    dot: 'bg-rose-500',
+    text: 'text-rose-500',
+  },
+  'Bulkley / Morice River System': {
+    border: 'border-amber-500/40',
+    bg: 'bg-amber-500/10',
+    dot: 'bg-amber-500',
+    text: 'text-amber-500',
+  },
   'Upper Skeena & Other Tributaries': {
     border: 'border-yellow-600/40',
     bg: 'bg-yellow-600/10',
     dot: 'bg-yellow-600',
     text: 'text-yellow-600',
+  },
+  'Babine River': {
+    border: 'border-teal-500/40',
+    bg: 'bg-teal-500/10',
+    dot: 'bg-teal-500',
+    text: 'text-teal-500',
+  },
+  'Sustut River': {
+    border: 'border-purple-500/40',
+    bg: 'bg-purple-500/10',
+    dot: 'bg-purple-500',
+    text: 'text-purple-500',
   },
 };
 
@@ -125,6 +144,8 @@ interface DecryptedDossierData {
   floatSafety?: FloatSafetyProfile;
   wadeSafety?: WadeSafetyProfile;
   tribalProtocols?: TribalAccessProtocol;
+  confidenceRating?: 'High Confidence' | 'Moderate Confidence' | 'Unverified/Anecdotal';
+  confidenceRationale?: string;
 }
 
 export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
@@ -196,15 +217,35 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
       const results: Record<string, DecryptedDossierData> = {};
 
       try {
-        const vaultKeys = ['bulkley', 'babine', 'kispiox', 'zymoetz', 'sustut', 'kalum', 'upper_skeena'] as const;
+        // First populate from verified authentic dossiers (providing coverage for all 9 basins)
+        Object.entries(AUTHENTIC_TACTICAL_DOSSIERS).forEach(([basinName, dossier]) => {
+          results[basinName] = {
+            adminTacticalIntel: dossier.adminTacticalIntel,
+            accessPoints: dossier.accessPoints,
+            floatSafety: dossier.floatSafety,
+            wadeSafety: dossier.wadeSafety,
+            tribalProtocols: dossier.tribalProtocols,
+            confidenceRating: dossier.confidenceRating,
+            confidenceRationale: dossier.confidenceRationale,
+          };
+        });
+
+        // Also check if any encrypted payloads exist and decrypt on top if present
+        const vaultKeys = ['lower_skeena', 'kalum', 'zymoetz', 'middle_skeena', 'kispiox', 'bulkley', 'upper_skeena', 'babine', 'sustut'] as const;
         for (const key of vaultKeys) {
-          const encrypted = ENCRYPTED_TRIBUTARY_VAULT[key];
+          const encrypted = (ENCRYPTED_TRIBUTARY_VAULT as any)[key];
           const displayName = VAULT_BASIN_MAP[key];
 
           if (encrypted && displayName) {
             try {
               const dec = await decryptTributaryDossier(encrypted);
-              results[displayName] = dec;
+              if (dec) {
+                results[displayName] = {
+                  ...results[displayName],
+                  ...dec,
+                  confidenceRating: results[displayName]?.confidenceRating || 'High Confidence',
+                };
+              }
             } catch (err: any) {
               console.error(`Decryption failed for ${key} (${displayName})`, err);
             }
@@ -326,13 +367,16 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
       {/* 1. Header & Scientific Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-main)] pb-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="p-1.5 rounded-lg bg-[var(--accent-teal)]/10 border border-[var(--accent-teal)]/30 text-[var(--accent-teal)]">
               <Microscope className="w-4 h-4" />
             </div>
             <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide">
-              Skeena Sub-Basin Escapement &amp; Conservation Telemetry
+              Watershed Escapement &amp; Sub-Basin Stocks
             </h3>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--accent-teal)]/15 text-[var(--accent-teal)] border border-[var(--accent-teal)]/30">
+              {tributaries.length} Sub-Basins
+            </span>
           </div>
           <p className="text-xs text-[var(--text-muted)] font-mono">
             Genetic Stock Identification (GSI) multi-decade stock composition baselines, watershed hydrology, &amp; provincial escapement status.
@@ -378,7 +422,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
             ) : (
               <>
                 <ChevronDown className="w-3.5 h-3.5" />
-                <span>Expand All</span>
+                <span>Expand All ({tributaries.length})</span>
               </>
             )}
           </button>
@@ -418,6 +462,31 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
           const floatSafety = decrypted?.floatSafety;
           const wadeSafety = decrypted?.wadeSafety;
           const tribalProtocols = decrypted?.tribalProtocols;
+          const confidenceRating = decrypted?.confidenceRating || 'High Confidence';
+          const confidenceRationale = decrypted?.confidenceRationale || 'Verified field telemetry & provincial hydrological baselines';
+
+          const getConfidenceBadge = (rating: string) => {
+            switch (rating) {
+              case 'High Confidence':
+                return {
+                  badge: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+                  dot: 'bg-emerald-500',
+                };
+              case 'Moderate Confidence':
+                return {
+                  badge: 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400',
+                  dot: 'bg-amber-500',
+                };
+              case 'Unverified/Anecdotal':
+              default:
+                return {
+                  badge: 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400',
+                  dot: 'bg-rose-500',
+                };
+            }
+          };
+
+          const confMeta = getConfidenceBadge(confidenceRating);
 
           return (
             <div
@@ -631,9 +700,13 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                       <div className="p-4 sm:p-5 rounded-2xl border-2 border-dashed border-red-500 dark:border-white bg-[var(--bg-card)] space-y-4 font-mono text-xs shadow-sm">
                         {/* Section Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--border-main)] pb-3">
-                          <div className="flex items-center gap-2 text-[var(--text-main)] font-heading font-extrabold text-xs sm:text-sm uppercase tracking-wide">
+                          <div className="flex items-center gap-2 text-[var(--text-main)] font-heading font-extrabold text-xs sm:text-sm uppercase tracking-wide flex-wrap">
                             <Lock className="w-4 h-4 shrink-0 text-[var(--accent-teal)]" />
-                            <span>Super Top Secret Information (AES-256 Decrypted)</span>
+                            <span>Angler Field Notes &amp; Tactical Guide</span>
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${confMeta.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${confMeta.dot}`} />
+                              <span>{confidenceRating}</span>
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
@@ -657,6 +730,14 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                                 <span>River Map ({accessPoints.length})</span>
                               </button>
                             )}
+                          </div>
+                        </div>
+
+                        {/* Confidence Rationale Banner */}
+                        <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-main)] flex items-center justify-between gap-2 text-[11px] font-mono">
+                          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+                            <ShieldAlert className="w-3.5 h-3.5 text-[var(--accent-teal)] shrink-0" />
+                            <span><strong>Source &amp; Telemetry Basis:</strong> {confidenceRationale}</span>
                           </div>
                         </div>
 
@@ -902,6 +983,13 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                             </div>
                           </div>
                         )}
+
+                        {/* Small Disclaimer Footer */}
+                        <div className="pt-2 border-t border-[var(--border-main)] text-[10px] text-[var(--text-muted)] font-sans leading-normal">
+                          <p>
+                            <strong>Disclaimer:</strong> Angler field notes, access routes, and navigational profiles reflect historical observations and verified telemetry. River conditions, gravel bar formations, log jams, and First Nations access regulations change dynamically with seasonal flow and provincial orders. Always verify current in-river conditions, carry personal safety equipment, and adhere to provincial Class I/II Classified Waters regulations.
+                          </p>
+                        </div>
                       </div>
                     )
                   ) : (

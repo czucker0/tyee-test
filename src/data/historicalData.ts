@@ -171,147 +171,39 @@ export const HISTORICAL_AVERAGE_CURVE: {
   }
 })();
 
-// Skeena Major Tributaries baseline shares (based on Fisheries & Oceans Canada & BC Ministry genetic stock data)
+// Skeena Major Tributaries & Mainstem Reach Baselines (ordered West to East following biological migration route)
 export const SKEENA_TRIBUTARY_BASELINES = [
   {
-    "name": "Bulkley / Morice River System",
-    "region": "Bulkley Valley & Morice Lake Sub-Basin",
-    "sharePct": 44,
-    "peakWindow": "Late Aug – Mid Sep",
-    "description": "The watershed’s primary wild steelhead production engine. Accounts for ~44% of total Skeena adult escapement, draining ~12,400 km² across the Bulkley Valley and high-elevation Morice Lake watershed.",
-    "scientificProfile": {
-      "basinAreaKm2": "12,400 km²",
-      "migrationDistanceKm": "220 km (Witset Canyon) to 340 km (Morice Lake)",
-      "meanTravelVelocity": "14–18 km/day mean swimming speed through mainstem Skeena",
-      "lakeBuffering": "Morice Lake lacustrine reservoir provides high hydrological and thermal damping to upper basin.",
-      "thermalRegime": "Summer: 12°C–16°C; Autumn: 6°C–10°C; low-gradient mainstem cooling rapidly with autumn freeze.",
-      "conservationPriority": "High. Primary population index for Skeena watershed wild summer steelhead escapement targets.",
-      "habitatEcology": "Pristine spawning gravels in upper Morice and Nanika rivers; juvenile rearing in lower Bulkley tributary braids.",
-      "provincialRegulations": "Class II Classified Waters (Sep 1 – Oct 31). Strict single barbless hook, 100% wild catch-and-release only.",
-      "monitoringMethodology": "Witset (Moricetown) Canyon First Nations tagging and provincial radio-telemetry program."
-    },
-    "timingTips": {
-      "estuaryPassage": "Tyee peak: Aug 12 – Aug 28. Heavy sustained volume continues into September.",
-      "travelTimeFromTyee": "12–18 days to Moricetown Canyon (~220 km upriver); 20–28 days to Telkwa and Morice River (~310 km).",
-      "primeHoldingWindow": "Mid-September through late October. Upper Morice holds fish through winter into spring.",
-      "waterClarityNotes": "Lake-headed Morice keeps the upper river gin-clear. Lower Bulkley vulnerable to clay silt from Telkwa River during heavy rains.",
-      "weatherTrigger": "First crisp autumn frosts drop river water temperature into the optimal 8°C–12°C swinging zone. Post-rain drop-and-clear triggers aggressive bites.",
-      "keyReaches": "Moricetown (Witset) Canyon pool, Telkwa confluence, Quick Station, Bymac, Morice River / Nanika junction.",
-      "regulations": "Class II Classified Waters (Sep 1 – Oct 31). Strict single barbless hook, catch-and-release only. Non-resident guide restrictions apply."
-    }
-  },
-  {
-    "name": "Babine River",
-    "region": "Upper Skeena / Nilkitkwa Sub-Basin",
-    "sharePct": 22,
-    "peakWindow": "Late Aug – Early Oct",
-    "description": "Home to the legendary high-latitude Skeena steelhead strain (average spawner age 5–6 years). Sustained by Nilkitkwa and Babine Lakes with continuous provincial counting fence escapement validation.",
-    "scientificProfile": {
-      "basinAreaKm2": "10,000 km²",
-      "migrationDistanceKm": "340 km (confluence) to 380 km (Babine Lake outlet counting fence)",
-      "meanTravelVelocity": "12–16 km/day ascending the Upper Skeena canyon network",
-      "lakeBuffering": "Extreme stability; buffered by Babine Lake (150 km long), dampening freshets and sediment spikes.",
-      "thermalRegime": "Stable discharge and moderate thermal lag from lake outflow through late autumn (7°C–11°C in Oct).",
-      "conservationPriority": "Critical. Strict escapement objective monitored at Babine Counting Weir (target >5,000 wild spawners).",
-      "habitatEcology": "High-energy bedrock rapids, gravel-riffle complexes, and rich sockeye smolt/salmon nutrient marine subsidy.",
-      "provincialRegulations": "Class I Classified Waters. Ultra-restricted non-resident rod day allocations, mandatory catch-and-release.",
-      "monitoringMethodology": "Babine River Counting Fence (continuous 24/7 video and biometric weir enumeration)."
-    },
-    "timingTips": {
-      "estuaryPassage": "Tyee peak: Aug 15 – Sep 05. Steady high-latitude late summer push.",
-      "travelTimeFromTyee": "22–32 days to Babine confluence (~340 km upriver); 30–40 days to Nilkitkwa / Babine counting weir.",
-      "primeHoldingWindow": "Late September through October. Iconic autumn dry fly and greased-line fishery.",
-      "waterClarityNotes": "Exceptional stability; buffered by Nilkitkwa Lake and Babine Lake. Rarely blows out even during massive coastal downpours.",
-      "weatherTrigger": "Active holding fish respond strongly to stable autumn barometric pressure and low afternoon sun.",
-      "keyReaches": "Nilkitkwa Lake outlet, Babine Fence, Silver Hilton reaches, Nichyeskwa Creek, Gail Creek confluence.",
-      "regulations": "Class I Classified Waters. Highly limited non-guided non-resident rod days. Strict catch-and-release wild steelhead protocols."
-    }
-  },
-  {
-    "name": "Kispiox River",
-    "region": "Hazelton / Kispiox Valley Sub-Basin",
-    "sharePct": 14,
-    "peakWindow": "Mid Aug – Late Sep",
-    "description": "Renowned for exceptionally large individual body mass and high repeat spawner ratios. Drains unbuffered coastal transition rainforest with high sensitivity to fine clay sediment pulses.",
-    "scientificProfile": {
-      "basinAreaKm2": "2,080 km²",
-      "migrationDistanceKm": "240 km (Hazelton confluence) to 290 km (Upper Sweetin junction)",
-      "meanTravelVelocity": "16–20 km/day ascending middle Skeena into low-gradient valley holding pools",
-      "lakeBuffering": "Unbuffered river system. Highly responsive to localized precipitation and snowpack melting.",
-      "thermalRegime": "Early cooling: drops below 8°C by early October, causing metabolic slowdown in holding adults.",
-      "conservationPriority": "High. Susceptible to sediment deposition from logging forestry roads and seasonal high-water scour.",
-      "habitatEcology": "Low-gradient valley meandering, deep clay holding pools, and rich riparian logjam cover structures.",
-      "provincialRegulations": "Class II Classified Waters (Sep 1 – Oct 31). Bait ban, single barbless hook, mandatory wild release.",
-      "monitoringMethodology": "Provincial tributary index sampling, angler creel surveys, and telemetry receivers."
-    },
-    "timingTips": {
-      "estuaryPassage": "Tyee peak: Aug 08 – Aug 24.",
-      "travelTimeFromTyee": "14–22 days to Kispiox mouth at Hazelton (~240 km upriver); 18–26 days to middle/upper valley beats.",
-      "primeHoldingWindow": "Mid-September to mid-October. Peak surface skating and damp fly action.",
-      "waterClarityNotes": "High clay content. Vulnerable to fast blowouts after moderate rains; typically needs 2–4 days of clear weather to regain fishable visibility.",
-      "weatherTrigger": "Timing the \"green drop\"—the exact 24-hour window when swollen water drops from brown to emerald green—yields the most explosive fishing.",
-      "keyReaches": "Hazelton mouth, 20-Mile bridge, Sweetin River confluence, Club Creek, upper forest bridge runs.",
-      "regulations": "Class II Classified Waters (Sep 1 – Oct 31). Bait ban, barbless hooks, mandatory release of all wild steelhead."
-    }
-  },
-  {
-    "name": "Zymoetz (Copper) River",
-    "region": "Coast Mountains / Terrace Sub-Basin",
-    "sharePct": 8.5,
-    "peakWindow": "Early Aug – Mid Sep",
-    "description": "Glacial-fed lower Skeena tributary with dual run segments (early canyon summer strain and late headwater migrants). Characterized by dramatic mountain gorges and cold glacial meltwater.",
-    "scientificProfile": {
-      "basinAreaKm2": "3,000 km²",
-      "migrationDistanceKm": "65 km (lower canyon) to 120 km (upper Clore River junction)",
-      "meanTravelVelocity": "10–14 km/day (coastal migrant with short estuary-to-river transit window)",
-      "lakeBuffering": "Upper McDonell lake system provides localized buffering; lower mainstem heavily influenced by glacial Clore River.",
-      "thermalRegime": "Cold glacial hydrology in summer (8°C–11°C), moderating in autumn as glacial melt ceases.",
-      "conservationPriority": "High. Essential thermal refuge and early spawning habitat for lower Skeena watershed.",
-      "habitatEcology": "Confined bedrock canyon reaches, boulder garden holding pockets, and upper lake-outlet gravel beds.",
-      "provincialRegulations": "Class II Classified Waters (Jul 24 – Oct 31). Steelhead stamp mandatory. Resident priority management.",
-      "monitoringMethodology": "Provincial helicopter escapement redd counts and lower canyon acoustic telemetry."
-    },
-    "timingTips": {
-      "estuaryPassage": "Tyee peak: Jul 28 – Aug 18.",
-      "travelTimeFromTyee": "5–10 days to lower canyon (~65 km from estuary); 12–18 days to upper canyon and Clore River.",
-      "primeHoldingWindow": "Late August through early October across lower/canyon pools.",
-      "waterClarityNotes": "Glacial tributary (Clore River) colors the lower river milky turquoise during warm sunny days. Upper Zymoetz above Clore remains crystal clear.",
-      "weatherTrigger": "Cool cloudy days reduce glacial melt, causing the river to clear rapidly. Early morning low-light swinging is optimal.",
-      "keyReaches": "Lower Skeena confluence, Red Canyon, Zymoetz Canyon bridge, Clore River junction, McDonell Lake outlet.",
-      "regulations": "Class II Classified Waters (Jul 24 – Oct 31). Steelhead stamp mandatory. Specific non-resident weekend restrictions in Class II section."
-    }
-  },
-  {
-    "name": "Sustut River",
-    "region": "Upper Skeena Wilderness Sub-Basin",
-    "sharePct": 4.5,
+    "name": "Lower Skeena Mainstem",
+    "region": "Prince Rupert / Tidal Reach to Terrace (km 0–140)",
+    "sharePct": 8,
     "peakWindow": "Late Jul – Late Aug",
-    "description": "Remote high-elevation wilderness stock; the earliest arriving summer-run strain in the upper watershed. Monitored continuously via the BC provincial Sustut counting weir.",
+    "description": "The massive lower tidal and freshwater entry corridor passing Port Essington, Kwinitsa, Exchamsiks, Kasiks, and Lakelse confluence up to Terrace.",
     "scientificProfile": {
-      "basinAreaKm2": "3,500 km²",
-      "migrationDistanceKm": "420 km (longest migration route of any Skeena summer steelhead stock)",
-      "meanTravelVelocity": "15–22 km/day through high Skeena canyons to beat high-altitude freeze",
-      "lakeBuffering": "Oligotrophic sub-alpine headwater lakes maintain gin-clear wilderness water quality.",
-      "thermalRegime": "High elevation cold water (4°C–9°C in autumn). Early freeze-up by late October.",
-      "conservationPriority": "Extreme. Benchmark pristine ecosystem with zero road access or industrial logging footprint.",
-      "habitatEcology": "High-gradient alpine gravels, pristine wilderness pools, fragile overwinter holding basins.",
-      "provincialRegulations": "Class I Classified Waters. Strict quota allocation and fly-fishing only catch-and-release regulations.",
-      "monitoringMethodology": "BC Ministry of Environment Sustut Counting Weir (complete adult count and biometric sampling)."
+      "basinAreaKm2": "Tidal & Coastal mainstem corridor (~140 km reach)",
+      "migrationDistanceKm": "0 km (Tyee Test Fishery / Estuary) to 140 km (Terrace bridge)",
+      "meanTravelVelocity": "15–25 km/day fast tidal pulse movement",
+      "lakeBuffering": "Low; heavily influenced by Pacific tides and coastal rain systems.",
+      "thermalRegime": "13°C–17°C in high summer; heavily moderated by coastal marine fog and cool rainfall.",
+      "conservationPriority": "Extreme. Primary entry gate and First Nations FSC / commercial gillnet interception zone.",
+      "habitatEcology": "Massive deep tidal runs, bedrock canyon seams, and gravel bars backed by old-growth temperate rainforest.",
+      "provincialRegulations": "Provincial tidal / non-tidal boundary rules; 100% wild steelhead catch-and-release.",
+      "monitoringMethodology": "DFO Tyee Test Fishery gillnet sets, FSC catch monitoring, and acoustic hydrophone array."
     },
     "timingTips": {
-      "estuaryPassage": "Tyee peak: Jul 15 – Aug 05 (the earliest major tributary stock passing through the estuary).",
-      "travelTimeFromTyee": "28–42 days to Sustut weir (~420 km upriver into the sub-alpine wilderness).",
-      "primeHoldingWindow": "September 1 – October 10. High-elevation cold water makes early autumn the exclusive window before winter freeze.",
-      "waterClarityNotes": "Pristine gin-clear wilderness gravel. High visibility requires long fluorocarbon leaders and stealthy low-profile presentations.",
-      "weatherTrigger": "Early autumn frost and Indian Summer sunshine trigger aggressive rises to waking dry flies.",
-      "keyReaches": "Sustut counting weir, Johanson Lake outlet, Asitka River junction, Moose Valley pools.",
-      "regulations": "Class I Classified Waters. Strict quota allocation and fly-fishing only catch-and-release regulations."
+      "estuaryPassage": "Tyee peak: July 25 – August 25.",
+      "travelTimeFromTyee": "1–6 days from Tyee test fishery through lower tidal pools to Terrace.",
+      "primeHoldingWindow": "August through September for fresh, sea-lice-bearing silver bullets.",
+      "waterClarityNotes": "Coastal downpours can color the lower river from mudslides, but large volume usually retains fishable green edges.",
+      "weatherTrigger": "High spring tide cycles (new/full moon) push the largest pulses of fresh ocean fish into the lower river.",
+      "keyReaches": "Kwinitsa holding pool, Exchamsiks confluence, Kasiks bar, Lakelse river mouth, Terrace railway bridge.",
+      "regulations": "Single barbless hook, mandatory wild steelhead release. Observe boundary markers near tidal transition."
     }
   },
   {
     "name": "Kalum (Kitsumkalum) River",
     "region": "Lower Skeena / Kalum Lake Sub-Basin",
-    "sharePct": 4,
+    "sharePct": 3.5,
     "peakWindow": "Year-round / Aug Peak",
     "description": "Deep glacial lake-headed system supporting both summer wild steelhead and giant spring winter-run strains. Lake buffering creates hydrological stability during heavy coastal storms.",
     "scientificProfile": {
@@ -336,9 +228,117 @@ export const SKEENA_TRIBUTARY_BASELINES = [
     }
   },
   {
+    "name": "Zymoetz (Copper) River",
+    "region": "Coast Mountains / Terrace Sub-Basin",
+    "sharePct": 7,
+    "peakWindow": "Early Aug – Mid Sep",
+    "description": "Glacial-fed lower Skeena tributary with dual run segments (early canyon summer strain and late headwater migrants). Characterized by dramatic mountain gorges and cold glacial meltwater.",
+    "scientificProfile": {
+      "basinAreaKm2": "3,000 km²",
+      "migrationDistanceKm": "65 km (lower canyon) to 120 km (upper Clore River junction)",
+      "meanTravelVelocity": "10–14 km/day (coastal migrant with short estuary-to-river transit window)",
+      "lakeBuffering": "Upper McDonell lake system provides localized buffering; lower mainstem heavily influenced by glacial Clore River.",
+      "thermalRegime": "Cold glacial hydrology in summer (8°C–11°C), moderating in autumn as glacial melt ceases.",
+      "conservationPriority": "High. Essential thermal refuge and early spawning habitat for lower Skeena watershed.",
+      "habitatEcology": "Confined bedrock canyon reaches, boulder garden holding pockets, and upper lake-outlet gravel beds.",
+      "provincialRegulations": "Class II Classified Waters (Jul 24 – Oct 31). Steelhead stamp mandatory. Resident priority management.",
+      "monitoringMethodology": "Provincial helicopter escapement redd counts and lower canyon acoustic telemetry."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Jul 28 – Aug 18.",
+      "travelTimeFromTyee": "5–10 days to lower canyon (~65 km from estuary); 12–18 days to upper canyon and Clore River.",
+      "primeHoldingWindow": "Late August through early October across lower/canyon pools.",
+      "waterClarityNotes": "Glacial tributary (Clore River) colors the lower river milky turquoise during warm sunny days. Upper Zymoetz above Clore remains crystal clear.",
+      "weatherTrigger": "Cool cloudy days reduce glacial melt, causing the river to clear rapidly. Early morning low-light swinging is optimal.",
+      "keyReaches": "Lower Skeena confluence, Red Canyon, Zymoetz Canyon bridge, Clore River junction, McDonell Lake outlet.",
+      "regulations": "Class II Classified Waters (Jul 24 – Oct 31). Steelhead stamp mandatory. Specific non-resident weekend restrictions in Class II section."
+    }
+  },
+  {
+    "name": "Middle Skeena Mainstem",
+    "region": "Terrace to Hazelton / Smithers Reach (km 140–260)",
+    "sharePct": 10,
+    "peakWindow": "Early Aug – Mid Sep",
+    "description": "Crucial mid-river staging, traveling, and holding reaches connecting Terrace, Usk, Cedarvale, Kitwanga, and Hazelton. Fish stage here before branching into the Kispiox, Bulkley, and Upper Skeena.",
+    "scientificProfile": {
+      "basinAreaKm2": "Mainstem fluvial corridor (~120 km reach)",
+      "migrationDistanceKm": "140 km (Terrace) to 260 km (Hazelton & Bulkley junction)",
+      "meanTravelVelocity": "18–24 km/day rapid active transit",
+      "lakeBuffering": "Moderate; receives tempered flows from Kalum alongside unbuffered high-gradient canyon runs.",
+      "thermalRegime": "12°C–16°C in August; cools rapidly in September. Critical thermal refuge seams at tributary confluences.",
+      "conservationPriority": "High. Key multi-stock holding corridor and transit highway for all upper-basin escapement.",
+      "habitatEcology": "Deep bedrock holding pools, wide cobble bars, eddy seams, and canyon plunge pools.",
+      "provincialRegulations": "Skeena River mainstem Class II regulations in specified seasonal zones. 100% wild catch-and-release.",
+      "monitoringMethodology": "Provincial radio-telemetry acoustic receiver gates and First Nations in-river monitoring."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Aug 05 – Aug 26.",
+      "travelTimeFromTyee": "7–14 days transit from Tyee test fishery to Terrace / Cedarvale / Hazelton.",
+      "primeHoldingWindow": "Mid-August through October across major gravel bars and canyon mouths.",
+      "waterClarityNotes": "Susceptible to discoloration if the Zymoetz (Copper) or Kitwanga blows out; clears quickly when mountain snowmelt stabilizes.",
+      "weatherTrigger": "Dropping barometric pressure and crisp autumn mornings trigger active fish movements along shoreline current seams.",
+      "keyReaches": "Usk gravel bars, Pacific braids, Cedarvale runs, Kitwanga bridge pool, Hazelton canyon junction.",
+      "regulations": "Single barbless hook, catch-and-release of all wild steelhead. Bait bans apply seasonally."
+    }
+  },
+  {
+    "name": "Kispiox River",
+    "region": "Hazelton / Kispiox Valley Sub-Basin",
+    "sharePct": 12,
+    "peakWindow": "Mid Aug – Late Sep",
+    "description": "Renowned for exceptionally large individual body mass and high repeat spawner ratios. Drains unbuffered coastal transition rainforest with high sensitivity to fine clay sediment pulses.",
+    "scientificProfile": {
+      "basinAreaKm2": "2,080 km²",
+      "migrationDistanceKm": "240 km (Hazelton confluence) to 290 km (Upper Sweetin junction)",
+      "meanTravelVelocity": "16–20 km/day ascending middle Skeena into low-gradient valley holding pools",
+      "lakeBuffering": "Unbuffered river system. Highly responsive to localized precipitation and snowpack melting.",
+      "thermalRegime": "Early cooling: drops below 8°C by early October, causing metabolic slowdown in holding adults.",
+      "conservationPriority": "High. Susceptible to sediment deposition from logging forestry roads and seasonal high-water scour.",
+      "habitatEcology": "Low-gradient valley meandering, deep clay holding pools, and rich riparian logjam cover structures.",
+      "provincialRegulations": "Class II Classified Waters (Sep 1 – Oct 31). Bait ban, single barbless hook, mandatory wild release.",
+      "monitoringMethodology": "Provincial tributary index sampling, angler creel surveys, and telemetry receivers."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Aug 08 – Aug 24.",
+      "travelTimeFromTyee": "14–22 days to Kispiox mouth at Hazelton (~240 km upriver); 18–26 days to middle/upper valley beats.",
+      "primeHoldingWindow": "Mid-September to mid-October. Peak surface skating and damp fly action.",
+      "waterClarityNotes": "High clay content. Vulnerable to fast blowouts after moderate rains; typically needs 2–4 days of clear weather to regain fishable visibility.",
+      "weatherTrigger": "Timing the \"green drop\"—the exact 24-hour window when swollen water drops from brown to emerald green—yields the most explosive fishing.",
+      "keyReaches": "Hazelton mouth, 20-Mile bridge, Sweetin River confluence, Club Creek, upper forest bridge runs.",
+      "regulations": "Class II Classified Waters (Sep 1 – Oct 31). Bait ban, barbless hooks, mandatory release of all wild steelhead."
+    }
+  },
+  {
+    "name": "Bulkley / Morice River System",
+    "region": "Bulkley Valley & Morice Lake Sub-Basin",
+    "sharePct": 36,
+    "peakWindow": "Late Aug – Mid Sep",
+    "description": "The watershed’s primary wild steelhead production engine. Draining ~12,400 km² across the Bulkley Valley and high-elevation Morice Lake watershed.",
+    "scientificProfile": {
+      "basinAreaKm2": "12,400 km²",
+      "migrationDistanceKm": "220 km (Witset Canyon) to 340 km (Morice Lake)",
+      "meanTravelVelocity": "14–18 km/day mean swimming speed through mainstem Skeena",
+      "lakeBuffering": "Morice Lake lacustrine reservoir provides high hydrological and thermal damping to upper basin.",
+      "thermalRegime": "Summer: 12°C–16°C; Autumn: 6°C–10°C; low-gradient mainstem cooling rapidly with autumn freeze.",
+      "conservationPriority": "High. Primary population index for Skeena watershed wild summer steelhead escapement targets.",
+      "habitatEcology": "Pristine spawning gravels in upper Morice and Nanika rivers; juvenile rearing in lower Bulkley tributary braids.",
+      "provincialRegulations": "Class II Classified Waters (Sep 1 – Oct 31). Strict single barbless hook, 100% wild catch-and-release only.",
+      "monitoringMethodology": "Witset (Moricetown) Canyon First Nations tagging and provincial radio-telemetry program."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Aug 12 – Aug 28. Heavy sustained volume continues into September.",
+      "travelTimeFromTyee": "12–18 days to Moricetown Canyon (~220 km upriver); 20–28 days to Telkwa and Morice River (~310 km).",
+      "primeHoldingWindow": "Mid-September through late October. Upper Morice holds fish through winter into spring.",
+      "waterClarityNotes": "Lake-headed Morice keeps the upper river gin-clear. Lower Bulkley vulnerable to clay silt from Telkwa River during heavy rains.",
+      "weatherTrigger": "First crisp autumn frosts drop river water temperature into the optimal 8°C–12°C swinging zone. Post-rain drop-and-clear triggers aggressive bites.",
+      "keyReaches": "Moricetown (Witset) Canyon pool, Telkwa confluence, Quick Station, Bymac, Morice River / Nanika junction.",
+      "regulations": "Class II Classified Waters (Sep 1 – Oct 31). Strict single barbless hook, catch-and-release only. Non-resident guide restrictions apply."
+    }
+  },
+  {
     "name": "Upper Skeena & Other Tributaries",
     "region": "Kitwanga, Shegunia, Bear & Mainstem",
-    "sharePct": 3,
+    "sharePct": 2,
     "peakWindow": "Mid Aug – Late Sep",
     "description": "Encompasses Kitwanga River, Shegunia River, Bear River, and remote wild headwater spawning gravels across Gitxsan and Wet’suwet’en traditional territories.",
     "scientificProfile": {
@@ -360,6 +360,60 @@ export const SKEENA_TRIBUTARY_BASELINES = [
       "weatherTrigger": "Skeena mainstem gravel bar fishing excels when river levels drop below 1,500 m³/s at Usk gauging station.",
       "keyReaches": "Kitwanga confluence & wooden bridge, Shegunia canyon mouth, Bear River, Skeena mainstem gravel bars.",
       "regulations": "Skeena mainstem and tributary provincial regulations apply. 100% wild steelhead catch-and-release."
+    }
+  },
+  {
+    "name": "Babine River",
+    "region": "Upper Skeena / Nilkitkwa Sub-Basin",
+    "sharePct": 18,
+    "peakWindow": "Late Aug – Early Oct",
+    "description": "Home to the legendary high-latitude Skeena steelhead strain (average spawner age 5–6 years). Sustained by Nilkitkwa and Babine Lakes with continuous provincial counting fence escapement validation.",
+    "scientificProfile": {
+      "basinAreaKm2": "10,000 km²",
+      "migrationDistanceKm": "340 km (confluence) to 380 km (Babine Lake outlet counting fence)",
+      "meanTravelVelocity": "12–16 km/day ascending the Upper Skeena canyon network",
+      "lakeBuffering": "Extreme stability; buffered by Babine Lake (150 km long), dampening freshets and sediment spikes.",
+      "thermalRegime": "Stable discharge and moderate thermal lag from lake outflow through late autumn (7°C–11°C in Oct).",
+      "conservationPriority": "Critical. Strict escapement objective monitored at Babine Counting Weir (target >5,000 wild spawners).",
+      "habitatEcology": "High-energy bedrock rapids, gravel-riffle complexes, and rich sockeye smolt/salmon nutrient marine subsidy.",
+      "provincialRegulations": "Class I Classified Waters. Ultra-restricted non-resident rod day allocations, mandatory catch-and-release.",
+      "monitoringMethodology": "Babine River Counting Fence (continuous 24/7 video and biometric weir enumeration)."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Aug 15 – Sep 05. Steady high-latitude late summer push.",
+      "travelTimeFromTyee": "22–32 days to Babine confluence (~340 km upriver); 30–40 days to Nilkitkwa / Babine counting weir.",
+      "primeHoldingWindow": "Late September through October. Iconic autumn dry fly and greased-line fishery.",
+      "waterClarityNotes": "Exceptional stability; buffered by Nilkitkwa Lake and Babine Lake. Rarely blows out even during massive coastal downpours.",
+      "weatherTrigger": "Active holding fish respond strongly to stable autumn barometric pressure and low afternoon sun.",
+      "keyReaches": "Nilkitkwa Lake outlet, Babine Fence, Silver Hilton reaches, Nichyeskwa Creek, Gail Creek confluence.",
+      "regulations": "Class I Classified Waters. Highly limited non-guided non-resident rod days. Strict catch-and-release wild steelhead protocols."
+    }
+  },
+  {
+    "name": "Sustut River",
+    "region": "Upper Skeena Wilderness Sub-Basin",
+    "sharePct": 3.5,
+    "peakWindow": "Late Jul – Late Aug",
+    "description": "Remote high-elevation wilderness stock; the earliest arriving summer-run strain in the upper watershed. Monitored continuously via the BC provincial Sustut counting weir.",
+    "scientificProfile": {
+      "basinAreaKm2": "3,500 km²",
+      "migrationDistanceKm": "420 km (longest migration route of any Skeena summer steelhead stock)",
+      "meanTravelVelocity": "15–22 km/day through high Skeena canyons to beat high-altitude freeze",
+      "lakeBuffering": "Oligotrophic sub-alpine headwater lakes maintain gin-clear wilderness water quality.",
+      "thermalRegime": "High elevation cold water (4°C–9°C in autumn). Early freeze-up by late October.",
+      "conservationPriority": "Extreme. Benchmark pristine ecosystem with zero road access or industrial logging footprint.",
+      "habitatEcology": "High-gradient alpine gravels, pristine wilderness pools, fragile overwinter holding basins.",
+      "provincialRegulations": "Class I Classified Waters. Strict quota allocation and fly-fishing only catch-and-release regulations.",
+      "monitoringMethodology": "BC Ministry of Environment Sustut Counting Weir (complete adult count and biometric sampling)."
+    },
+    "timingTips": {
+      "estuaryPassage": "Tyee peak: Jul 15 – Aug 05 (the earliest major tributary stock passing through the estuary).",
+      "travelTimeFromTyee": "28–42 days to Sustut weir (~420 km upriver into the sub-alpine wilderness).",
+      "primeHoldingWindow": "September 1 – October 10. High-elevation cold water makes early autumn the exclusive window before winter freeze.",
+      "waterClarityNotes": "Pristine gin-clear wilderness gravel. High visibility requires long fluorocarbon leaders and stealthy low-profile presentations.",
+      "weatherTrigger": "Early autumn frost and Indian Summer sunshine trigger aggressive rises to waking dry flies.",
+      "keyReaches": "Sustut counting weir, Johanson Lake outlet, Asitka River junction, Moose Valley pools.",
+      "regulations": "Class I Classified Waters. Strict quota allocation and fly-fishing only catch-and-release regulations."
     }
   }
 ];

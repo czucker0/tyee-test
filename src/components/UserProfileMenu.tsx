@@ -70,6 +70,20 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
     return localStorage.getItem('skeena_hide_tour_on_launch') !== 'true';
   });
 
+  // Text size preference state ('standard' | 'comfortable')
+  const [textSizeMode, setTextSizeMode] = useState<'standard' | 'comfortable'>(() => {
+    return (localStorage.getItem('skeena_text_size_mode') as 'standard' | 'comfortable') || 'standard';
+  });
+
+  useEffect(() => {
+    if (textSizeMode === 'comfortable') {
+      document.documentElement.classList.add('font-scale-comfortable');
+    } else {
+      document.documentElement.classList.remove('font-scale-comfortable');
+    }
+    localStorage.setItem('skeena_text_size_mode', textSizeMode);
+  }, [textSizeMode]);
+
   const handleToggleTourPreference = (checked: boolean) => {
     setShowTourOnStartup(checked);
     if (!checked) {
@@ -460,6 +474,45 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ onLoadScenario
             ) : (
               /* Settings & Tour Tab */
               <div className="space-y-3 text-xs font-mono">
+                {/* Mobile Text Size Accessibility Selector */}
+                <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                      <span className="text-sm">🔤</span>
+                      <span>Display Text Size</span>
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                      {textSizeMode === 'comfortable' ? 'Comfortable (112%)' : 'Standard (100%)'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setTextSizeMode('standard')}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition border flex items-center justify-center gap-1 ${
+                        textSizeMode === 'standard'
+                          ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber)] shadow-xs'
+                          : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-main)] hover:bg-[var(--border-light)]'
+                      }`}
+                    >
+                      <span className="text-xs">A</span>
+                      <span>Standard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTextSizeMode('comfortable')}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition border flex items-center justify-center gap-1 ${
+                        textSizeMode === 'comfortable'
+                          ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber)] shadow-xs'
+                          : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-main)] hover:bg-[var(--border-light)]'
+                      }`}
+                    >
+                      <span className="text-sm font-black">A+</span>
+                      <span>Comfortable</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5">
                   <div className="flex items-center gap-2 text-[var(--text-main)] font-bold">
                     <Compass className="w-4 h-4 text-[var(--accent-amber)]" />

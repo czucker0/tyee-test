@@ -305,29 +305,27 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
           </div>
         </div>
 
-        {/* Preset Chips - Always on a single line */}
-        <div className="pt-0.5 w-full min-w-0">
-          <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mr-0.5 font-bold shrink-0 whitespace-nowrap hidden sm:inline">
-              Field Milestones:
-            </span>
+        {/* Preset Milestones Grid - 100% Width on Mobile with Zero Scroll */}
+        <div className="pt-1 w-full min-w-0">
+          <div className="grid grid-cols-5 gap-1 sm:gap-1.5 w-full">
             {presets.map((preset) => {
               const isSelected = currentDayIndex === preset.index;
               return (
                 <button
                   key={preset.label}
                   onClick={() => onDayChange(preset.index)}
-                  className={`px-2 sm:px-2.5 py-1 rounded text-[11px] sm:text-xs font-editorial transition flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap ${
+                  className={`py-1.5 px-1 sm:px-2 rounded-lg text-[10px] sm:text-xs font-editorial transition flex items-center justify-center gap-1 sm:gap-1.5 w-full text-center truncate ${
                     isSelected
-                      ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                      ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm ring-1 ring-[var(--accent-amber)]'
                       : preset.highlight
                       ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] border border-[var(--accent-amber-border)] font-bold hover:bg-[var(--accent-amber)] hover:text-white'
                       : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] font-semibold'
                   }`}
+                  title={`${preset.label} (${SEASON_DAYS[preset.index]?.monthDay})`}
                 >
-                  {preset.icon}
-                  <span className="hidden xs:inline">{preset.label}</span>
-                  <span className="xs:hidden">{preset.shortLabel}</span>
+                  <span className="shrink-0 hidden xs:inline">{preset.icon}</span>
+                  <span className="hidden sm:inline truncate">{preset.label}</span>
+                  <span className="sm:hidden truncate font-mono font-bold">{preset.shortLabel}</span>
                 </button>
               );
             })}

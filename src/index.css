@@ -101,6 +101,15 @@
   }
 }
 
+/* User Text Size Preference Modes */
+html.font-scale-comfortable {
+  font-size: 112%;
+}
+
+html.font-scale-comfortable body {
+  letter-spacing: 0;
+}
+
 /* Typography Utility Classes */
 .font-heading {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;

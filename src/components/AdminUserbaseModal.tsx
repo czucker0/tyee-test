@@ -138,6 +138,7 @@ export const AdminUserbaseModal: React.FC = () => {
 
   // Maintenance actions state
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isBulkScraping, setIsBulkScraping] = useState(false);
   const [setIsValidating] = useState(false);
 
   // Usage Metrics & Telemetry State
@@ -172,7 +173,10 @@ export const AdminUserbaseModal: React.FC = () => {
   const fetchScraperStatus = useCallback(async () => {
     setIsScraperLoading(true);
     try {
-      const res = await fetch('/api/tyee/scraper/status');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch('/api/tyee/scraper/status', { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -180,7 +184,7 @@ export const AdminUserbaseModal: React.FC = () => {
         }
       }
     } catch (err) {
-      console.warn('Could not query /api/tyee/scraper/status:', err);
+      console.warn('Could not query /api/tyee/scraper/status (timed out or offline):', err);
     } finally {
       setIsScraperLoading(false);
     }
@@ -189,12 +193,15 @@ export const AdminUserbaseModal: React.FC = () => {
   const loadUsageMetrics = useCallback(async () => {
     setMetricsLoading(true);
     try {
-      const data = await fetchUsageMetricsSummaries();
+      const timeoutPromise = new Promise<{ summaries: UsageMetricsSummary[]; recentEvents: TelemetryEvent[]; overallKPIs: any }>((_, reject) =>
+        setTimeout(() => reject(new Error('Telemetry fetch timed out')), 3500)
+      );
+      const data = await Promise.race([fetchUsageMetricsSummaries(), timeoutPromise]);
       setMetricsSummaries(data.summaries);
       setRecentEvents(data.recentEvents);
       setOverallKPIs(data.overallKPIs);
     } catch (err) {
-      console.warn('Could not query telemetry summaries:', err);
+      console.warn('Could not query telemetry summaries (timed out or offline):', err);
     } finally {
       setMetricsLoading(false);
     }
@@ -203,11 +210,17 @@ export const AdminUserbaseModal: React.FC = () => {
   useEffect(() => {
     if (isAdminModalOpen && isAdmin) {
       setIsLoading(true);
-      fetchAllUsersForAdmin().finally(() => setIsLoading(false));
-      fetchScraperStatus();
-      loadUsageMetrics();
+      Promise.allSettled([
+        fetchAllUsersForAdmin(),
+        fetchScraperStatus(),
+        loadUsageMetrics(),
+      ]).finally(() => {
+        setIsLoading(false);
+        setIsScraperLoading(false);
+        setMetricsLoading(false);
+      });
     }
-  }, [isAdminModalOpen, isAdmin, fetchScraperStatus, loadUsageMetrics, fetchAllUsersForAdmin]);
+  }, [isAdminModalOpen, isAdmin]);
 
   if (!isAdminModalOpen || !isAdmin) return null;
 
@@ -314,6 +327,33 @@ export const AdminUserbaseModal: React.FC = () => {
       setStatusMsg({ type: 'error', text: `Recalculation request failed: ${err.message}` });
     } finally {
       setIsRecalculating(false);
+    }
+  };
+
+  const handleBulkHistoricalScrape = async () => {
+    setIsBulkScraping(true);
+    setStatusMsg(null);
+    try {
+      const res = await fetch('/api/tyee/scraper/bulk-historical', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startYear: 1956, endYear: 2025 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatusMsg({
+          type: 'success',
+          text: data.message || 'Bulk historical archive synchronized successfully.',
+        });
+        window.dispatchEvent(new CustomEvent('skeena-dataset-refreshed'));
+      } else {
+        setStatusMsg({ type: 'error', text: `Bulk sync error: ${data.message}` });
+      }
+      await fetchScraperStatus();
+    } catch (err: any) {
+      setStatusMsg({ type: 'error', text: `Bulk sync request failed: ${err.message}` });
+    } finally {
+      setIsBulkScraping(false);
     }
   };
 
@@ -1316,11 +1356,20 @@ export const AdminUserbaseModal: React.FC = () => {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleRecalculateStats}
-                    disabled={isRecalculating}
+                    disabled={isRecalculating || isBulkScraping}
                     className="px-3 py-2 bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] rounded-xl text-xs flex items-center gap-1.5 transition disabled:opacity-50"
                   >
                     <RotateCcw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
                     <span>Recalculate 10-Yr Historical Norms</span>
+                  </button>
+                  <button
+                    onClick={handleBulkHistoricalScrape}
+                    disabled={isBulkScraping || isRecalculating}
+                    className="px-3 py-2 bg-[var(--accent-amber-light)] hover:bg-[var(--accent-amber)] text-[var(--accent-amber)] hover:text-white border border-[var(--accent-amber-border)] rounded-xl text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50 shadow-xs"
+                    title="Scrape and cache all historical seasons 1956 to Present into persistent database"
+                  >
+                    <Database className={`w-3.5 h-3.5 ${isBulkScraping ? 'animate-spin' : ''}`} />
+                    <span>{isBulkScraping ? 'Syncing 1956–Present Archive...' : 'Sync Complete Historical Archive (1956–Present)'}</span>
                   </button>
                 </div>
               </div>
