@@ -249,29 +249,29 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={handleClose}
     >
       <div
-        className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden text-[var(--text-main)] transition-all"
+        className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden text-[var(--text-main)] transition-all max-h-[82dvh] sm:max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Banner */}
-        <div className="p-4 sm:p-5 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)] shadow-xs">
-              <Sparkles className="w-5 h-5" />
+        <div className="p-3.5 sm:p-5 border-b border-[var(--border-main)] bg-[var(--bg-subtle)] flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)] shadow-xs shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] uppercase tracking-wide">
+                <h2 className="text-sm sm:text-lg font-heading font-extrabold text-[var(--text-main)] uppercase tracking-wide">
                   Welcome to BKLYNFLY Run Tracker
                 </h2>
-                <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] px-2 py-0.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-main)]">
+                <span className="text-[10px] font-mono font-bold text-[var(--accent-amber)] px-1.5 py-0.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-main)]">
                   v3.0
                 </span>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] font-mono">
+              <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] font-mono">
                 Skeena River Escapement Telemetry &amp; Field Intelligence
               </p>
             </div>
@@ -279,45 +279,45 @@ export const WhatsNewTourModal: React.FC<WhatsNewTourModalProps> = ({
 
           <button
             onClick={handleClose}
-            className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-main)] transition"
+            className="p-1.5 sm:p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-main)] transition shrink-0"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Mode Switcher Tabs */}
-        <div className="flex border-b border-[var(--border-main)] bg-[var(--bg-surface)] px-4 sm:px-6 shrink-0 text-xs font-mono font-bold">
+        <div className="flex border-b border-[var(--border-main)] bg-[var(--bg-surface)] px-3 sm:px-6 shrink-0 text-xs font-mono font-bold">
           <button
             onClick={() => setActiveTab('whats_new')}
-            className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-4 border-b-2 transition flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'whats_new'
                 ? 'border-[var(--accent-amber)] text-[var(--accent-amber)]'
                 : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Zap className="w-4 h-4" />
-            <span>What&apos;s New in v3.0 ({whatsNewFeatures.length})</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/10 text-amber-500 font-extrabold border border-amber-500/30">
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>What&apos;s New ({whatsNewFeatures.length})</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[9px] sm:text-[10px] bg-amber-500/10 text-amber-500 font-extrabold border border-amber-500/30">
               NEW
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('tour')}
-            className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-4 border-b-2 transition flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'tour'
                 ? 'border-[var(--accent-amber)] text-[var(--accent-amber)]'
                 : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Compass className="w-4 h-4" />
+            <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Interactive Tour ({tourSteps.length} Steps)</span>
           </button>
         </div>
 
-        {/* Content Body Area (Paginated without awkward scrollbars) */}
-        <div className="p-5 sm:p-6 space-y-4">
+        {/* Content Body Area (Smooth scrolling within viewport) */}
+        <div className="p-3.5 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {/* TAB 1: WHAT'S NEW (PAGINATED CARDS) */}
           {activeTab === 'whats_new' && (
             <div className="space-y-4 animate-in fade-in duration-150">

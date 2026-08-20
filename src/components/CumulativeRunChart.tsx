@@ -296,7 +296,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide flex items-center gap-2">
-              <span>{visualMode === 'bars' ? 'Escapement Standings & Benchmarks' : 'S-Curve Migration Trajectory'}</span>
+              <span>{visualMode === 'bars' ? 'Escapement Standings & Benchmarks' : 'Cumulative Escapement'}</span>
             </h3>
             {isSelectedDateFuture ? (
               <span className="stamp-badge stamp-amber">
