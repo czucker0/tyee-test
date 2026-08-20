@@ -125,7 +125,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
     {
       id: 'field_notes_vault',
       number: '08',
-      title: 'Field Notes & Zero-Knowledge Vault',
+      title: 'Notes & Zero-Knowledge Vault',
       icon: Lock,
       summary: 'Client-side AES-GCM 256-bit encryption, PBKDF2 passphrase keys, offline backups, private vs shared logs, and JSON export.',
     },
@@ -169,14 +169,14 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] uppercase tracking-wide">
-                  Skeena River Field Manual &amp; Master Reference
+                  Skeena Help &amp; Master Field Reference
                 </h2>
                 <span className="hidden sm:inline-block text-[10px] font-mono font-bold text-[var(--accent-amber)] px-2 py-0.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-main)]">
-                  v3.0 Complete Field Edition
+                  v3.0 Complete Reference
                 </span>
               </div>
               <p className="text-xs text-[var(--text-secondary)] font-mono">
-                Comprehensive Guide to Test Fishery Mechanics, In-Season Telemetry, Tributaries, Weather, Field Notes &amp; AI
+                Comprehensive Guide to Test Fishery Mechanics, 70-Year Datasets, Tributaries, Weather, Field Notes &amp; AI
               </p>
             </div>
           </div>
@@ -528,6 +528,58 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     </table>
                   </div>
                 </div>
+
+                {/* Granular River Float & Wade Safety Protocols */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-mono font-bold uppercase text-[var(--accent-teal)] tracking-wider">
+                    Granular River Float &amp; Wade Safety Profiles
+                  </h4>
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+                    Skeena tributaries vary wildly from gentle family-friendly drift boat flats to lethal Class V unrunnable canyons. Always review specific river dossiers before launching:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[var(--text-main)] text-sm">Zymoetz (Copper River)</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/15 text-rose-500 font-bold">Class II vs Class V+ Hazard</span>
+                      </div>
+                      <p className="text-[var(--text-secondary)] leading-relaxed">
+                        <strong>Upper &amp; Middle Floats:</strong> The upper reaches and middle drift down to the campsite / red suspension bridge above the canyon are popular, scenic Class II–III floats suitable for experienced rowers in rafts or sturdy drift boats.<br />
+                        <strong className="text-rose-500">Lower Canyon Warning:</strong> The final 6 km gorge above the Skeena confluence is an impassable Class V+ whitewater canyon with sheer vertical bedrock walls and siphon traps. Mandatory takeout above the canyon.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[var(--text-main)] text-sm">Bulkley &amp; Morice</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">Premier Drift &amp; Wade</span>
+                      </div>
+                      <p className="text-[var(--text-secondary)] leading-relaxed">
+                        Miles of gently sloping gravel bars and classic Class I–II riffles (Quick to Telkwa, Telkwa to Smithers). Ideal for 14–16 ft drift boats and walk-and-wade anglers. <strong>Witset (Moricetown) Canyon</strong> is an impassable Class V+ waterfall gorge requiring takeout well above the canyon at Trout Creek.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[var(--text-main)] text-sm">Babine River</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 font-bold">Class IV–V Expedition Only</span>
+                      </div>
+                      <p className="text-[var(--text-secondary)] leading-relaxed">
+                        Lethal Class IV–V chasm rapids through Babine Canyon. Strictly no standard drift boats; self-bailing expedition rafts with expert oarspeople only. Highest grizzly bear density in BC—bear spray on hip and satellite communication mandatory.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[var(--text-main)] text-sm">Kispiox, Kalum &amp; Sustut</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold">Varied Tactical Access</span>
+                      </div>
+                      <p className="text-[var(--text-secondary)] leading-relaxed">
+                        <strong>Kispiox:</strong> Class I–II gravel riffles; watch for shifting sweepers and riverbank clay silt. <strong>Kalum:</strong> Class II–III lower drift vs Class IV+ upper canyon. <strong>Sustut:</strong> Ultra-remote alpine headwater sanctuary accessed via packraft or bush flight.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -726,7 +778,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               </div>
             )}
 
-            {/* CHAPTER 8: FIELD NOTES & ZERO-KNOWLEDGE VAULT */}
+            {/* CHAPTER 8: NOTES & ZERO-KNOWLEDGE VAULT */}
             {activeChapter === 'field_notes_vault' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div>
@@ -734,10 +786,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     Chapter 08 &bull; Privacy &amp; Security
                   </span>
                   <h3 className="text-xl sm:text-2xl font-heading font-extrabold text-[var(--text-main)] mt-1">
-                    Field Notes &amp; Zero-Knowledge Vault
+                    Notes &amp; Zero-Knowledge Vault
                   </h3>
                   <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1 font-mono">
-                    Client-Side Cryptography, Private River Logs, and Secure Data Backups
+                    Client-Side Cryptography, Private River Catch Logs, and Secure Backups
                   </p>
                 </div>
 
@@ -747,7 +799,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     <span>Zero-Knowledge AES-GCM 256-Bit Architecture</span>
                   </h4>
                   <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-                    Angler secrets, specific GPS coordinates, fly patterns, and catch records are sacred. The <strong>Field Notes Vault</strong> uses military-grade <strong>AES-GCM 256-bit encryption</strong> executed purely inside your browser using the native Web Crypto API.
+                    Angler secrets, specific GPS coordinates, fly patterns, and catch records are sacred. The <strong>Notes Vault</strong> uses military-grade <strong>AES-GCM 256-bit encryption</strong> executed purely inside your browser using the native Web Crypto API.
                   </p>
                   <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1.5 text-xs font-mono">
                     <div className="flex items-center gap-2 text-[var(--accent-teal)] font-bold">

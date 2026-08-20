@@ -18,29 +18,62 @@ import {
   ADULT_EXPANSION_FACTOR,
 } from '../data/historicalData';
 import { ProjectionModelResult } from '../types/steelhead';
-import { Activity, Waves, Clock, MapPin, Sparkles, HelpCircle } from 'lucide-react';
+import { Activity, Waves, Clock, Sparkles, HelpCircle, Calendar, GitCompare } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 interface DailyRunPulseChartProps {
   currentDayIndex: number;
   projection: ProjectionModelResult;
   isMetricInAdults: boolean;
+  mode?: 'in-season-overview' | 'full-comparison';
 }
+
+// Standout historical seasons with their ecological context
+const STANDOUT_PRESETS = [
+  { year: 2026, label: '2026 Live', tag: 'Active Season', desc: 'Current in-season DFO test catches & ML model' },
+  { year: 1998, label: '1998 Record', tag: 'All-Time High (1,540 pts)', desc: 'Mega El Niño super-run all-time Skeena record' },
+  { year: 2004, label: '2004 Peak', tag: 'Historic High (1,480 pts)', desc: 'Major multi-tributary abundance across all basins' },
+  { year: 1985, label: '1985 Golden Age', tag: 'Vintage Peak (245 pts)', desc: 'Golden Age return with immense wild summer steelhead density' },
+  { year: 2010, label: '2010 Cold Run', tag: 'Cold Cohort (1,241 pts)', desc: 'Prime cold-water runoff and steady August pulse flow' },
+  { year: 2018, label: '2018 High', tag: 'Decade Peak (1,419 pts)', desc: 'Highest return in the modern 2016-2025 decade' },
+  { year: 2021, label: '2021 Crisis', tag: 'Crisis Low (229 pts)', desc: 'Severe ocean-heatwave collapse triggering closures' },
+  { year: 2024, label: '2024 Prior', tag: 'Last Season (240 pts)', desc: 'Previous completed season baseline' },
+  { year: 1956, label: '1956 Inaugural', tag: 'Inaugural Year', desc: 'First official operating season of DFO Tyee test fishery' },
+];
 
 export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
   currentDayIndex,
   projection,
   isMetricInAdults,
+  mode = 'full-comparison',
 }) => {
   const { isDark } = useTheme();
+  const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR);
+  const [overlay2026, setOverlay2026] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'waveform' | 'bars'>('waveform');
   const [showTransitHelp, setShowTransitHelp] = useState(false);
 
-  const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
-  const currentYearRecord = ALL_YEARS_DATA.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || ALL_YEARS_DATA[0];
+  // If in overview mode, force selectedYear to CURRENT_YEAR
+  const effectiveYear = mode === 'in-season-overview' ? CURRENT_YEAR : selectedYear;
+  const isSelectedCurrentYear = effectiveYear === CURRENT_YEAR;
 
-  // Dynamically find the last published DFO data day
-  const lastRecordedDayIndex = useMemo(() => {
+  const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
+  
+  // Sorted list of all available years in archive
+  const availableYears = useMemo(() => {
+    return ALL_YEARS_DATA.map((y) => y.year).sort((a, b) => b - a);
+  }, []);
+
+  const activeYearRecord = useMemo(() => {
+    return ALL_YEARS_DATA.find((y) => y.year === effectiveYear) || ALL_YEARS_DATA[0];
+  }, [effectiveYear]);
+
+  const currentYearRecord = useMemo(() => {
+    return ALL_YEARS_DATA.find((y) => y.year === CURRENT_YEAR) || ALL_YEARS_DATA[0];
+  }, []);
+
+  // Dynamically find the last published DFO data day for 2026
+  const lastRecordedDayIndex2026 = useMemo(() => {
     let lastRec = 67; // Aug 16
     if (currentYearRecord && currentYearRecord.data && currentYearRecord.data.length > 0) {
       for (let i = currentYearRecord.data.length - 1; i >= 0; i--) {
@@ -62,25 +95,48 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
     return map;
   }, [projection]);
 
-  // Compute 5-day rolling average for smooth trendline
+  // Compute daily chart points for the selected year + optional 2026 overlay + 10-Yr Avg
   const chartData = useMemo(() => {
     const rawPoints = SEASON_DAYS.map((sDay, idx) => {
       const hist = HISTORICAL_AVERAGE_CURVE[idx] || { avgDaily: 0 };
-      const isPastOrRecorded = idx <= lastRecordedDayIndex;
-      const projItem = trajectoryMap.get(idx);
-
-      let dailyVal = 0;
+      
+      // Target active year daily values
+      let targetDailyVal = 0;
       let recordedDaily: number | null = null;
       let projectedDaily: number | null = null;
 
-      if (isPastOrRecorded) {
-        const dVal = currentYearRecord?.data[idx]?.dailyIndex ?? 0;
-        dailyVal = dVal;
-        recordedDaily = Math.round(dVal * mult * 10) / 10;
+      if (isSelectedCurrentYear) {
+        const isPastOrRecorded = idx <= lastRecordedDayIndex2026;
+        const projItem = trajectoryMap.get(idx);
+
+        if (isPastOrRecorded) {
+          const dVal = currentYearRecord?.data[idx]?.dailyIndex ?? 0;
+          targetDailyVal = dVal;
+          recordedDaily = Math.round(dVal * mult * 10) / 10;
+        } else {
+          if (projItem) {
+            targetDailyVal = projItem.projectedDaily;
+            projectedDaily = Math.round(projItem.projectedDaily * mult * 10) / 10;
+          }
+        }
       } else {
-        if (projItem) {
-          dailyVal = projItem.projectedDaily;
-          projectedDaily = Math.round(projItem.projectedDaily * mult * 10) / 10;
+        // Historical archival year (all recorded)
+        const dVal = activeYearRecord?.data[idx]?.dailyIndex ?? 0;
+        targetDailyVal = dVal;
+        recordedDaily = Math.round(dVal * mult * 10) / 10;
+      }
+
+      // 2026 Overlay values if viewing historical year
+      let overlay2026Daily: number | null = null;
+      if (!isSelectedCurrentYear && overlay2026) {
+        const isPast2026 = idx <= lastRecordedDayIndex2026;
+        if (isPast2026) {
+          overlay2026Daily = Math.round((currentYearRecord?.data[idx]?.dailyIndex ?? 0) * mult * 10) / 10;
+        } else {
+          const proj = trajectoryMap.get(idx);
+          if (proj) {
+            overlay2026Daily = Math.round(proj.projectedDaily * mult * 10) / 10;
+          }
         }
       }
 
@@ -90,11 +146,12 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
         histAvgDaily: Math.round(hist.avgDaily * mult * 10) / 10,
         recordedDaily,
         projectedDaily,
-        activeDailyVal: Math.round(dailyVal * mult * 10) / 10,
+        overlay2026Daily,
+        activeDailyVal: Math.round(targetDailyVal * mult * 10) / 10,
       };
     });
 
-    // Calculate 5-day rolling average
+    // Calculate 5-day rolling average for smooth trendline
     return rawPoints.map((pt, i, arr) => {
       const start = Math.max(0, i - 2);
       const end = Math.min(arr.length - 1, i + 2);
@@ -111,7 +168,7 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
         rollingAvg,
       };
     });
-  }, [currentYearRecord, lastRecordedDayIndex, trajectoryMap, mult]);
+  }, [activeYearRecord, currentYearRecord, isSelectedCurrentYear, lastRecordedDayIndex2026, mult, overlay2026, trajectoryMap]);
 
   const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
 
@@ -120,42 +177,46 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
     let peakVal = 0;
     let peakDate = 'Aug 14';
     let latestVal = 0;
-    let latestDate = SEASON_DAYS[lastRecordedDayIndex]?.monthDay || 'Aug 16';
+    let latestDate = SEASON_DAYS[lastRecordedDayIndex2026]?.monthDay || 'Aug 16';
 
     chartData.forEach((d) => {
       if (d.recordedDaily !== null && d.recordedDaily > peakVal) {
         peakVal = d.recordedDaily;
         peakDate = d.monthDay;
       }
-      if (d.dayIndex === lastRecordedDayIndex && d.recordedDaily !== null) {
-        latestVal = d.recordedDaily;
+      if (d.dayIndex === currentDayIndex && (d.recordedDaily !== null || d.projectedDaily !== null)) {
+        latestVal = d.recordedDaily ?? d.projectedDaily ?? 0;
       }
     });
 
     const fishPerDay = isMetricInAdults ? Math.round(latestVal) : Math.round(latestVal * ADULT_EXPANSION_FACTOR);
     const peakFishPerDay = isMetricInAdults ? Math.round(peakVal) : Math.round(peakVal * ADULT_EXPANSION_FACTOR);
+    const totalSeasonVal = activeYearRecord?.totalIndex ?? 0;
 
     return {
       peakVal,
       peakDate,
       latestVal,
-      latestDate,
+      latestDate: selectedMonthDay,
       fishPerDay,
       peakFishPerDay,
+      totalSeasonVal,
+      status: activeYearRecord?.conservationStatus || 'Healthy',
+      color: activeYearRecord?.color || '#38bdf8',
     };
-  }, [chartData, lastRecordedDayIndex, isMetricInAdults]);
+  }, [activeYearRecord, chartData, currentDayIndex, isMetricInAdults, lastRecordedDayIndex2026, selectedMonthDay]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
     const dayIdx = payload[0]?.payload?.dayIndex;
-    const isRecorded = dayIdx !== undefined && dayIdx <= lastRecordedDayIndex;
+    const isRecorded = dayIdx !== undefined && (isSelectedCurrentYear ? dayIdx <= lastRecordedDayIndex2026 : true);
 
     return (
-      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[220px]">
-        <div className="font-bold text-[var(--accent-amber)] font-mono border-b border-[var(--border-main)] pb-1 flex justify-between items-center">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[230px] font-mono">
+        <div className="border-b border-[var(--border-main)] pb-1 flex justify-between items-center">
           <span className="text-sm font-bold text-[var(--text-main)]">{label}</span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]">
-            {isRecorded ? 'DFO Telemetry' : 'Model Forecast'}
+          <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)]">
+            {isSelectedCurrentYear ? (isRecorded ? '2026 Test Catch' : '2026 Forecast') : `${selectedYear} Archive`}
           </span>
         </div>
         {payload.map((p: any) => {
@@ -165,16 +226,16 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
           const expandedDaily = isMetricInAdults ? rawVal : Math.round(rawVal * ADULT_EXPANSION_FACTOR);
           return (
             <div key={p.dataKey} className="flex justify-between items-center py-1 gap-2">
-              <span className="text-[var(--text-secondary)] flex items-center gap-1.5 font-mono text-[11px]">
+              <span className="text-[var(--text-secondary)] flex items-center gap-1.5 text-[11px]">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                 <span>{p.name}</span>
               </span>
-              <div className="font-mono text-right">
+              <div className="text-right">
                 <span className="font-bold text-[var(--text-main)]">
                   {rawVal.toFixed(1)} {isMetricInAdults ? 'adults/day' : 'pts/day'}
                 </span>
                 {!isMetricInAdults && (
-                  <span className="text-[11px] text-[var(--text-muted)] font-normal ml-1">
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal ml-1">
                     (~{expandedDaily.toLocaleString()} fish)
                   </span>
                 )}
@@ -188,51 +249,151 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
-      {/* Header & Controls - Strictly Single Line on Mobile */}
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--border-main)] pb-3">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Top Header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-main)] pb-3">
+        <div className="flex items-center gap-2.5">
           <Activity className="w-5 h-5 text-[var(--accent-amber)] shrink-0" />
-          <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight truncate">
-            Run Progress
-          </h3>
+          <div>
+            <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
+              {mode === 'in-season-overview'
+                ? '2026 Daily Migration Pulses & Catches'
+                : 'Daily Migration Pulses & Historical Comparisons'}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] font-mono">
+              {mode === 'in-season-overview'
+                ? 'Daily drift-net catch rates and migration pulses vs 10-year rolling average'
+                : 'Inspect daily drift-net catch rates and migration pulses for any season since 1956'}
+            </p>
+          </div>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-[var(--bg-subtle)] border border-[var(--border-main)] p-0.5 rounded-lg shrink-0 text-xs font-mono">
-          <button
-            onClick={() => setViewMode('waveform')}
-            className={`px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 ${
-              viewMode === 'waveform'
-                ? 'bg-[var(--accent-amber)] text-white shadow-xs'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-            }`}
-            title="Smooth Flowing River Waveform"
-          >
-            <Waves className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Smooth Wave</span>
-          </button>
-          <button
-            onClick={() => setViewMode('bars')}
-            className={`px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 ${
-              viewMode === 'bars'
-                ? 'bg-[var(--accent-amber)] text-white shadow-xs'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-            }`}
-            title="Daily Drift Net Sets"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Daily Sets</span>
-          </button>
+        {/* Controls: Year Selector (if comparison) & View Mode */}
+        <div className="flex items-center gap-2 font-mono flex-wrap sm:flex-nowrap">
+          {mode === 'full-comparison' && (
+            <>
+              {/* Year Dropdown */}
+              <div className="flex items-center gap-1.5 bg-[var(--bg-subtle)] px-2.5 py-1.5 rounded-xl border border-[var(--border-main)] text-xs">
+                <Calendar className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                  aria-label="Select Historical Season for Daily Data"
+                  className="bg-transparent text-[var(--text-main)] font-bold font-mono focus:outline-none cursor-pointer"
+                >
+                  <optgroup label="Active Live Season">
+                    <option value={2026}>2026 (Live In-Season Data)</option>
+                  </optgroup>
+                  <optgroup label="Modern Decade (2016–2025)">
+                    {availableYears
+                      .filter((y) => y >= 2016 && y <= 2025)
+                      .map((yr) => (
+                        <option key={yr} value={yr} className="bg-[var(--bg-surface)] text-[var(--text-main)]">
+                          {yr} Season
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Millennial Super-Runs (1990–2015)">
+                    {availableYears
+                      .filter((y) => y >= 1990 && y < 2016)
+                      .map((yr) => (
+                        <option key={yr} value={yr} className="bg-[var(--bg-surface)] text-[var(--text-main)]">
+                          {yr} Season
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Vintage Heritage Era (1956–1989)">
+                    {availableYears
+                      .filter((y) => y >= 1956 && y < 1990)
+                      .map((yr) => (
+                        <option key={yr} value={yr} className="bg-[var(--bg-surface)] text-[var(--text-main)]">
+                          {yr} Season
+                        </option>
+                      ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* If viewing historical year: Toggle 2026 Overlay */}
+              {!isSelectedCurrentYear && (
+                <button
+                  onClick={() => setOverlay2026(!overlay2026)}
+                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                    overlay2026
+                      ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)]'
+                      : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                  title="Overlay 2026 live pulses against this historical season"
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  <span>Overlay 2026</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Segmented View Mode Toggle */}
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1 shrink-0 text-xs">
+            <button
+              onClick={() => setViewMode('waveform')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                viewMode === 'waveform'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+              title="Smooth Flowing Waveform"
+            >
+              <Waves className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">Wave</span>
+            </button>
+            <button
+              onClick={() => setViewMode('bars')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                viewMode === 'bars'
+                  ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+              }`}
+              title="Daily Drift Net Sets"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">Sets</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Migration Pulse Meaning Cards */}
+      {/* Standout Season Quick-Access Chips (Only in Full Comparison Mode) */}
+      {mode === 'full-comparison' && (
+        <div className="space-y-1.5 font-mono">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+            <span className="text-[11px] text-[var(--text-muted)] shrink-0 font-bold">Standout Eras:</span>
+            {STANDOUT_PRESETS.map((p) => {
+              const isSelected = selectedYear === p.year;
+              return (
+                <button
+                  key={p.year}
+                  onClick={() => setSelectedYear(p.year)}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition shrink-0 flex items-center gap-1 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber)] shadow-xs'
+                      : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:border-[var(--accent-amber)]'
+                  }`}
+                  title={`${p.tag}: ${p.desc}`}
+                >
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Migration Pulse Summary Cards for Selected Season */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
             <span className="flex items-center gap-1">
               <Waves className="w-3 h-3 text-[var(--accent-amber)]" />
-              Latest Inflow Pulse
+              {isSelectedCurrentYear ? 'Current Date Pulse' : `${selectedYear} Pulse on ${selectedMonthDay}`}
             </span>
             <span className="font-bold text-[var(--text-main)]">{stats.latestDate}</span>
           </div>
@@ -248,7 +409,7 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-500" />
-              Peak Migration Day
+              Peak Single-Day Catch
             </span>
             <span className="font-bold text-[var(--text-main)]">{stats.peakDate}</span>
           </div>
@@ -282,9 +443,8 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
 
       {showTransitHelp && (
         <div className="p-2.5 rounded-xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-xs font-mono text-[var(--text-secondary)] flex items-start gap-2">
-          <MapPin className="w-4 h-4 text-[var(--accent-amber)] shrink-0 mt-0.5" />
           <p>
-            Steelhead average 14–20 km/day ascending the mainstem Skeena. An ocean pulse recorded today at Tyee test fishery typically reaches Terrace in ~4 days, Witset/Kispiox in ~12 days, and Babine in ~25 days.
+            Steelhead average 14–20 km/day ascending the mainstem Skeena. An ocean pulse recorded at Tyee test fishery typically reaches Terrace in ~4 days, Witset/Kispiox in ~12 days, and Babine in ~25 days.
           </p>
         </div>
       )}
@@ -294,9 +454,9 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
             <defs>
-              <linearGradient id="recordedWave" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={isDark ? '#3b82f6' : '#c56a25'} stopOpacity={0.45} />
-                <stop offset="95%" stopColor={isDark ? '#3b82f6' : '#c56a25'} stopOpacity={0.02} />
+              <linearGradient id="selectedYearWave" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={stats.color || (isDark ? '#3b82f6' : '#c56a25')} stopOpacity={0.45} />
+                <stop offset="95%" stopColor={stats.color || (isDark ? '#3b82f6' : '#c56a25')} stopOpacity={0.02} />
               </linearGradient>
               <linearGradient id="projectedWave" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={isDark ? '#60a5fa' : '#e89553'} stopOpacity={0.25} />
@@ -335,40 +495,55 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
               }}
             />
 
-            {/* 10-Year Average Mean Curve */}
+            {/* 10-Year Average Mean Baseline Curve */}
             <Line
               type="monotone"
               dataKey="histAvgDaily"
               stroke={isDark ? '#2dd4bf' : '#1a6467'}
-              strokeWidth={2}
+              strokeWidth={1.75}
+              strokeDasharray="4 4"
               dot={false}
               name="10-Yr Historical Mean"
             />
 
+            {/* 2026 Overlay Curve (if inspecting historical year) */}
+            {!isSelectedCurrentYear && overlay2026 && (
+              <Line
+                type="monotone"
+                dataKey="overlay2026Daily"
+                stroke={isDark ? '#fbbf24' : '#c56a25'}
+                strokeWidth={2}
+                dot={false}
+                name="2026 Live Comparison"
+              />
+            )}
+
             {viewMode === 'waveform' ? (
               <>
-                {/* Recorded Flow Area */}
+                {/* Selected Year Daily Waveform */}
                 <Area
                   type="monotone"
                   dataKey="recordedDaily"
-                  stroke={isDark ? '#3b82f6' : '#c56a25'}
+                  stroke={isSelectedCurrentYear ? (isDark ? '#3b82f6' : '#c56a25') : stats.color}
                   strokeWidth={2.5}
                   fillOpacity={1}
-                  fill="url(#recordedWave)"
-                  name="Recorded Daily CPUE"
+                  fill="url(#selectedYearWave)"
+                  name={`${selectedYear} Daily CPUE`}
                 />
 
-                {/* Projected Flow Area */}
-                <Area
-                  type="monotone"
-                  dataKey="projectedDaily"
-                  stroke={isDark ? '#60a5fa' : '#e89553'}
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  fillOpacity={1}
-                  fill="url(#projectedWave)"
-                  name="Modeled Daily Arrival"
-                />
+                {/* 2026 Projected Flow Area (if 2026 active) */}
+                {isSelectedCurrentYear && (
+                  <Area
+                    type="monotone"
+                    dataKey="projectedDaily"
+                    stroke={isDark ? '#60a5fa' : '#e89553'}
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    fillOpacity={1}
+                    fill="url(#projectedWave)"
+                    name="Modeled Daily Arrival"
+                  />
+                )}
 
                 {/* 5-Day Trend Smoothed Line */}
                 <Line
@@ -378,40 +553,42 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
                   strokeWidth={1.5}
                   dot={false}
                   strokeDasharray="2 2"
-                  name="5-Day Trendline"
+                  name={`${selectedYear} 5-Day Trend`}
                 />
               </>
             ) : (
               <>
-                {/* Recorded Daily Catch Sets */}
+                {/* Selected Year Daily Sets */}
                 <Bar
                   dataKey="recordedDaily"
-                  fill={isDark ? '#3b82f6' : '#c56a25'}
-                  fillOpacity={0.9}
-                  stroke={isDark ? '#60a5fa' : '#e89553'}
+                  fill={isSelectedCurrentYear ? (isDark ? '#3b82f6' : '#c56a25') : stats.color}
+                  fillOpacity={0.85}
+                  stroke={stats.color}
                   strokeWidth={1}
-                  name="Recorded Daily CPUE"
+                  name={`${selectedYear} Daily CPUE`}
                 />
 
-                {/* Projected Daily Inflow */}
-                <Bar
-                  dataKey="projectedDaily"
-                  fill={isDark ? '#60a5fa' : '#e89553'}
-                  fillOpacity={0.4}
-                  stroke={isDark ? '#3b82f6' : '#c56a25'}
-                  strokeDasharray="3 3"
-                  strokeWidth={1}
-                  name="Modeled Daily Arrival"
-                />
+                {/* 2026 Projected Sets */}
+                {isSelectedCurrentYear && (
+                  <Bar
+                    dataKey="projectedDaily"
+                    fill={isDark ? '#60a5fa' : '#e89553'}
+                    fillOpacity={0.4}
+                    stroke={isDark ? '#3b82f6' : '#c56a25'}
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
+                    name="Modeled Daily Arrival"
+                  />
+                )}
               </>
             )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-t border-[var(--border-main)] pt-2 font-mono">
-        <span>Anchor: Published data through <strong className="text-[var(--text-main)]">{SEASON_DAYS[lastRecordedDayIndex]?.monthDay}</strong></span>
-        <span>Selected: <strong className="text-[var(--accent-amber)]">{selectedMonthDay}</strong></span>
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-t border-[var(--border-main)] pt-2 font-mono flex-wrap gap-2">
+        <span>Inspecting season: <strong className="text-[var(--accent-amber)]">{selectedYear}</strong> ({activeYearRecord?.notes || 'DFO Skeena record'})</span>
+        <span>Selected date: <strong className="text-[var(--text-main)]">{selectedMonthDay}</strong></span>
       </div>
     </div>
   );

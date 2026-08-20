@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import {
   CURRENT_YEAR,
   ADULT_EXPANSION_FACTOR,
+  HISTORICAL_ERAS,
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
-import { ArrowUpDown, Table, AlertTriangle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { ArrowUpDown, Table, AlertTriangle, AlertCircle, ShieldCheck, Filter } from 'lucide-react';
 
 interface HistoricalComparisonTableProps {
   currentDayIndex: number;
@@ -29,11 +30,22 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
 }) => {
   const [sortField, setSortField] = useState<SortField>('rank');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [filterToSelected, setFilterToSelected] = useState<boolean>(false);
+  const [activeEra, setActiveEra] = useState<string>('all');
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
 
+  const currentEraObj = HISTORICAL_ERAS.find((e) => e.id === activeEra) || HISTORICAL_ERAS[0];
+
+  // Filter according to era or active cohort
+  const filteredArchiveYears = allYears.filter((y) => {
+    if (activeEra === 'selected' && selectedYears && selectedYears.length > 0) {
+      return selectedYears.includes(y.year);
+    }
+    if (activeEra === 'all') return true;
+    return currentEraObj.years.includes(y.year);
+  });
+
   // Build rows
-  let rawRows = allYears.map((y) => {
+  let rawRows = filteredArchiveYears.map((y) => {
     let onDateVal = y.data[currentDayIndex]?.cumulativeIndex || 0;
     let totalVal = y.totalIndex;
     let isCurrent = y.isCurrentYear || y.year === CURRENT_YEAR;
@@ -74,10 +86,6 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
   rawRows.forEach((r) => {
     r.delta = Math.round(((r.onDateVal - cur2026Val) / cur2026Val) * 1000) / 10;
   });
-
-  if (filterToSelected && selectedYears && selectedYears.length > 0) {
-    rawRows = rawRows.filter((r) => selectedYears.includes(r.year));
-  }
 
   // Sort rows based on user preference
   rawRows.sort((a, b) => {
@@ -138,22 +146,48 @@ export const HistoricalComparisonTable: React.FC<HistoricalComparisonTableProps>
             </h3>
           </div>
           <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
-            Sortable matrix comparing cumulative CPUE indices, escapement ranks, and peak dates.
+            Compare cumulative run passage on {selectedMonthDay} and total season escapement ({rawRows.length} seasons shown)
           </p>
         </div>
 
-        {selectedYears && selectedYears.length > 0 && (
-          <button
-            onClick={() => setFilterToSelected(!filterToSelected)}
-            className={`text-xs px-3 py-1.5 rounded-lg border font-mono font-semibold transition ${
-              filterToSelected
-                ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)]'
-                : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-          >
-            {filterToSelected ? 'Showing Selected Only' : 'Show All Archive Seasons'}
-          </button>
-        )}
+        {/* Era Filter Toolbar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto font-mono text-xs">
+          <span className="text-[11px] text-[var(--text-muted)] font-bold shrink-0 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-[var(--accent-teal)]" />
+            Filter:
+          </span>
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1">
+            {selectedYears && selectedYears.length > 1 && (
+              <button
+                onClick={() => setActiveEra('selected')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer ${
+                  activeEra === 'selected'
+                    ? 'bg-[var(--accent-teal)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                Cohort ({selectedYears.length})
+              </button>
+            )}
+            {HISTORICAL_ERAS.map((era) => {
+              const isSelected = activeEra === era.id;
+              return (
+                <button
+                  key={era.id}
+                  onClick={() => setActiveEra(era.id)}
+                  title={era.description}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  {era.shortLabel}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto no-scrollbar">

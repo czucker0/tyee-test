@@ -12,6 +12,7 @@ import {
 import {
   CURRENT_YEAR,
   HISTORICAL_AVERAGE_CURVE,
+  ALL_TIME_AVERAGE_CURVE,
   SEASON_DAYS,
   ESCAPEMENT_THRESHOLDS,
   ADULT_EXPANSION_FACTOR,
@@ -32,7 +33,7 @@ interface CumulativeRunChartProps {
   isMetricInAdults: boolean;
   selectedYears: number[];
   onToggleYear: (year: number) => void;
-  onSelectPreset: (preset: 'all' | 'recent' | 'extremes' | 'currentOnly') => void;
+  onSelectPreset: (preset: 'all' | 'recent' | 'extremes' | 'vintage' | 'currentOnly') => void;
   allYears?: YearRunData[];
 }
 
@@ -52,6 +53,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
   const [barScope, setBarScope] = useState<'onDate' | 'seasonTotal'>('onDate');
 
   const [showAverage, setShowAverage] = useState<boolean>(true);
+  const [showAllTimeAverage, setShowAllTimeAverage] = useState<boolean>(true);
   const [showEnvelope] = useState<boolean>(true);
   const [showThresholds] = useState<boolean>(true);
   const [showConfidenceBands, setShowConfidenceBands] = useState<boolean>(true);
@@ -85,6 +87,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
 
     const data = SEASON_DAYS.map((sDay, idx) => {
       const hist = HISTORICAL_AVERAGE_CURVE[idx] || { avgCumulative: 0, minCumulative: 0, maxCumulative: 0 };
+      const allTimeHist = ALL_TIME_AVERAGE_CURVE[idx] || { avgCumulative: 0, avgDaily: 0 };
       const projItem = trajectoryMap.get(idx);
       const isPastOrRecorded = idx <= lastRecIdx;
 
@@ -92,6 +95,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         dayIndex: idx,
         monthDay: sDay.monthDay,
         avgCumulative: Math.round(hist.avgCumulative * mult * 10) / 10,
+        allTimeCumulative: Math.round(allTimeHist.avgCumulative * mult * 10) / 10,
         minCumulative: Math.round(hist.minCumulative * mult * 10) / 10,
         maxCumulative: Math.round(hist.maxCumulative * mult * 10) / 10,
         envelopeRange: [Math.round(hist.minCumulative * mult * 10) / 10, Math.round(hist.maxCumulative * mult * 10) / 10],
@@ -214,6 +218,21 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
       deltaVsBaseline: 0,
     });
 
+    // 2b. 70-Year All-Time Baseline
+    const allTimeDay = ALL_TIME_AVERAGE_CURVE[currentDayIndex] || ALL_TIME_AVERAGE_CURVE[0];
+    const allTimeActiveVal = barScope === 'onDate' ? allTimeDay.avgCumulative : ALL_TIME_AVERAGE_CURVE[ALL_TIME_AVERAGE_CURVE.length - 1].avgCumulative;
+    const allTimeDelta = baseToCompare > 0 ? Math.round(((allTimeActiveVal - baseToCompare) / baseToCompare) * 1000) / 10 : 0;
+    barItems.push({
+      id: 'all_time_avg',
+      label: barScope === 'onDate' ? '70-Yr All-Time Avg (On Date)' : '70-Yr All-Time Avg (Final)',
+      isAverage: true,
+      color: isDark ? '#a855f7' : '#7e22ce',
+      rawVal: allTimeActiveVal,
+      valDisplay: allTimeActiveVal * mult,
+      adults: Math.round(allTimeActiveVal * ADULT_EXPANSION_FACTOR),
+      deltaVsBaseline: allTimeDelta,
+    });
+
     // 3. Archival Selected Years
     allYears.forEach((y) => {
       if (y.isCurrentYear || y.year === CURRENT_YEAR || !isYearSelected(y.year)) return;
@@ -306,7 +325,7 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
             ) : (
               <span className="stamp-badge stamp-teal">
                 <Fish className="w-3 h-3" />
-                <span>DFO Telemetry</span>
+                <span>DFO Test Catch</span>
                 <span className="font-bold normal-case">({dateFormatted})</span>
               </span>
             )}
@@ -351,29 +370,33 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
       {/* 1. HORIZONTAL STANDINGS & BENCHMARK BAR VIEW */}
       {visualMode === 'bars' ? (
         <div className="space-y-3.5">
-          {/* Sub-scope toggle: To-Date vs Season Total */}
+          {/* Sub-scope toggle: To-Date vs Season Total - Standardized Segmented Pill */}
           <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
-            <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-lg border border-[var(--border-main)]">
+            <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1">
               <button
                 onClick={() => setBarScope('onDate')}
-                className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
-                  barScope === 'onDate' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 ${
+                  barScope === 'onDate'
+                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
-                <span>Passage on</span>
-                <span className="font-bold">{selectedMonthDay}</span>
+                <span>On</span>
+                <span className="font-bold">{dateLabel}</span>
               </button>
               <button
                 onClick={() => setBarScope('seasonTotal')}
-                className={`px-2.5 py-1 rounded font-medium transition ${
-                  barScope === 'seasonTotal' ? 'bg-[var(--accent-amber-light)] text-[var(--accent-amber)] font-bold border border-[var(--accent-amber-border)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                  barScope === 'seasonTotal'
+                    ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                 }`}
               >
                 Full Season Final / Proj
               </button>
             </div>
 
-            <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2.5">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-amber)]" />
                 <strong className="text-[var(--accent-amber)]">2026</strong>
@@ -389,16 +412,16 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
             </div>
           </div>
 
-          {/* Vertical Stack of Horizontal Bars */}
+          {/* Vertical Stack of Horizontal Bars - Harmonized with YearRankingChart */}
           <div className="space-y-2.5">
             {horizontalBarData.items.map((item, idx) => {
               const rank = item.isAverage ? null : idx + 1;
-              const barWidthPct = Math.max(5, Math.round((item.rawVal / horizontalBarData.maxVal) * 100));
+              const barWidthPct = Math.max(4, Math.round((item.rawVal / horizontalBarData.maxVal) * 100));
 
               return (
                 <div
                   key={item.id}
-                  className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col gap-1.5 ${
+                  className={`p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     item.isCurrent
                       ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
                       : item.isAverage
@@ -406,87 +429,108 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                       : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    {/* Rank & Year Label */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      {rank !== null ? (
-                        <span
-                          className={`w-6 h-6 rounded-md flex items-center justify-center font-mono text-[11px] font-black shrink-0 ${
-                            rank === 1
-                              ? 'bg-[var(--accent-amber)] text-white'
-                              : rank === 2
-                              ? 'bg-stone-300 text-stone-900'
-                              : rank === 3
-                              ? 'bg-stone-400 text-white'
-                              : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
-                          }`}
-                        >
-                          #{rank}
-                        </span>
-                      ) : (
-                        <span className="w-6 h-6 rounded-md bg-[var(--accent-teal)] text-white flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
-                          AVG
-                        </span>
-                      )}
-
-                      <span className={`font-bold truncate ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm font-mono' : item.isAverage ? 'text-[var(--accent-teal)] font-mono font-semibold' : 'text-[var(--text-main)] font-mono'}`}>
-                        {item.label}
-                        {item.isCurrent && (
-                          <span className={`ml-1.5 stamp-badge ${item.isProjected ? 'stamp-amber' : 'stamp-teal'}`}>
-                            {item.isProjected ? 'PROJECTION' : 'RECORDED'}
-                          </span>
-                        )}
-                      </span>
+                  {/* Left: Year & Rank Info */}
+                  <div className="flex items-center gap-3 min-w-[140px]">
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-black shrink-0 ${
+                        rank === 1
+                          ? 'bg-[var(--accent-amber)] text-white'
+                          : rank === 2
+                          ? 'bg-stone-300 text-stone-900'
+                          : rank === 3
+                          ? 'bg-stone-400 text-white'
+                          : item.isAverage
+                          ? 'bg-[var(--accent-teal)] text-white'
+                          : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-main)]'
+                      }`}
+                    >
+                      {rank !== null ? `#${rank}` : 'AVG'}
                     </div>
 
-                    {/* Escapement Values & Delta */}
-                    <div className="flex items-center gap-2 text-right shrink-0">
-                      <div className="font-mono">
-                        <span className={`font-black ${item.isCurrent ? 'text-[var(--accent-amber)] text-sm' : 'text-[var(--text-main)]'}`}>
-                          {item.valDisplay.toFixed(1)} {isMetricInAdults ? 'adults' : 'pts'}
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className={`font-mono font-black text-sm ${item.isCurrent ? 'text-[var(--accent-amber)]' : item.id === 'all_time_avg' ? 'text-purple-600 dark:text-purple-400 font-bold' : item.isAverage ? 'text-[var(--accent-teal)] font-bold' : 'text-[var(--text-main)]'}`}>
+                          {item.id === 'all_time_avg' ? '70-Yr All-Time Avg' : item.id === 'hist_avg' ? '10-Yr Decade Mean' : item.year}
                         </span>
-                        {!isMetricInAdults && (
-                          <span className="text-[10px] text-[var(--text-muted)] ml-1.5 hidden xs:inline">
-                            (~{item.adults.toLocaleString()} fish)
+                        {item.isCurrent && (
+                          <span className={`stamp-badge ${item.isProjected ? 'stamp-amber' : 'stamp-teal'}`}>
+                            {item.isProjected ? 'Projection' : 'Recorded'}
                           </span>
                         )}
                       </div>
+                      <span className="text-[10px] text-[var(--text-muted)] block font-mono">
+                        {item.isCurrent
+                          ? barScope === 'onDate'
+                            ? isSelectedDateFuture
+                              ? `Projected on ${dateLabel}`
+                              : `Recorded on ${dateLabel}`
+                            : 'Season Forecast'
+                          : item.id === 'all_time_avg'
+                          ? '1956–2025 Long-Term Baseline'
+                          : item.isAverage
+                          ? '2016–2025 Rolling Baseline'
+                          : barScope === 'onDate'
+                          ? `On ${dateLabel}`
+                          : 'Final Season Total'}
+                      </span>
+                    </div>
+                  </div>
 
-                      {!item.isAverage && (
+                  {/* Middle: Visual Bar Indicator Track */}
+                  <div className="flex-1 px-2 hidden sm:block">
+                    <div className="w-full bg-[var(--bg-subtle)] rounded-full h-3.5 overflow-hidden p-0.5 border border-[var(--border-main)] relative">
+                      {/* Target Marker (110 pts) */}
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-spruce)] z-10 opacity-75 pointer-events-none"
+                        style={{
+                          left: `${Math.min(100, (ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY / horizontalBarData.maxVal) * 100)}%`,
+                        }}
+                        title="Healthy Conservation Target (110 pts)"
+                      />
+
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          item.isCurrent
+                            ? 'bg-[var(--accent-amber)]'
+                            : item.isAverage
+                            ? 'bg-[var(--accent-teal)]'
+                            : 'bg-stone-400 dark:bg-stone-600'
+                        }`}
+                        style={{ width: `${barWidthPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right: Value & Fish Count Breakdown */}
+                  <div className="text-right min-w-[150px] flex sm:flex-col justify-between sm:justify-center items-center sm:items-end font-mono">
+                    <div className="text-xs font-bold text-[var(--text-main)]">
+                      <span>{item.valDisplay.toFixed(1)} {isMetricInAdults ? 'adults' : 'pts'}</span>
+                      {!isMetricInAdults && (
+                        <span className="text-[10px] text-[var(--text-muted)] font-normal ml-1 hidden xs:inline">
+                          (~{item.adults.toLocaleString()} fish)
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1.5">
+                      {!item.isAverage ? (
                         <span
-                          className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                          className={`font-bold px-1.5 py-0.2 rounded text-[9px] ${
                             item.deltaVsBaseline >= 0
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                               : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
                           }`}
                         >
-                          {item.deltaVsBaseline >= 0 ? `+${item.deltaVsBaseline}%` : `${item.deltaVsBaseline}%`}
+                          {item.deltaVsBaseline >= 0 ? `+${item.deltaVsBaseline}%` : `${item.deltaVsBaseline}%`} vs avg
                         </span>
+                      ) : (
+                        <span>Historical Benchmark</span>
                       )}
                     </div>
-                  </div>
-
-                  {/* Horizontal Bar Metric Track */}
-                  <div className="w-full bg-[var(--bg-subtle)] rounded-full h-2.5 sm:h-3 overflow-hidden relative border border-[var(--border-main)]">
-                    {/* Conservation Target Marker line (110 pts) */}
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-spruce)] z-10 opacity-70 pointer-events-none"
-                      style={{
-                        left: `${Math.min(100, (ESCAPEMENT_THRESHOLDS.TARGET_HEALTHY / horizontalBarData.maxVal) * 100)}%`,
-                      }}
-                      title="Healthy Conservation Target (110 pts)"
-                    />
-
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        item.isCurrent
-                          ? 'bg-[var(--accent-amber)]'
-                          : item.isAverage
-                          ? 'bg-[var(--accent-teal)]'
-                          : 'bg-stone-400 dark:bg-stone-600'
-                      }`}
-                      style={{ width: `${barWidthPct}%` }}
-                    />
                   </div>
                 </div>
               );
@@ -497,48 +541,35 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
         /* 2. S-CURVE TRAJECTORY LINE CHART */
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap text-xs pb-1 font-mono">
-            {/* Quick Year Presets */}
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[11px] text-[var(--text-muted)] mr-1">Presets:</span>
-              <button
-                onClick={() => onSelectPreset('currentOnly')}
-                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                2026 Only
-              </button>
-              <button
-                onClick={() => onSelectPreset('recent')}
-                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                Recent (2022–24)
-              </button>
-              <button
-                onClick={() => onSelectPreset('extremes')}
-                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                Extremes
-              </button>
-              <button
-                onClick={() => onSelectPreset('all')}
-                className="px-2 py-0.5 text-[11px] rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-main)] hover:border-[var(--border-highlight)] transition"
-              >
-                All
-              </button>
+            {/* Active Year Cohort Indicator */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] text-[var(--text-muted)] font-mono">Comparing:</span>
+              <span className="px-2 py-0.5 text-[11px] rounded bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)] font-bold">
+                {selectedYears.length} {selectedYears.length === 1 ? 'Season' : 'Seasons'}
+              </span>
             </div>
 
             {/* Layer Toggles */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowAverage(!showAverage)}
-                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
+                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition cursor-pointer ${
                   showAverage ? 'bg-[var(--accent-teal-light)] border-[var(--accent-teal-border)] text-[var(--accent-teal)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
                 }`}
               >
                 10-Yr Avg
               </button>
               <button
+                onClick={() => setShowAllTimeAverage(!showAllTimeAverage)}
+                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition cursor-pointer ${
+                  showAllTimeAverage ? 'bg-purple-100 dark:bg-purple-950/60 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
+                }`}
+              >
+                70-Yr Avg
+              </button>
+              <button
                 onClick={() => setShowConfidenceBands(!showConfidenceBands)}
-                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition ${
+                className={`px-2 py-0.5 text-[11px] rounded font-medium border transition cursor-pointer ${
                   showConfidenceBands ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] text-[var(--accent-amber)] font-bold' : 'bg-[var(--bg-subtle)] border-[var(--border-main)] text-[var(--text-muted)]'
                 }`}
               >
@@ -617,6 +648,19 @@ export const CumulativeRunChart: React.FC<CumulativeRunChartProps> = ({
                     strokeDasharray="5 5"
                     dot={false}
                     name="10-Year Average"
+                    isAnimationActive={false}
+                  />
+                )}
+
+                {showAllTimeAverage && (
+                  <Line
+                    type="monotone"
+                    dataKey="allTimeCumulative"
+                    stroke={isDark ? '#a855f7' : '#7e22ce'}
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    dot={false}
+                    name="70-Yr All-Time Average"
                     isAnimationActive={false}
                   />
                 )}

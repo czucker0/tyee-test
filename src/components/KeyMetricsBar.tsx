@@ -12,10 +12,12 @@ import {
   ChevronUp,
   HelpCircle,
   Scale,
+  Calendar,
 } from 'lucide-react';
 import { ProjectionModelResult, YearRunData } from '../types/steelhead';
 import {
   HISTORICAL_AVERAGE_CURVE,
+  ALL_TIME_AVERAGE_CURVE,
   ADULT_EXPANSION_FACTOR,
   CURRENT_YEAR,
   ALL_YEARS_DATA,
@@ -46,9 +48,14 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   onOpenMultiplierDebate,
 }) => {
   const [showDetailedCards, setShowDetailedCards] = useState<boolean>(false);
+  const [benchmarkBaseline, setBenchmarkBaseline] = useState<'10yr' | '70yr'>('10yr');
   const dayIdx = Math.max(0, Math.min(HISTORICAL_AVERAGE_CURVE.length - 1, currentDayIndex));
-  const histDay = HISTORICAL_AVERAGE_CURVE[dayIdx] || HISTORICAL_AVERAGE_CURVE[0];
-  const histAvgCumulative = histDay ? histDay.avgCumulative : 1;
+  
+  // Baseline curves
+  const histDay10 = HISTORICAL_AVERAGE_CURVE[dayIdx] || HISTORICAL_AVERAGE_CURVE[0];
+  const histDay70 = ALL_TIME_AVERAGE_CURVE[dayIdx] || ALL_TIME_AVERAGE_CURVE[0];
+  const activeBaselineDay = benchmarkBaseline === '70yr' ? histDay70 : histDay10;
+  const histAvgCumulative = activeBaselineDay ? activeBaselineDay.avgCumulative : 1;
 
   // Locate current year record
   const currentYearData = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
@@ -82,7 +89,7 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
   const lowCIAdults = Math.round(projection.projectedLowCI * multiplierValue);
   const highCIAdults = Math.round(projection.projectedHighCI * multiplierValue);
 
-  // Delta calculations against historical 10-year mean on this day
+  // Delta calculations against selected baseline on this day
   const deltaVsAvgPct =
     histAvgCumulative > 0
       ? Math.round(((activeCumulative - histAvgCumulative) / histAvgCumulative) * 1000) / 10
@@ -121,8 +128,34 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
               <span className="font-bold text-sm text-[var(--text-main)] normal-case tracking-normal">{selectedMonthDay}</span>
             </span>
 
+            {/* Baseline Benchmark Toggle: 10-Yr Modern vs 70-Yr All-Time */}
+            <div className="flex items-center gap-1 ml-1 sm:ml-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg p-0.5 font-mono text-[10px]">
+              <button
+                onClick={() => setBenchmarkBaseline('10yr')}
+                title="10-Year Rolling Decade Mean (2016-2025)"
+                className={`px-2 py-0.5 font-bold rounded-md transition ${
+                  benchmarkBaseline === '10yr'
+                    ? 'bg-[var(--accent-teal)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                10-Yr Base
+              </button>
+              <button
+                onClick={() => setBenchmarkBaseline('70yr')}
+                title="70-Year All-Time Baseline (1956-2025)"
+                className={`px-2 py-0.5 font-bold rounded-md transition ${
+                  benchmarkBaseline === '70yr'
+                    ? 'bg-[var(--accent-amber)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                70-Yr All-Time
+              </button>
+            </div>
+
             {/* Prominent Multiplier Mode Pill with Info Trigger */}
-            <div className="flex items-center gap-1 ml-1 sm:ml-2 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg p-0.5">
+            <div className="flex items-center gap-1 bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-lg p-0.5">
               <button
                 onClick={() => onSelectMultiplierMode?.('four_year')}
                 title="4-Year Dynamic Rolling Ratio (Derived from recent brood cycles)"
@@ -196,7 +229,9 @@ export const KeyMetricsBar: React.FC<KeyMetricsBarProps> = ({
               </div>
             </div>
             <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--border-main)] font-mono">
-              <span className="text-[var(--text-secondary)] font-medium">vs 10-Yr Mean:</span>
+              <span className="text-[var(--text-secondary)] font-medium">
+                vs {benchmarkBaseline === '70yr' ? '70-Yr All-Time' : '10-Yr'} Mean:
+              </span>
               <span className={`font-bold flex items-center gap-0.5 ${deltaVsAvgPct >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                 {deltaVsAvgPct >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {deltaVsAvgPct >= 0 ? `+${deltaVsAvgPct}%` : `${deltaVsAvgPct}%`}

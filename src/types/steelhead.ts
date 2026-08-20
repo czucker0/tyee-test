@@ -125,6 +125,7 @@ export interface FloatSafetyProfile {
   rating:
     | 'Heavy Powercraft / Jetboat Only (Severe Volume)'
     | 'Reach-Dependent: Upper Drift / Lower Lethal Canyon'
+    | 'Reach-Dependent: Scenic Class I–II Upper/Mid Drift | Lethal Class V+ Lower Canyon'
     | 'Reach-Dependent: Drift Friendly / Mid-Canyon Hazard'
     | 'Premier Drift Boat & Raft Friendly'
     | 'Intermediate Float with Sweeper Hazards'
@@ -133,7 +134,8 @@ export interface FloatSafetyProfile {
     | 'Personal Raft Friendly'
     | 'Intermediate Float with Hazards'
     | 'Extreme Whitewater Canyon'
-    | 'Walk-In / Jetboat Only';
+    | 'Walk-In / Jetboat Only'
+    | string;
   whitewaterClass: string;
   suitableCraft: string;
   hazardWarnings: string[];
@@ -141,7 +143,7 @@ export interface FloatSafetyProfile {
 }
 
 export interface WadeSafetyProfile {
-  difficulty: 'Easy' | 'Moderate' | 'Challenging / Treacherous';
+  difficulty: 'Easy' | 'Moderate' | 'Challenging / Treacherous' | string;
   footwearRecommendation: string;
   bankAccessibility: string;
   wadingStaffAdvice: string;

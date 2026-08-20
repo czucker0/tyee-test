@@ -156,10 +156,10 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
     ],
     floatSafety: {
       rating: 'Heavy Powercraft / Jetboat Only (Severe Volume)',
-      whitewaterClass: 'Class I–II (Extreme 2,000–8,000 m³/s hydraulic discharge, heavy standing waves, powerful ocean tidal reversals)',
-      suitableCraft: 'Heavy commercial/custom inboard jetboat (18ft–24ft) or heavy 16ft+ commercial whitewater raft with experienced oarsperson. STRICTLY DANGEROUS & UNSUITED FOR SOLO PERSONAL PONTOON BOATS, SMALL RAFTS, OR CANOES.',
+      whitewaterClass: 'Mainstem Corridor: Class I–II (Extreme 2,000–8,000 m³/s hydraulic discharge, heavy standing waves, powerful ocean tidal reversals)',
+      suitableCraft: 'Heavy commercial/custom inboard jetboat (18ft–24ft) or heavy 16ft+ commercial whitewater raft with experienced oarsperson. Strictly unsuited for solo personal pontoon boats, canoes, or small drift boats.',
       hazardWarnings: [
-        'Severe hydraulic discharge (2,000–8,000 m³/s) creating inescapable mid-river currents and heavy wave trains against ocean winds',
+        'Massive hydraulic discharge (2,000–8,000 m³/s) creating inescapable mid-river currents and heavy wave trains against ocean winds',
         'Violent tidal surges and standing whirlpools below Kasiks/Kwinitsa with sudden marine fog banks reducing visibility to <20 meters',
         'Massive commercial barge and high-speed jetboat wake in narrow shipping channels',
         'Quicksand-like glacial silt drop-offs and floating deadhead logs in side channels'
@@ -167,9 +167,9 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       typicalFloatTimes: 'Terrace to Kasiks: Full Day (62 km heavy power run); Exchamsiks to Kwinitsa: 3–5 hours (Heavy craft only)'
     },
     wadeSafety: {
-      difficulty: 'Moderate',
+      difficulty: 'Reach-Dependent: Easy on Wide Gravel Bars | Dangerous Near Silt Drop-Offs',
       footwearRecommendation: 'Felt soles with hardened tungsten carbide studs for slick glacial slate shelves and submerged clay deposits',
-      bankAccessibility: 'Wide expansive gravel bars at low water; hazardous railway rip-rap and steep clay drop-offs on northern shore',
+      bankAccessibility: 'Wide expansive gravel bars at low autumn water; hazardous railway rip-rap and steep clay drop-offs on northern shore',
       wadingStaffAdvice: 'Mandatory. Deep glacial back-eddies create sudden suction drop-offs into 5+ meter glacier depths.'
     },
     tribalProtocols: {
@@ -323,21 +323,22 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Reach-Dependent: Drift Friendly / Mid-Canyon Hazard',
-      whitewaterClass: 'Upper Kalum & Lower Kalum: Class II. Kalum Canyon (KM 8 to KM 5): Impassable Class IV–V Gorge',
-      suitableCraft: '14–16 ft Drift boats and rafts permitted on Upper Kalum (Lake to KM 8) and Lower Kalum (Fishery Rd to Hwy 16). STRICTLY NO DRIFT BOATS THROUGH KALUM CANYON.',
+      rating: 'Reach-Dependent: Scenic Class I–II Upper/Lower Drifts | Impassable Class IV–V Mid Canyon',
+      whitewaterClass: 'Upper Kalum & Lower Kalum: Class I–II (Gentle emerald riffles, clear boulder runs). Kalum Canyon (KM 8 to KM 5): Impassable Class IV–V Bedrock Chasm',
+      suitableCraft: '14–16 ft Drift boats, rafts, and pontoons permitted on Upper Kalum (Lake to KM 8) and Lower Kalum (Fishery Rd to Hwy 16). STRICTLY NO BOATS OF ANY KIND THROUGH KALUM CANYON.',
       hazardWarnings: [
-        'DEATH HAZARD: Kalum Canyon gorge is impassable to drift boats. Take out at KM 8 Canyon Rec Site before canyon entrance.',
-        'Dense grizzly bear feeding concentration along lower timbered gravel bars during salmon runs',
-        'Submerged sweepers and rootwads on braided island channels in lower river'
+        'UPPER & LOWER RUNS: Clear, safe Class I–II drift water with productive tailouts and accessible gravel launches.',
+        'MANDATORY TAKE-OUT AT KM 8: Kalum Canyon gorge below KM 8 Rec Site is an unrunnable Class IV–V whitewater gorge. Never drift past KM 8.',
+        'Dense grizzly bear feeding concentration along lower timbered gravel bars during autumn salmon runs',
+        'Submerged sweepers and rootwads on braided island channels in lower river near Terrace'
       ],
-      typicalFloatTimes: 'Upper Kalum (Kitsumkalum Lake to KM 8 Rec Site): 3–4 hours; Lower Kalum (Fishery Rd to Hwy 16): 4–5 hours'
+      typicalFloatTimes: 'Upper Kalum (Kitsumkalum Lake to KM 8 Rec Site): 3–4 hours (Gentle Class I–II); Lower Kalum (Fishery Rd to Hwy 16): 4–5 hours (Classic drift)'
     },
     wadeSafety: {
-      difficulty: 'Moderate',
-      footwearRecommendation: 'Studded felt waders; sharp shale ledges and slippery glacial clay banks',
-      bankAccessibility: 'Steep timbered cut-banks with slick root systems; use established game trails',
-      wadingStaffAdvice: 'Recommended when wading the tailouts of deep glacial boulder runs'
+      difficulty: 'Easy to Moderate on Gravel & Shingle Bars | Caution along Canyon Rim',
+      footwearRecommendation: 'Studded felt waders or carbide-studded rubber; sharp shale ledges and slippery glacial clay banks',
+      bankAccessibility: 'Lower river (Hwy 16 to Fishery Rd) features accessible, open shingle bars and gravel spits with straightforward wading. Mid-river Kalum canyon features steep timbered cutbanks and slippery clay shelves where extra caution is warranted.',
+      wadingStaffAdvice: 'Helpful when wading fast boulder tailouts; standard gravel wading is comfortable and wide open.'
     },
     tribalProtocols: {
       nation: 'Kitsumkalum First Nation (Tsimshian Nation)',
@@ -492,21 +493,22 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Reach-Dependent: Upper Drift / Lower Lethal Canyon',
-      whitewaterClass: 'Upper/Middle (McDonnell/Clore to KM 9.5 Bridge): Class II. Lower Canyon (KM 9.5 Bridge to Skeena): Class V+ Lethal Whitewater Gorge',
-      suitableCraft: '14–16 ft Drift boats and self-bailing whitewater rafts on UPPER/MIDDLE ONLY. NO BOATS OF ANY KIND IN LOWER CANYON.',
+      rating: 'Reach-Dependent: Scenic Class I–II Upper/Mid Drift | Unrunnable Class V+ Lower Canyon',
+      whitewaterClass: 'Upper/Middle (KM 38 Clore to KM 9.5 Campground): Class I–II (Gentle, scenic drift boat water). Lower Canyon (KM 9.5 Bridge to Skeena): Class V+ Unrunnable Bedrock Chasm',
+      suitableCraft: '14–16 ft Drift boats, rafts, and personal pontoons are widely used on the Upper/Middle stretches down to the KM 9.5 campsite. STRICTLY ZERO BOATING IN THE LOWER CANYON BELOW KM 9.5.',
       hazardWarnings: [
-        'LETHAL CANYON HAZARD: The Lower Zymoetz Canyon below KM 9.5 (6-Mile) Bridge is an impassable Class V+ gorge with undercut siphon ledges and boiling hydraulics. MANDATORY TAKE-OUT AT KM 9.5 BRIDGE.',
-        'Active heavy industrial logging corridor on single-lane Zymoetz FSR. 2-way VHF radio (RR-1 / 153.050 MHz) mandatory for all traffic.',
-        'Flash mudslides from Limonite Creek and Clore River during autumn rain-on-snow events'
+        'UPPER & MID RIVER (KM 38 to KM 9.5): Safe, widely floated Class I–II water with forgiving gravel runs, gentle tailouts, and great dry fly flats. An ideal day drift.',
+        'LOWER CANYON HAZARD: The river narrows below the KM 9.5 (6-Mile) Bridge / Campground into an unrunnable Class V+ gorge with violent boils, siphon boulders, and sheer cliffs.',
+        'MANDATORY TAKEOUT: All boats must pull out at the KM 9.5 (6-Mile) Bridge Recreation Site above the canyon.',
+        'LOGGING ROAD TRAFFIC: Zymoetz FSR is an active single-lane timber haul route. 2-way VHF radio (RR-1 / 153.050 MHz) is mandatory.'
       ],
-      typicalFloatTimes: 'Upper Float (KM 38 Clore to KM 9.5 Bridge): 5–7 hours (Class II drift); Middle Float (KM 24 Fossil Beds to KM 9.5 Bridge): 3–4.5 hours'
+      typicalFloatTimes: 'Upper Float (KM 38 Clore to KM 9.5 Campground): 5–7 hours (Scenic Class I–II); Mid Float (KM 24 Fossil Beds to KM 9.5 Campground): 3–4.5 hours (Easy drift)'
     },
     wadeSafety: {
-      difficulty: 'Challenging / Treacherous',
-      footwearRecommendation: 'Studded boots with heavy ankle support; greasy canyon boulder gardens and steep scree slopes',
-      bankAccessibility: 'Sheer canyon walls in multiple sectors; steep bush descents requiring handlines',
-      wadingStaffAdvice: 'Essential. River bottom consists of shifting bowling-ball cobblestones and sudden bedrock faults'
+      difficulty: 'Easy to Moderate on Gravel Bars | Avoid Canyon Bedrock Chutes',
+      footwearRecommendation: 'Standard felt or studded rubber wading boots for cobble flats; carbide studs helpful on polished slate shelves',
+      bankAccessibility: 'Upper & mid river (KM 0 to KM 9.5 and KM 20 to KM 38) features extensive, gentle, walk-and-wade gravel bars and friendly tailouts. Canyon reaches (KM 10 to KM 18) feature steep shale bluffs with difficult descents.',
+      wadingStaffAdvice: 'Helpful for crossing fast riffles; thousands of anglers comfortably wade the expansive gravel bars without difficulty.'
     },
     tribalProtocols: {
       nation: 'Kitselas & Wet\'suwet\'en First Nations Territory',
@@ -615,21 +617,22 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Heavy Powercraft / Jetboat Only (Severe Volume)',
-      whitewaterClass: 'Class II–III (Heavy boiling upwellings, standing whirlpools)',
-      suitableCraft: 'Heavy inboard/outboard jetboats (experienced navigators only), 16ft+ whitewater rafts',
+      rating: 'Reach-Dependent: Heavy Jetboat & Commercial Raft Corridor | Avoid Hazardous Canyons',
+      whitewaterClass: 'Valley Reaches: Class II (Massive volume, deep standing waves). Kitselas & Roche de Boule Canyons: Class III–IV Violent Boiling Hydraulics',
+      suitableCraft: 'Heavy inboard/outboard jetboats (experienced navigators only) or 16ft+ commercial whitewater rafts. Unsuitable for light personal pontoons or lightweight canoes.',
       hazardWarnings: [
-        'Kitselas and Roche de Boule canyons present extreme hydraulic boil lines that can capsize light craft',
-        'Active First Nations set nets along eddy seams—maintain 100m distance',
-        'Railway bridge footings create powerful hydraulic pinning hazards'
+        'VALLEY RUNS (Hazelton to Kitwanga, Cedarvale to Usk): Powerful, high-volume open drift suitable for heavy jetcraft and expedition rafts.',
+        'CANYON HAZARDS: Kitselas and Roche de Boule canyons feature violent hydraulic boils and whirlpool seams that can easily capsize light craft.',
+        'Active First Nations food-fishery set nets along eddy seams—maintain at least 100m distance',
+        'Railway bridge concrete footings create dangerous hydraulic pinning currents'
       ],
       typicalFloatTimes: 'Hazelton to Kitwanga: 4–6 hours (38 km); Kitwanga to Usk: Full day (65 km)'
     },
     wadeSafety: {
-      difficulty: 'Moderate',
-      footwearRecommendation: 'Felt sole boots with hardened studs for slick slate rock shelves',
-      bankAccessibility: 'Long open gravel bars on inside bends; sheer rail bed rip-rap on outside bends',
-      wadingStaffAdvice: 'Strongly recommended when wading out into heavy current to reach the inside seam'
+      difficulty: 'Easy on Broad Inside Gravel Bars | Caution along Canyon Rip-Rap',
+      footwearRecommendation: 'Felt soles with hardened tungsten studs for slick slate rock shelves and glacial silt seams',
+      bankAccessibility: 'Miles of wide, gentle inside gravel bars along Hwy 16; dangerous steep railway rip-rap and deep bedrock drops along outside bends',
+      wadingStaffAdvice: 'Helpful when wading out into heavy current to reach the inside seam; gravel bars are flat and easy to traverse.'
     },
     tribalProtocols: {
       nation: 'Gitxsan Nation (Gitanmaax, Glen Vowell, Kispiox, Gitwangak, Gitanyow Bands)',
@@ -781,20 +784,21 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Intermediate Float with Sweeper Hazards',
-      whitewaterClass: 'Class I–II (Low gradient, heavy deadfall/sweepers)',
-      suitableCraft: '14–16 ft fiberglass/aluminum drift boats, inflatable rafts, pontoon boats',
+      rating: 'Intermediate Drift with Sweeper & Low-Water Hazards',
+      whitewaterClass: 'Valley Reaches: Class I–II (Low gradient, gentle gravel runs, shifting spruce sweepers)',
+      suitableCraft: '14–16 ft fiberglass/aluminum drift boats, inflatable rafts, personal pontoon boats',
       hazardWarnings: [
-        'EXTREME SWEEPER HAZARD: River shifts gravel bars annually; freshly fallen spruce sweepers block entire braided channels',
-        'Dense grizzly bear population feeding on salmon carcasses along narrow brushy banks',
-        'Low autumn water levels can trap drift boats on shallow gravel bars'
+        'VALLEY DRIFT CONDITIONS: Beautiful, gentle Class I–II gravel riffles and long sweeping tailouts ideal for drift boats and rafts.',
+        'SWEEPER & LOGJAM HAZARDS: River shifts gravel bars annually; freshly fallen spruce sweepers can block narrow braided side channels.',
+        'Dense grizzly bear population feeding on salmon carcasses along brushy gravel banks in autumn',
+        'Low autumn water levels can ground drift boats on shallow riffles'
       ],
-      typicalFloatTimes: 'KM 33 (20-Mile) to KM 20 (12-Mile): 4–5 hours (13 km); KM 20 to Mouth: 5–6.5 hours (20 km)'
+      typicalFloatTimes: 'KM 33 (20-Mile) to KM 20 (12-Mile): 4–5 hours (13 km easy drift); KM 20 to Mouth: 5–6.5 hours (20 km scenic run)'
     },
     wadeSafety: {
-      difficulty: 'Easy',
+      difficulty: 'Easy on Gravel Bars | Watch for Soft Mud/Clay Pockets',
       footwearRecommendation: 'Felt boots or rubber vibram with light studs; soft gravel bars and fine cobble',
-      bankAccessibility: 'Gentle grassy banks and open gravel spits; some muddy clay drops',
+      bankAccessibility: 'Gentle grassy banks and open gravel spits; some muddy clay drops near cutbanks',
       wadingStaffAdvice: 'Helpful around deep clay holes and submerged log piles'
     },
     tribalProtocols: {
@@ -989,21 +993,22 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Premier Drift Boat & Raft Friendly',
-      whitewaterClass: 'Class I–II (Gentle riffles and long gravel flats)',
-      suitableCraft: '14–16 ft drift boats, whitewater rafts, personal pontoon catamarans',
+      rating: 'Reach-Dependent: Premier Class I–II Drift Reaches | Impassable Witset Canyon Falls',
+      whitewaterClass: 'Bulkley Valley & Upper Morice: Class I–II (Gentle gravel riffles and long sweeping pools). Witset (Moricetown) Canyon: Impassable Class V+ Waterfall Chasm',
+      suitableCraft: '14–16 ft drift boats, whitewater rafts, personal pontoon catamarans. STRICTLY ZERO BOATING THROUGH WITSET CANYON.',
       hazardWarnings: [
-        'Witset (Moricetown) Canyon is an impassable Class V+ waterfall gorge. ALL CRAFT MUST TAKE OUT at Trout Creek or Telkwa well above canyon.',
+        'VALLEY DRIFT SECTORS (Quick to Telkwa, Telkwa to Smithers): Premier drift boat water on earth with gentle gradients and spacious gravel launches.',
+        'WITSET CANYON MANDATORY TAKEOUT: Witset (Moricetown) Canyon is an impassable Class V+ waterfall gorge. ALL BOATS MUST TAKE OUT AT TROUT CREEK OR TELKWA.',
         'Midstream gravel bar logjams between Quick and Telkwa can create tight braids with sweepers',
-        'Morning frost in October makes boat launch ramps dangerously slick for towing vehicles'
+        'Morning frost in October makes concrete boat launch ramps dangerously slick'
       ],
-      typicalFloatTimes: 'Quick to Telkwa: 4–6 hours (22 km); Telkwa to Smithers (Ferry Park): 3.5–5 hours (18 km); Bimbear to Morice Forks: 5–6.5 hours (24 km)'
+      typicalFloatTimes: 'Quick to Telkwa: 4–6 hours (22 km classic); Telkwa to Smithers (Ferry Park): 3.5–5 hours (18 km easy); Bimbear to Morice Forks: 5–6.5 hours (24 km scenic)'
     },
     wadeSafety: {
-      difficulty: 'Easy',
+      difficulty: 'Easy on Gravel Bars | Moderate in Fast Heavy Chutes',
       footwearRecommendation: 'Felt soles with light studs or sticky rubber with carbide studs for gravel flats and rounded cobble',
-      bankAccessibility: 'Premier walk-and-wade river. Miles of wide open, gently sloping gravel bars with easy access',
-      wadingStaffAdvice: 'Recommended when crossing heavy tailout chutes to reach far-side gravel bars'
+      bankAccessibility: 'Premier walk-and-wade river in North America. Miles of wide open, gently sloping gravel bars with easy access',
+      wadingStaffAdvice: 'Helpful when crossing heavy tailout chutes to reach far-side gravel bars'
     },
     tribalProtocols: {
       nation: 'Wet\'suwet\'en First Nation (Witset, Moricetown) & Gitxsan Nation',
@@ -1112,21 +1117,22 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Expert Whitewater Expedition Rafts Only',
-      whitewaterClass: 'Class IV–V through Babine Canyon (Lethal drop-pools, boulder gardens)',
-      suitableCraft: 'Heavy expedition whitewater rafts (16–18 ft) with self-bailers and expert oarspeople. STRICTLY NO DRIFT BOATS.',
+      rating: 'Reach-Dependent: Gentle Class I–II Lake Outlet & Fence Drift | Class IV–V Babine Canyon Wilderness Gorge',
+      whitewaterClass: 'Upper Nilkitkwa Lake / Fence Sector: Class I–II (Gentle turquoise drift). Babine Canyon Wilderness Gorge: Dangerous Class IV–V Chasm (Lethal drop-pools, violent boiling hydraulics)',
+      suitableCraft: 'Upper lake/fence drift: standard drift boats & rafts. Canyon expedition reach: Heavy self-bailing whitewater expedition rafts (16–18 ft) with expert oarspeople ONLY. STRICTLY NO STANDARD DRIFT BOATS THROUGH BABINE CANYON.',
       hazardWarnings: [
-        'EXTREME GRIZZLY BEAR DENSITY: Babine Corridor Provincial Park has one of the highest concentrations of grizzly bears in North America. Bear spray and food barrels mandatory.',
-        'Babine Canyon has unrunnable Class V chasm rapids. Must scout and maintain strict expedition safety protocols.',
-        'Extremely remote: No cell phone service, satellite communication (InReach/Zoleo) mandatory.'
+        'UPPER OUTLET & FENCE REACH: Forgiving Class I–II gravel riffles and clear lake-buffered holding pools above and near the DFO counting fence.',
+        'BABINE CANYON EXPEDITION HAZARD: Impassable to standard drift craft. Multi-day remote whitewater expedition with unrunnable Class V chasm rapids.',
+        'HIGHEST GRIZZLY DENSITY IN BC: Babine Corridor Provincial Park supports hundreds of feeding grizzlies. Bear spray on belt and satellite communication mandatory.',
+        'EXTREMELY REMOTE: No cellular reception or road access for 50+ km; satellite communication (InReach/Zoleo) mandatory.'
       ],
-      typicalFloatTimes: 'Multi-day expedition float: 3 to 5 days from DFO Fence to Skeena confluence (65 km)'
+      typicalFloatTimes: 'Upper Nilkitkwa Drift: 2–3.5 hours (Class I–II); Multi-day Wilderness Canyon Expedition: 3 to 5 days from DFO Fence to Skeena confluence (65 km)'
     },
     wadeSafety: {
-      difficulty: 'Challenging / Treacherous',
+      difficulty: 'Reach-Dependent: Moderate on Upper Gravel Bars | Treacherous on Canyon Bedrock Ledges',
       footwearRecommendation: 'Felt soles with heavy tungsten studs; slippery bedrock ledges and deep current shelves',
-      bankAccessibility: 'Sheer canyon drop-offs, dense old-growth devil\'s club and alder jungle',
-      wadingStaffAdvice: 'Mandatory. Powerful hydraulic surges can sweep anglers off bedrock ledges'
+      bankAccessibility: 'Upper river features accessible gravel spits; canyon reach has sheer bedrock bluffs and dense old-growth devil\'s club brush',
+      wadingStaffAdvice: 'Mandatory on canyon ledges where hydraulic surges can sweep anglers off footing'
     },
     tribalProtocols: {
       nation: 'Lake Babine Nation & Ned\'u\'ten First Nation Traditional Territory',
@@ -1221,20 +1227,21 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Intermediate Float with Hazards',
-      whitewaterClass: 'Class II–III (Heavy canyon hydraulics, isolated Class IV gorges)',
-      suitableCraft: 'Heavy jetboat (skilled pilot) or 16ft+ whitewater raft',
+      rating: 'Reach-Dependent: Moderate Jetboat & Large Raft Corridor | Class III–IV Isolated Canyons',
+      whitewaterClass: 'Valley Mainstem: Class II–III. Kuldo Canyon & Kisgegas Chutes: Class III–IV Heavy Whitewater',
+      suitableCraft: 'Heavy inboard/outboard jetboat (skilled river pilot) or 16ft+ commercial whitewater raft',
       hazardWarnings: [
-        'Kuldo Canyon features powerful boiling upwellings and blind rock horns',
-        'Isolated northern wilderness with no cellular reception or road access for 40+ km stretches',
-        'Active timber and log jams in braided gravel bars'
+        'MAINSTEM VALLEY RUNS: Broad, powerful river corridor suitable for experienced jetboaters and large whitewater rafts.',
+        'ISOLATED CANYON CHUTES: Kuldo Canyon features powerful boiling upwellings and submerged bedrock horns.',
+        'Northern wilderness with zero cellular reception and limited road access for 40+ km stretches',
+        'Shifting timber and log jams in braided tributary mouths'
       ],
       typicalFloatTimes: 'Glen Vowell to Kispiox Confluence: 3–4.5 hours (18 km); Shegunia to Hazelton: 5–6.5 hours (32 km)'
     },
     wadeSafety: {
-      difficulty: 'Moderate',
+      difficulty: 'Reach-Dependent: Easy on Broad Cobblestone Bars | Moderate in Canyon Bluffs',
       footwearRecommendation: 'Felt soles with hardened studs for slick slate rock shelves',
-      bankAccessibility: 'Mix of broad cobblestone gravel bars and sheer canyon rock bluffs',
+      bankAccessibility: 'Mix of broad cobblestone gravel bars and steep canyon rock bluffs',
       wadingStaffAdvice: 'Recommended when wading the fast seams of the main upper Skeena'
     },
     tribalProtocols: {
@@ -1329,18 +1336,19 @@ export const AUTHENTIC_TACTICAL_DOSSIERS: Record<string, UnencryptedDossier> = {
       }
     ],
     floatSafety: {
-      rating: 'Fly-In Alpine Wilderness / Shallow Jetboat',
-      whitewaterClass: 'Class II–III (High gradient alpine freestone, shallow boulder gardens)',
+      rating: 'Fly-In Alpine Freestone / Packraft & Small Raft | Unsuitable for Heavy Drift Boats',
+      whitewaterClass: 'Class II–III (High gradient alpine freestone, shallow granite boulder gardens)',
       suitableCraft: 'Small inflatable raft, packraft, walk-and-wade. No heavy drift boats.',
       hazardWarnings: [
-        'EXTREME REMOTE WILDERNESS: 150+ km from nearest hospital or paved road. Satellite SOS beacon mandatory.',
+        'ALPINE FREESTONE WATER: Spectacular crystal-clear wilderness freestone with swift boulder riffles suitable for light packrafts and walk-in anglers.',
+        'REMOTE SANCTUARY: 150+ km from nearest hospital or paved road. Satellite SOS beacon mandatory.',
         'High grizzly bear and bull moose concentration in alpine river valley',
         'Sub-zero freeze-up can begin as early as late September'
       ],
       typicalFloatTimes: 'Fence to Lower Camp: 4–6 hours (Packraft/Walk-and-wade)'
     },
     wadeSafety: {
-      difficulty: 'Moderate',
+      difficulty: 'Moderate: Fast Crystal-Clear Freestone with Slick Granite Cobble',
       footwearRecommendation: 'Felt soles or studded rubber for slick alpine riverbed cobble and granite boulders',
       bankAccessibility: 'Open alpine gravel bars and willow meadows; pristine high-elevation scenery',
       wadingStaffAdvice: 'Essential in fast, crystal-clear freestone riffles'

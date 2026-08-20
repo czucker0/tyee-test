@@ -774,47 +774,51 @@ export const FieldNotesView: React.FC = () => {
             </div>
           </div>
 
-          {/* Actions Bar - Unified Segmented Pill Control Bar matching Standings Bars / Run Curve */}
-          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1 font-mono text-xs shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setIsDisclosureOpen(true)}
-              className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold"
-            >
-              <Info className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
-              <span>Security</span>
-            </button>
+          {/* Actions Bar - Separated Secondary Utility Pills & Primary New Note CTA */}
+          <div className="flex items-center gap-2 font-mono text-xs flex-wrap sm:flex-nowrap">
+            {/* Utility Pills Group */}
+            <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsDisclosureOpen(true)}
+                className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold"
+              >
+                <Info className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
+                <span className="hidden xs:inline">Security</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={handleExportVault}
-              disabled={notes.length === 0}
-              className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer text-xs font-bold"
-              title="Download encrypted backup file"
-            >
-              <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <span>Export</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleExportVault}
+                disabled={notes.length === 0}
+                className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer text-xs font-bold"
+                title="Download encrypted backup file"
+              >
+                <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <span className="hidden xs:inline">Export</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={handleEncryptAndSync}
-              disabled={syncing}
-              className={`px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs font-bold ${
-                syncing
-                  ? 'bg-[var(--accent-amber)] text-white'
-                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--accent-amber)] border border-[var(--border-main)]'
-              }`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-white' : 'text-[var(--accent-amber)]'}`} />
-              <span>Sync</span>
-              {pendingCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[var(--accent-amber)] text-white text-[9px] font-mono font-bold">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={handleEncryptAndSync}
+                disabled={syncing}
+                className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs font-bold ${
+                  syncing
+                    ? 'bg-[var(--accent-amber)] text-white'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--accent-amber)] hover:bg-[var(--bg-surface)]'
+                }`}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-white' : 'text-[var(--accent-amber)]'}`} />
+                <span>Sync</span>
+                {pendingCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[var(--accent-amber)] text-white text-[9px] font-mono font-bold">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
 
+            {/* Primary Action CTA */}
             <button
               type="button"
               onClick={() => {
@@ -822,9 +826,9 @@ export const FieldNotesView: React.FC = () => {
                 handleSelectRiverOnMap('Bulkley River');
                 setIsModalOpen(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-[var(--accent-amber)] text-white font-black hover:opacity-90 transition shadow-xs flex items-center gap-1.5 cursor-pointer text-xs"
+              className="px-3.5 py-2 rounded-xl bg-[var(--accent-amber)] text-white font-black hover:opacity-90 transition shadow-sm flex items-center gap-1.5 cursor-pointer text-xs shrink-0"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
               <span>New Note</span>
             </button>
           </div>

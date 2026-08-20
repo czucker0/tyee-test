@@ -67,7 +67,7 @@ export function useTyeeData() {
     parseServerYears(authenticInitial.years)
   );
 
-  const [selectedYears, setSelectedYears] = useState<number[]>([2026, 2025, 2024, 2023, 2018, 2021]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([2026, 2024, 2021, 2018, 2010, 2004, 1998, 1985]);
   const [archiveSearchQuery, setArchiveSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -101,8 +101,18 @@ export function useTyeeData() {
       if (res.ok) {
         const json: TyeeApiDataset = await res.json();
         if (json.success !== false && json.years) {
-          setDataset({ ...json, isStaticHostingerFallback: false });
-          const parsed = parseServerYears(json.years);
+          // Merge server updates (e.g. 2026 live catches) with the complete 70-year authentic archive
+          const mergedYears = { ...authenticInitial.years, ...json.years };
+          const allYearsList = Object.keys(mergedYears).map(Number).sort((a, b) => b - a);
+
+          setDataset({
+            ...json,
+            years: mergedYears,
+            availableArchiveYears: allYearsList,
+            defaultDecadeYears: authenticInitial.defaultDecadeYears,
+            isStaticHostingerFallback: false,
+          });
+          const parsed = parseServerYears(mergedYears);
           setAllYearsData(parsed);
           setIsStaticHostinger(false);
           return;
@@ -114,7 +124,7 @@ export function useTyeeData() {
       setIsStaticHostinger(true);
       applyLocalStorageOverrides();
     }
-  }, [parseServerYears, applyLocalStorageOverrides]);
+  }, [authenticInitial.years, authenticInitial.defaultDecadeYears, parseServerYears, applyLocalStorageOverrides]);
 
   useEffect(() => {
     fetchDataset();

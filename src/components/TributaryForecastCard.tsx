@@ -155,6 +155,9 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
     tributaries[0]?.name || 'Bulkley / Morice River System'
   );
 
+  // Basin hovered in SVG map
+  const [hoveredRiverName, setHoveredRiverName] = useState<string | null>(null);
+
   // For Admins only: Switch between Overview and Tactical Intel
   const [adminViewMode, setAdminViewMode] = useState<'overview' | 'tactical'>('overview');
 
@@ -385,7 +388,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
   const floatSafety = decrypted?.floatSafety;
   const wadeSafety = decrypted?.wadeSafety;
   const confidenceRating = decrypted?.confidenceRating || 'High Confidence';
-  const confidenceRationale = decrypted?.confidenceRationale || 'Verified field telemetry & provincial hydrological baselines';
+  const confidenceRationale = decrypted?.confidenceRationale || 'Verified field data & provincial hydrological baselines';
   const confMeta = getConfidenceBadge(confidenceRating);
 
   return (
@@ -473,33 +476,62 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
         </div>
       </div>
 
-      {/* 2. Clean Theme-Adaptive Stylized Watershed Map (Synchronized with Field Notes Topology Style) */}
+      {/* 2. Clean Theme-Adaptive Stylized Watershed Map */}
       {showWatershedMap && (
         <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
-              <span>Skeena Watershed Topology &bull; Click Reach to Inspect Basin</span>
+              <span>Skeena Watershed Topology &bull; Click or Hover Reach</span>
             </span>
-            <span className="text-[10px] font-mono text-[var(--accent-teal)] font-bold">
+            <span className="text-[10px] font-mono text-[var(--accent-teal)] font-bold hidden sm:inline-block">
               KM 0 (Tyee) ➔ KM 450 (Sustut)
             </span>
           </div>
 
-          <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl overflow-hidden p-3 select-none">
-            {/* In-Map Active HUD */}
-            <div className="absolute top-2.5 left-2.5 pointer-events-none z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)]/90 backdrop-blur-md border border-[var(--border-main)] shadow-xs">
-              <Compass className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
-              <span className="text-[11px] font-mono font-extrabold text-[var(--text-main)]">
-                {selectedRiverName}
-              </span>
+          <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl overflow-hidden p-2 sm:p-3 select-none">
+            {/* Desktop In-Map Active HUD - Hidden on Mobile to avoid covering map */}
+            <div className="hidden sm:flex absolute top-3 left-3 z-10 flex-col gap-1 p-3 rounded-xl bg-[var(--bg-surface)]/95 backdrop-blur-md border border-[var(--border-main)] shadow-md max-w-xs transition-all pointer-events-none">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-teal)] animate-pulse shrink-0" />
+                <span className="text-sm font-heading font-extrabold text-[var(--text-main)] truncate">
+                  {hoveredRiverName || selectedRiverName}
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-[var(--text-secondary)]">
+                {(() => {
+                  const targetRiverName = hoveredRiverName || selectedRiverName;
+                  const targetRiver = tributaries.find(t => t.name === targetRiverName);
+                  const targetDecrypted = decryptedDossiers[targetRiverName] || (AUTHENTIC_TACTICAL_DOSSIERS as any)[targetRiverName];
+                  const transitTime = targetRiver?.scientificBaselines?.transitTimeDays || '12–24d';
+                  const gsiShare = targetRiver?.historicalStockSharePercent || 15;
+                  const floatSummary = targetDecrypted?.floatSafety?.rating || targetRiver?.description || 'River corridor';
+
+                  return (
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[var(--accent-teal)] font-bold">{gsiShare}% GSI Share</span>
+                        <span>&bull;</span>
+                        <span>Transit: {transitTime}</span>
+                      </div>
+                      <p className="text-[10px] text-[var(--text-muted)] font-sans line-clamp-1">
+                        {floatSummary}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
 
-            {/* Watershed SVG Topology */}
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {/* Watershed SVG Topology - Clean Horizontal Left-to-Right Flow */}
+            <svg 
+              className="w-full h-full" 
+              viewBox="0 0 100 60" 
+              preserveAspectRatio="xMidYMid meet"
+            >
               <defs>
-                <linearGradient id="watershedSkeenaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.8" />
+                <linearGradient id="watershedSkeenaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.85" />
                   <stop offset="100%" stopColor="#0284c7" stopOpacity="0.95" />
                 </linearGradient>
                 
@@ -512,195 +544,197 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                 </filter>
               </defs>
 
-              {/* 1. Lower Skeena Mainstem: Tyee Estuary (12,85) to Terrace/Kalum Junction (35,68) */}
+              {/* 1. Lower Skeena Mainstem: Tyee Estuary (6,32) to Terrace/Kalum Junction (32,30) */}
               <g
                 onClick={() => setSelectedRiverName('Lower Skeena Mainstem')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '24% 76%' }}
+                onMouseEnter={() => setHoveredRiverName('Lower Skeena Mainstem')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 12 85 Q 24 75 35 68" 
+                  d="M 6 32 Q 18 31 32 30" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Lower Skeena Mainstem' ? '#38bdf8' : 'url(#watershedSkeenaGradient)'} 
-                  strokeWidth={selectedRiverName === 'Lower Skeena Mainstem' ? '5.2' : '4.2'}
+                  stroke={selectedRiverName === 'Lower Skeena Mainstem' || hoveredRiverName === 'Lower Skeena Mainstem' ? '#38bdf8' : 'url(#watershedSkeenaGradient)'} 
+                  strokeWidth={selectedRiverName === 'Lower Skeena Mainstem' || hoveredRiverName === 'Lower Skeena Mainstem' ? '5.5' : '4.2'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Lower Skeena Mainstem' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#38bdf8] group-hover:stroke-[5.2] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Lower Skeena Mainstem' ? 'scale(1.03)' : 'scale(1)',
-                    transformOrigin: '24% 76%'
-                  }}
+                  filter={selectedRiverName === 'Lower Skeena Mainstem' || hoveredRiverName === 'Lower Skeena Mainstem' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* 2. Middle Skeena Mainstem: Terrace (35,68) to Hazelton / Bulkley Junction (50,48) */}
+              {/* 2. Middle Skeena Mainstem: Terrace (32,30) to Hazelton / Bulkley Junction (56,28) */}
               <g
                 onClick={() => setSelectedRiverName('Middle Skeena Mainstem')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '42% 58%' }}
+                onMouseEnter={() => setHoveredRiverName('Middle Skeena Mainstem')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 35 68 Q 42 58 50 48" 
+                  d="M 32 30 Q 44 29 56 28" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Middle Skeena Mainstem' ? '#38bdf8' : 'url(#watershedSkeenaGradient)'} 
-                  strokeWidth={selectedRiverName === 'Middle Skeena Mainstem' ? '4.8' : '3.8'}
+                  stroke={selectedRiverName === 'Middle Skeena Mainstem' || hoveredRiverName === 'Middle Skeena Mainstem' ? '#38bdf8' : 'url(#watershedSkeenaGradient)'} 
+                  strokeWidth={selectedRiverName === 'Middle Skeena Mainstem' || hoveredRiverName === 'Middle Skeena Mainstem' ? '5.2' : '3.8'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Middle Skeena Mainstem' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#38bdf8] group-hover:stroke-[4.8] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Middle Skeena Mainstem' ? 'scale(1.03)' : 'scale(1)',
-                    transformOrigin: '42% 58%'
-                  }}
+                  filter={selectedRiverName === 'Middle Skeena Mainstem' || hoveredRiverName === 'Middle Skeena Mainstem' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* 3. Upper Skeena Corridor: Hazelton (50,48) through Kuldo/Sustut (60,25 T 75,12) */}
+              {/* 3. Upper Skeena Corridor: Hazelton (56,28) heading north-east towards Kuldo & Sustut (74,18 to 88,10) */}
               <g
                 onClick={() => setSelectedRiverName('Upper Skeena & Other Tributaries')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '65% 25%' }}
+                onMouseEnter={() => setHoveredRiverName('Upper Skeena & Other Tributaries')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 50 48 Q 55 35 60 25 T 75 12" 
+                  d="M 56 28 Q 68 20 80 14 T 92 8" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Upper Skeena & Other Tributaries' ? '#818cf8' : 'url(#watershedSkeenaGradient)'} 
-                  strokeWidth={selectedRiverName === 'Upper Skeena & Other Tributaries' ? '4.2' : '3.2'}
+                  stroke={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? '#a78bfa' : '#818cf8'} 
+                  strokeWidth={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? '4.6' : '3.4'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Upper Skeena & Other Tributaries' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#818cf8] group-hover:stroke-[4.2] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Upper Skeena & Other Tributaries' ? 'scale(1.03)' : 'scale(1)',
-                    transformOrigin: '65% 25%'
-                  }}
+                  filter={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Bulkley River Tributary Branch */}
+              {/* Bulkley & Morice River System - Branching South-East (56,28 to 94,52) */}
               <g
                 onClick={() => setSelectedRiverName('Bulkley / Morice River System')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '65% 65%' }}
+                onMouseEnter={() => setHoveredRiverName('Bulkley / Morice River System')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 45 55 Q 58 60 68 64 T 82 75" 
+                  d="M 56 28 Q 68 38 80 46 T 94 52" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Bulkley / Morice River System' ? '#fbbf24' : '#d97706'} 
-                  strokeWidth={selectedRiverName === 'Bulkley / Morice River System' ? '3.8' : '2.8'}
+                  stroke={selectedRiverName === 'Bulkley / Morice River System' || hoveredRiverName === 'Bulkley / Morice River System' ? '#fde047' : '#d97706'} 
+                  strokeWidth={selectedRiverName === 'Bulkley / Morice River System' || hoveredRiverName === 'Bulkley / Morice River System' ? '4.4' : '3.0'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Bulkley / Morice River System' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#fbbf24] group-hover:stroke-[3.8] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Bulkley / Morice River System' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '65% 65%'
-                  }}
+                  filter={selectedRiverName === 'Bulkley / Morice River System' || hoveredRiverName === 'Bulkley / Morice River System' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Babine River Branch */}
+              {/* Babine River Branch - Given clean east/central-east corridor (64,24 to 94,30) with zero overlap */}
               <g
                 onClick={() => setSelectedRiverName('Babine River')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '70% 35%' }}
+                onMouseEnter={() => setHoveredRiverName('Babine River')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 52 45 Q 62 38 72 32 T 85 28" 
+                  d="M 64 24 Q 76 26 86 28 T 95 30" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Babine River' ? '#34d399' : '#10b981'} 
-                  strokeWidth={selectedRiverName === 'Babine River' ? '3.5' : '2.4'}
+                  stroke={selectedRiverName === 'Babine River' || hoveredRiverName === 'Babine River' ? '#34d399' : '#059669'} 
+                  strokeWidth={selectedRiverName === 'Babine River' || hoveredRiverName === 'Babine River' ? '4.6' : '3.2'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Babine River' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#34d399] group-hover:stroke-[3.5] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Babine River' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '70% 35%'
-                  }}
+                  filter={selectedRiverName === 'Babine River' || hoveredRiverName === 'Babine River' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Kispiox River Branch */}
+              {/* Kispiox River Branch - Branching North at Hazelton */}
               <g
                 onClick={() => setSelectedRiverName('Kispiox River')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '50% 38%' }}
+                onMouseEnter={() => setHoveredRiverName('Kispiox River')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 46 48 Q 48 38 52 28" 
+                  d="M 54 28 Q 50 18 46 8" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Kispiox River' ? '#fde047' : '#f59e0b'} 
-                  strokeWidth={selectedRiverName === 'Kispiox River' ? '3.2' : '2.2'}
+                  stroke={selectedRiverName === 'Kispiox River' || hoveredRiverName === 'Kispiox River' ? '#fcd34d' : '#f59e0b'} 
+                  strokeWidth={selectedRiverName === 'Kispiox River' || hoveredRiverName === 'Kispiox River' ? '4.0' : '2.6'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Kispiox River' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#fde047] group-hover:stroke-[3.2] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Kispiox River' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '50% 38%'
-                  }}
+                  filter={selectedRiverName === 'Kispiox River' || hoveredRiverName === 'Kispiox River' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Kalum River Branch */}
+              {/* Kalum River Branch - Branching North at Terrace */}
               <g
                 onClick={() => setSelectedRiverName('Kalum (Kitsumkalum) River')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '28% 58%' }}
+                onMouseEnter={() => setHoveredRiverName('Kalum (Kitsumkalum) River')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 28 68 Q 26 58 28 48" 
+                  d="M 30 30 Q 28 18 26 8" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Kalum (Kitsumkalum) River' ? '#7dd3fc' : '#38bdf8'} 
-                  strokeWidth={selectedRiverName === 'Kalum (Kitsumkalum) River' ? '3.2' : '2.2'}
+                  stroke={selectedRiverName === 'Kalum (Kitsumkalum) River' || hoveredRiverName === 'Kalum (Kitsumkalum) River' ? '#67e8f9' : '#06b6d4'} 
+                  strokeWidth={selectedRiverName === 'Kalum (Kitsumkalum) River' || hoveredRiverName === 'Kalum (Kitsumkalum) River' ? '4.2' : '2.8'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Kalum (Kitsumkalum) River' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#7dd3fc] group-hover:stroke-[3.2] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Kalum (Kitsumkalum) River' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '28% 58%'
-                  }}
+                  filter={selectedRiverName === 'Kalum (Kitsumkalum) River' || hoveredRiverName === 'Kalum (Kitsumkalum) River' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Copper / Zymoetz River Branch */}
+              {/* Copper / Zymoetz River Branch - Branching South-East at Terrace */}
               <g
                 onClick={() => setSelectedRiverName('Zymoetz (Copper) River')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '40% 75%' }}
+                onMouseEnter={() => setHoveredRiverName('Zymoetz (Copper) River')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 32 70 Q 40 75 48 82" 
+                  d="M 34 30 Q 40 42 48 54" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Zymoetz (Copper) River' ? '#67e8f9' : '#06b6d4'} 
-                  strokeWidth={selectedRiverName === 'Zymoetz (Copper) River' ? '3.2' : '2.2'}
+                  stroke={selectedRiverName === 'Zymoetz (Copper) River' || hoveredRiverName === 'Zymoetz (Copper) River' ? '#38bdf8' : '#0284c7'} 
+                  strokeWidth={selectedRiverName === 'Zymoetz (Copper) River' || hoveredRiverName === 'Zymoetz (Copper) River' ? '4.2' : '2.8'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Zymoetz (Copper) River' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#67e8f9] group-hover:stroke-[3.2] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Zymoetz (Copper) River' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '40% 75%'
-                  }}
+                  filter={selectedRiverName === 'Zymoetz (Copper) River' || hoveredRiverName === 'Zymoetz (Copper) River' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
 
-              {/* Sustut Headwater Branch */}
+              {/* Sustut Headwater Branch - Flowing North from Upper Skeena */}
               <g
                 onClick={() => setSelectedRiverName('Upper Skeena & Other Tributaries')}
-                className="cursor-pointer group transition-all duration-200"
-                style={{ transformOrigin: '73% 20%' }}
+                onMouseEnter={() => setHoveredRiverName('Upper Skeena & Other Tributaries')}
+                onMouseLeave={() => setHoveredRiverName(null)}
+                className="cursor-pointer group"
               >
                 <path 
-                  d="M 62 25 Q 74 18 84 14" 
+                  d="M 78 15 Q 82 8 88 4" 
                   fill="none" 
-                  stroke={selectedRiverName === 'Upper Skeena & Other Tributaries' ? '#6ee7b7' : '#059669'} 
-                  strokeWidth={selectedRiverName === 'Upper Skeena & Other Tributaries' ? '3' : '2'}
+                  stroke={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? '#6ee7b7' : '#10b981'} 
+                  strokeWidth={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? '4.0' : '2.6'}
                   strokeLinecap="round"
-                  filter={selectedRiverName === 'Upper Skeena & Other Tributaries' ? 'url(#wsGlowEffect)' : undefined}
-                  className="transition-all duration-200 group-hover:stroke-[#6ee7b7] group-hover:stroke-[3] group-hover:[filter:url(#wsGlowEffect)]"
-                  style={{
-                    transform: selectedRiverName === 'Upper Skeena & Other Tributaries' ? 'scale(1.02)' : 'scale(1)',
-                    transformOrigin: '73% 20%'
-                  }}
+                  filter={selectedRiverName === 'Upper Skeena & Other Tributaries' || hoveredRiverName === 'Upper Skeena & Other Tributaries' ? 'url(#wsGlowEffect)' : undefined}
                 />
               </g>
             </svg>
+          </div>
+
+          {/* Mobile Active Reach Telemetry Card - Placed under map on mobile for 100% unobstructed view */}
+          <div className="flex sm:hidden flex-col gap-1 p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-[var(--accent-teal)] animate-pulse shrink-0" />
+                <span className="text-xs font-heading font-extrabold text-[var(--text-main)] truncate">
+                  {hoveredRiverName || selectedRiverName}
+                </span>
+              </div>
+              {(() => {
+                const targetRiverName = hoveredRiverName || selectedRiverName;
+                const targetRiver = tributaries.find(t => t.name === targetRiverName);
+                const gsiShare = targetRiver?.historicalStockSharePercent || 15;
+                return (
+                  <span className="px-1.5 py-0.5 rounded bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] text-[10px] font-mono font-bold shrink-0">
+                    {gsiShare}% GSI
+                  </span>
+                );
+              })()}
+            </div>
+            {(() => {
+              const targetRiverName = hoveredRiverName || selectedRiverName;
+              const targetRiver = tributaries.find(t => t.name === targetRiverName);
+              const targetDecrypted = decryptedDossiers[targetRiverName] || (AUTHENTIC_TACTICAL_DOSSIERS as any)[targetRiverName];
+              const transitTime = targetRiver?.scientificBaselines?.transitTimeDays || '12–24d';
+              const floatSummary = targetDecrypted?.floatSafety?.rating || targetRiver?.description || 'River corridor';
+
+              return (
+                <div className="text-[10px] font-mono text-[var(--text-secondary)] space-y-0.5">
+                  <div>Transit Velocity: <span className="text-[var(--text-main)] font-medium">{transitTime} from Tyee</span></div>
+                  <p className="text-[10px] text-[var(--text-muted)] font-sans line-clamp-1">
+                    {floatSummary}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -948,7 +982,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               </div>
             )}
 
-            {/* VIEW MODE 2: ADMIN TACTICAL INTELLIGENCE (Strictly Gated for Authorized Admins) */}
+            {/* VIEW MODE 2: RIVER ACCESS & CONDITIONS (Strictly Gated for Authorized Admins) */}
             {isAdmin && adminViewMode === 'tactical' && adminIntel && (
               <div className="space-y-5 animate-in fade-in duration-150 font-mono text-xs">
                 {/* Admin Intel Header: Clean Single Line */}
@@ -956,7 +990,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                     <span className="font-heading font-extrabold text-xs uppercase tracking-wide text-[var(--text-main)]">
-                      Confidential Basin Intelligence &amp; Access Vault
+                      River Profile, Access Points &amp; Safety Details
                     </span>
                   </div>
                   {accessPoints && accessPoints.length > 0 && (
@@ -978,7 +1012,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   )}
                 </div>
 
-                {/* Holding Water Anatomy & Swing Bite Triggers */}
+                {/* Holding Water Anatomy & Fly Recommendations */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
                     <span className="text-[var(--accent-teal)] block uppercase text-[10px] font-bold">
@@ -991,7 +1025,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                   <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
                     <span className="text-[var(--accent-amber)] block uppercase text-[10px] font-bold">
-                      Fly Swing &amp; Bite Triggers:
+                      Fly &amp; Tackle Recommendations:
                     </span>
                     <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
                       {adminIntel.tacticalBiteTriggers}
@@ -1009,7 +1043,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                   <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
                     <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
-                      Passage &amp; Guide Notes:
+                      Run Timing &amp; River Notes:
                     </span>
                     <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
                       {adminIntel.historicalGuideNotes || adminIntel.estuaryPassageNotes}
@@ -1046,32 +1080,36 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
                 )}
 
-                {/* VHF Resource Road Radio Protocols */}
+                {/* VHF Resource Road Radio Protocols - Full Width Container */}
                 {roadProtocols.length > 0 && (
-                  <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 text-sky-500 font-bold uppercase tracking-wider text-[11px] truncate">
-                        <Radio className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">VHF Resource Road Channels</span>
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 text-sky-500 font-bold uppercase tracking-wider text-xs truncate min-w-0">
+                        <Radio className="w-4 h-4 shrink-0" />
+                        <span className="truncate">VHF Resource Road Radio Channels</span>
                       </div>
-                      <span className="text-[10px] text-[var(--text-muted)] font-mono shrink-0">
-                        Logging Corridors
+                      <span className="text-[10px] text-sky-600 dark:text-sky-400 font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/30 shrink-0 max-w-full truncate">
+                        Active FSR &bull; Mandatory Radio Calling
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
+                      Forest Service Roads (FSR) are active, single-lane commercial timber corridors with loaded logging trucks. Calling kilometer markers and travel direction on two-way VHF radio is required for driver safety.
+                    </p>
+
+                    <div className={`grid gap-3 pt-1 ${roadProtocols.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
                       {roadProtocols.map((rp, i) => (
-                        <div key={i} className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1">
-                          <div className="flex items-center justify-between text-xs font-bold text-[var(--text-main)]">
+                        <div key={i} className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-main)] space-y-1.5 shadow-xs w-full">
+                          <div className="flex items-center justify-between text-xs font-bold text-[var(--text-main)] gap-2">
                             <div className="flex items-center gap-1.5 truncate">
                               <Truck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               <span className="truncate">{rp.roadName}</span>
                             </div>
-                            <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 text-[10px] font-mono border border-sky-500/30 shrink-0">
-                              {rp.rrChannel}
+                            <span className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 text-[10px] font-mono font-bold border border-sky-500/30 shrink-0">
+                              {rp.rrChannel} &bull; {rp.frequencyMhz}
                             </span>
                           </div>
-                          <p className="text-[11px] text-[var(--text-secondary)] font-sans leading-relaxed">
+                          <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
                             {rp.callingRules}
                           </p>
                         </div>
@@ -1082,9 +1120,9 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                 {/* Float & Wade Safety Profiles */}
                 {(floatSafety || wadeSafety) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className={`grid gap-3 pt-1 ${floatSafety && wadeSafety ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
                     {floatSafety && (
-                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 w-full">
                         <div className="flex items-center gap-1.5 text-rose-500 font-bold uppercase tracking-wider text-[11px] truncate">
                           <LifeBuoy className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">Float Navigation Profile</span>
@@ -1111,7 +1149,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                     )}
 
                     {wadeSafety && (
-                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 w-full">
                         <div className="flex items-center gap-1.5 text-amber-500 font-bold uppercase tracking-wider text-[11px] truncate">
                           <Footprints className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">Wading Safety Profile</span>
@@ -1148,11 +1186,11 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className={`grid gap-3 ${suggestedFloats.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
                       {suggestedFloats.map((fl) => (
                         <div
                           key={fl.id}
-                          className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 flex flex-col justify-between shadow-xs"
+                          className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 flex flex-col justify-between shadow-xs w-full"
                         >
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between gap-1 flex-wrap">
@@ -1294,14 +1332,14 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               </div>
             )}
 
-            {/* 5. Prominent Backcountry Peril & User Liability Notice */}
+            {/* 5. Prominent Backcountry Safety & User Responsibility Notice */}
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-[var(--text-secondary)] space-y-1.5 mt-4">
               <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-                <span>Wilderness Intelligence &bull; Access Strictly at Your Own Risk &amp; Peril</span>
+                <span>River &amp; Backcountry Safety Notice &bull; Access at Your Own Risk</span>
               </div>
               <p className="leading-relaxed font-sans text-xs">
-                All tactical intelligence, road navigation spurs, canyon tracks, and boat access waypoints are compiled for backcountry navigational awareness only. Skeena wilderness corridors present extreme natural hazards including unmaintained logging roads, sudden flash flooding, Class IV/V whitewater canyons, glacial currents, hypothermia, dense grizzly bear populations, and zero cellular coverage. You are solely responsible for your own safety, satellite SOS transceivers, proper permits, and river-reading judgment.
+                All road navigation, river access points, and float descriptions are compiled for backcountry navigational awareness. Skeena watershed corridors present natural hazards including active single-lane logging roads, heavy whitewater canyons, cold glacial currents, sudden weather shifts, dense grizzly bear populations, and limited cellular coverage. Anglers and boaters are responsible for carrying two-way satellite transceivers, proper licenses and safety gear, and exercising sound river judgment.
               </p>
             </div>
           </div>

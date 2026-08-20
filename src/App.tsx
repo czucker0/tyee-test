@@ -16,6 +16,7 @@ import {
 } from './utils/projectionEngine';
 import { Header } from './components/Header';
 import { DateSliderControl } from './components/DateSliderControl';
+import { SharedComparisonToolbar } from './components/SharedComparisonToolbar';
 import { KeyMetricsBar } from './components/KeyMetricsBar';
 import { CumulativeRunChart } from './components/CumulativeRunChart';
 import { DailyRunPulseChart } from './components/DailyRunPulseChart';
@@ -24,7 +25,6 @@ import { ProjectionDetailsCard } from './components/ProjectionDetailsCard';
 import { TributaryForecastCard } from './components/TributaryForecastCard';
 import { HistoricalComparisonTable } from './components/HistoricalComparisonTable';
 import { HeadToHeadCompareCard } from './components/HeadToHeadCompareCard';
-import { HistoricalYearArchiveSearch } from './components/HistoricalYearArchiveSearch';
 import { WhatIfSandbox } from './components/WhatIfSandbox';
 import { AIAnalystModal } from './components/AIAnalystModal';
 import { AboutTyeeModal } from './components/AboutTyeeModal';
@@ -48,6 +48,8 @@ import {
   Bot,
   Lock,
   Fish,
+  Calendar,
+  ChevronRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -114,20 +116,23 @@ export default function App() {
   // Display Units: Tyee Index points vs Estimated Adult Steelhead
   const [isMetricInAdults, setIsMetricInAdults] = useState<boolean>(false);
 
-  // Scroll detection for dynamic condensed sticky bar
+  // 5 Main Mobile-First Tabs
+  const [activeTab, setActiveTab] = useState<MainTabType>('overview');
+
+  // Scroll detection for ultra-compact sticky date slider
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
+      if (window.scrollY > 80) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
     };
-    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // 4 Main Mobile-First Tabs
-  const [activeTab, setActiveTab] = useState<MainTabType>('overview');
 
   // Modals
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
@@ -141,13 +146,19 @@ export default function App() {
   });
 
   // Select year presets
-  const handleSelectYearPreset = (preset: 'all' | 'recent' | 'extremes' | 'currentOnly') => {
+  const handleSelectYearPreset = (preset: 'all' | 'recent' | 'extremes' | 'vintage' | 'currentOnly') => {
     if (preset === 'all') {
       setSelectedYears(effectiveAllYears.map((y) => y.year));
     } else if (preset === 'recent') {
       setSelectedYears(effectiveAllYears.filter((y) => y.year >= 2022).map((y) => y.year));
     } else if (preset === 'extremes') {
-      setSelectedYears([2016, 2018, 2021, 2025, 2026]);
+      // Historical all-time highs and crisis lows
+      const extremeYears = [1998, 2004, 2010, 2018, 2021, 2024, 2026];
+      setSelectedYears(effectiveAllYears.filter((y) => extremeYears.includes(y.year)).map((y) => y.year));
+    } else if (preset === 'vintage') {
+      // Classic 1950s - 1980s runs
+      const vintageYears = [1956, 1968, 1978, 1985, 1989, 2026];
+      setSelectedYears(effectiveAllYears.filter((y) => vintageYears.includes(y.year)).map((y) => y.year));
     } else if (preset === 'currentOnly') {
       setSelectedYears([CURRENT_YEAR]);
     }
@@ -251,82 +262,75 @@ export default function App() {
     SEASON_DAYS.forEach((sDay, idx) => {
       const hist = HISTORICAL_AVERAGE_CURVE[idx];
       const pItem = projMap.get(idx);
-
-      csv += `${idx + 1},${sDay.monthDay},2026-${sDay.month < 10 ? '0' + sDay.month : sDay.month}-${sDay.day < 10 ? '0' + sDay.day : sDay.day},${hist?.avgCumulative || 0},`;
-
+      csv += `${idx},"${sDay.monthDay}","2026-${sDay.month < 10 ? '0' + sDay.month : sDay.month}-${sDay.day < 10 ? '0' + sDay.day : sDay.day}",${hist?.avgCumulative || 0},`;
       effectiveAllYears.forEach((y) => {
-        csv += `${y.data[idx]?.cumulativeIndex || 0},`;
+        csv += `${y.data[idx]?.cumulativeIndex ?? ''},`;
       });
-
-      const projCum = pItem ? pItem.projectedCumulative : '';
-      const projLow = pItem ? pItem.projectedCumulativeLow : '';
-      const projHigh = pItem ? pItem.projectedCumulativeHigh : '';
-
-      csv += `${projCum},${projLow},${projHigh}\n`;
+      csv += `${pItem?.projectedCumulative ?? ''},${pItem?.projectedCumulativeLow ?? ''},${pItem?.projectedCumulativeHigh ?? ''}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Skeena_Steelhead_DFO_Dataset_${selectedMonthDay.replace(' ', '_')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Skeena_Tyee_Run_Data_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  // 4 Main Mobile-First Tabs
+  // Tab definitions
   const tabs = [
     {
       id: 'overview' as MainTabType,
-      label: 'Overview',
+      label: 'Run Overview',
       shortLabel: 'Overview',
-      icon: <TrendingUp className="w-4 h-4" />,
+      icon: <Fish className="w-4 h-4" />,
       badge: 'Live',
     },
     {
       id: 'forecast' as MainTabType,
-      label: 'Forecast & Projections',
+      label: 'Run Forecast',
       shortLabel: 'Forecast',
-      icon: <Sparkles className="w-4 h-4" />,
+      icon: <TrendingUp className="w-4 h-4" />,
     },
     {
       id: 'compare' as MainTabType,
-      label: 'Historical Comparison',
-      shortLabel: 'Compare',
+      label: 'Historical Archive',
+      shortLabel: 'History',
       icon: <ArrowRightLeft className="w-4 h-4" />,
+      badge: '70 Yrs',
     },
     {
       id: 'tributaries' as MainTabType,
-      label: 'Watershed Escapement',
+      label: 'Tributaries',
       shortLabel: 'Watersheds',
-      icon: <MapPin className="w-4 h-4" />,
-      badge: `${tributaries.length} Basins`,
+      icon: <Waves className="w-4 h-4" />,
     },
     {
       id: 'field-notes' as MainTabType,
       label: 'Field Notes',
-      shortLabel: 'Field Notes',
-      icon: <Lock className="w-4 h-4" />,
-      badge: 'Encrypted',
+      shortLabel: 'Vault',
+      icon: user ? <MapPin className="w-4 h-4" /> : <Lock className="w-4 h-4" />,
+      badge: user ? 'Sync' : 'Auth',
     },
   ];
 
-  // Auth Protection Gate
+  // Auth loading splash
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col items-center justify-center space-y-4 text-[var(--text-secondary)]">
-        <div className="relative p-4 rounded-2xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)]">
-          <Waves className="w-8 h-8 animate-pulse" />
-        </div>
-        <div className="text-center space-y-1">
-          <p className="text-base font-heading font-black text-[var(--text-main)] tracking-wider uppercase">BKLYNFLY</p>
-          <p className="text-xs font-mono font-bold text-[var(--accent-amber)] tracking-wider uppercase">SKEENA STEELHEAD RUN TRACKER</p>
-          <p className="text-[11px] text-[var(--text-muted)] font-mono pt-1">Verifying authorized profile &amp; telemetry sync...</p>
+      <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center">
+        <div className="text-center space-y-3 font-mono">
+          <div className="w-10 h-10 border-3 border-[var(--accent-amber)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[var(--text-secondary)] font-bold tracking-wider uppercase">
+            Synchronizing Skeena Telemetry...
+          </p>
         </div>
       </div>
     );
   }
 
+  // Auth gate check
   if (!user) {
     return (
       <>
@@ -355,12 +359,10 @@ export default function App() {
         }}
       />
 
-      {/* Timeline & Navigation Header Dock - Anchored to top-0 on mobile, top-[53px] on desktop */}
-      <div className={`sticky top-0 sm:top-[53px] z-20 bg-[var(--bg-surface)]/95 border-b border-[var(--border-main)] shadow-sm backdrop-blur-md transition-all duration-200 ${
-        isScrolled ? 'py-1.5 sm:py-2' : 'py-2 sm:py-2.5'
-      }`}>
-        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 space-y-1.5 sm:space-y-2">
-          {/* Date Slider Control */}
+      {/* Timeline & Navigation Header Dock - Stable height, zero scroll jitter */}
+      <div className="sticky top-0 sm:top-[53px] z-30 bg-[var(--bg-surface)]/95 border-b border-[var(--border-main)] shadow-sm backdrop-blur-md py-1.5 sm:py-2">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 space-y-1.5">
+          {/* Date Slider Control (Ultra-compact minimal mode when scrolled) */}
           <DateSliderControl
             currentDayIndex={currentDayIndex}
             onDayChange={handleDayChange}
@@ -370,7 +372,7 @@ export default function App() {
             playSpeed={playSpeed}
             onChangeSpeed={(spd) => setPlaySpeed(spd)}
             latestRecordedDayIndex={latestRecordedDayIndex}
-            isCondensed={isScrolled}
+            isCompactSticky={isScrolled}
           />
 
           {/* Segmented Tab Navigation - Full Width 5-Column Grid on sm+ screens */}
@@ -381,9 +383,7 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 ${
-                    isScrolled ? 'py-1.5 text-xs' : 'py-2 text-xs sm:text-[13px]'
-                  } rounded-lg font-bold transition ${
+                  className={`w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2 text-xs sm:text-[13px] rounded-lg font-bold transition cursor-pointer ${
                     isActive
                       ? 'bg-[var(--accent-amber)] text-white shadow-sm font-black'
                       : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-[var(--border-main)]'
@@ -426,13 +426,13 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCustomMultiplier(1.0)}
-                className="px-2.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] transition font-bold"
+                className="px-2.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] transition font-bold cursor-pointer"
               >
                 Reset to Live
               </button>
               <button
                 onClick={() => setIsSandboxOpen(true)}
-                className="text-[var(--accent-amber)] hover:underline font-medium"
+                className="text-[var(--accent-amber)] hover:underline font-medium cursor-pointer"
               >
                 Adjust Sandbox
               </button>
@@ -440,12 +440,9 @@ export default function App() {
           </div>
         )}
 
-        {/* 1. OVERVIEW TAB */}
+        {/* 1. OVERVIEW TAB - Pure Live 2026 In-Season Focus */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Regional Weather Hub (Terrace & Smithers Toggle - Non-sticky, clean flow) */}
-            <RegionalWeatherWidget defaultZone="Terrace" />
-
             {/* 4 Key Metric Cards */}
             <KeyMetricsBar
               projection={projection}
@@ -460,28 +457,53 @@ export default function App() {
               onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
             />
 
-            {/* Primary Cumulative Run Line Chart */}
+            {/* Primary Cumulative Run Line Chart (2026 vs 10-Yr Baseline) */}
             <CumulativeRunChart
               currentDayIndex={currentDayIndex}
               projection={projection}
               selectedMonthDay={selectedMonthDay}
               isMetricInAdults={isMetricInAdults}
-              selectedYears={selectedYears}
+              selectedYears={[CURRENT_YEAR]}
               onToggleYear={toggleYear}
               onSelectPreset={handleSelectYearPreset}
               allYears={effectiveAllYears}
             />
 
-            {/* Daily Drift Net Sets & Migration Pulses */}
+            {/* Daily Drift Net Sets & In-Season Migration Pulses (2026 Focus) */}
             <DailyRunPulseChart
               currentDayIndex={currentDayIndex}
               projection={projection}
               isMetricInAdults={isMetricInAdults}
+              mode="in-season-overview"
             />
+
+            {/* Quick CTA to 70-Year Historical Comparison Archive (Positioned at bottom) */}
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-[var(--accent-amber-light)] border border-[var(--accent-amber-border)] text-[var(--accent-amber)]">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-heading font-extrabold text-[var(--text-main)]">
+                    Looking for 70-Year Multi-Season Comparisons?
+                  </h4>
+                  <p className="text-xs text-[var(--text-secondary)] font-mono">
+                    Overlay benchmark years (1956–2025), compare modern decade curves, inspect daily pulse matchups, and download historical datasets.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('compare')}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] text-[var(--text-main)] border border-[var(--border-main)] hover:border-[var(--accent-amber)] text-xs font-mono font-bold transition shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <span>Open Historical Comparison</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* 2. FORECAST & PROJECTIONS TAB */}
+        {/* 2. FORECAST & PROJECTIONS TAB - 2026 Trajectory & Scenarios */}
         {activeTab === 'forecast' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Statistical Projection & Multi-Scenario Models */}
@@ -495,12 +517,12 @@ export default function App() {
               onOpenMultiplierDebate={() => setIsMultiplierModalOpen(true)}
             />
 
-            {/* Trajectory comparison on cumulative chart */}
+            {/* Trajectory comparison on cumulative chart (2026 Projected Bounds & Envelope) */}
             <CumulativeRunChart
               currentDayIndex={currentDayIndex}
               projection={projection}
               isMetricInAdults={isMetricInAdults}
-              selectedYears={selectedYears}
+              selectedYears={[CURRENT_YEAR]}
               onToggleYear={toggleYear}
               onSelectPreset={handleSelectYearPreset}
               allYears={effectiveAllYears}
@@ -519,7 +541,7 @@ export default function App() {
               </div>
               <button
                 onClick={() => setIsSandboxOpen(true)}
-                className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white text-xs font-bold transition shadow-sm flex items-center gap-2 shrink-0 hover:opacity-90"
+                className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] text-white text-xs font-bold transition shadow-sm flex items-center gap-2 shrink-0 hover:opacity-90 cursor-pointer"
               >
                 <Sliders className="w-4 h-4" />
                 <span>Open What-If Sandbox</span>
@@ -531,6 +553,27 @@ export default function App() {
         {/* 3. HISTORICAL COMPARISON TAB */}
         {activeTab === 'compare' && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Unified Comparison Year Selector Dock */}
+            <SharedComparisonToolbar
+              allYears={effectiveAllYears}
+              selectedYears={selectedYears}
+              onToggleYear={toggleYear}
+              onSelectEraPreset={(yrs) => setSelectedYears([CURRENT_YEAR, ...yrs.filter((y) => y !== CURRENT_YEAR)])}
+              onClearAll={() => setSelectedYears([CURRENT_YEAR])}
+            />
+
+            {/* Multi-Season Overlay S-Curve Line Chart */}
+            <CumulativeRunChart
+              currentDayIndex={currentDayIndex}
+              projection={projection}
+              selectedMonthDay={selectedMonthDay}
+              isMetricInAdults={isMetricInAdults}
+              selectedYears={selectedYears}
+              onToggleYear={toggleYear}
+              onSelectPreset={handleSelectYearPreset}
+              allYears={effectiveAllYears}
+            />
+
             {/* Head-to-Head Benchmark Matchup */}
             <HeadToHeadCompareCard
               currentDayIndex={currentDayIndex}
@@ -542,13 +585,12 @@ export default function App() {
               allYears={effectiveAllYears}
             />
 
-            {/* Multi-Decade Archive Search & Picker */}
-            <HistoricalYearArchiveSearch
-              availableArchiveYears={dataset?.availableArchiveYears || [1998, 1999, 2000, 2004, 2006, 2010, 2012, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]}
-              allYearsData={effectiveAllYears}
-              selectedYears={selectedYears}
-              onSelectYear={addHistoricalYearToSelection}
-              currentYear={CURRENT_YEAR}
+            {/* Comprehensive Multi-Season Daily Migration Pulse Comparison */}
+            <DailyRunPulseChart
+              currentDayIndex={currentDayIndex}
+              projection={projection}
+              isMetricInAdults={isMetricInAdults}
+              mode="full-comparison"
             />
 
             {/* Annual Ranking Chart */}
@@ -665,7 +707,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center justify-center gap-1 transition-colors relative font-mono ${
+                className={`flex flex-col items-center justify-center gap-1 transition-colors relative font-mono cursor-pointer ${
                   isActive
                     ? 'text-[var(--accent-amber)] font-bold'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
