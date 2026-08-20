@@ -503,8 +503,8 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   const targetRiverName = hoveredRiverName || selectedRiverName;
                   const targetRiver = tributaries.find(t => t.name === targetRiverName);
                   const targetDecrypted = decryptedDossiers[targetRiverName] || (AUTHENTIC_TACTICAL_DOSSIERS as any)[targetRiverName];
-                  const transitTime = targetRiver?.scientificBaselines?.transitTimeDays || '12–24d';
-                  const gsiShare = targetRiver?.historicalStockSharePercent || 15;
+                  const transitTime = targetRiver?.timingTips?.travelTimeFromTyee || targetRiver?.scientificProfile?.meanTravelVelocity || '12–24d';
+                  const gsiShare = targetRiver?.sharePct || 15;
                   const floatSummary = targetDecrypted?.floatSafety?.rating || targetRiver?.description || 'River corridor';
 
                   return (
@@ -711,7 +711,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               {(() => {
                 const targetRiverName = hoveredRiverName || selectedRiverName;
                 const targetRiver = tributaries.find(t => t.name === targetRiverName);
-                const gsiShare = targetRiver?.historicalStockSharePercent || 15;
+                const gsiShare = targetRiver?.sharePct || 15;
                 return (
                   <span className="px-1.5 py-0.5 rounded bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] text-[10px] font-mono font-bold shrink-0">
                     {gsiShare}% GSI
@@ -723,7 +723,7 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               const targetRiverName = hoveredRiverName || selectedRiverName;
               const targetRiver = tributaries.find(t => t.name === targetRiverName);
               const targetDecrypted = decryptedDossiers[targetRiverName] || (AUTHENTIC_TACTICAL_DOSSIERS as any)[targetRiverName];
-              const transitTime = targetRiver?.scientificBaselines?.transitTimeDays || '12–24d';
+              const transitTime = targetRiver?.timingTips?.travelTimeFromTyee || targetRiver?.scientificProfile?.meanTravelVelocity || '12–24d';
               const floatSummary = targetDecrypted?.floatSafety?.rating || targetRiver?.description || 'River corridor';
 
               return (
@@ -855,92 +855,104 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
               )}
             </div>
 
-            {/* River Run Summary Metrics */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 font-mono text-center">
-              <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">Stock Proportion</span>
-                <span className="text-base sm:text-lg font-black text-[var(--accent-teal)]">
+            {/* River Run Summary Metrics - High Contrast Scannable Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 font-mono text-center">
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-center">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold block mb-0.5">Stock Share</span>
+                <span className="text-lg sm:text-xl font-heading font-black text-[var(--accent-teal)]">
                   {activeTrib.sharePct}%
                 </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-sans">of Skeena GSI</span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">Est. Escapement</span>
-                <span className="text-base sm:text-lg font-black text-[var(--text-main)]">
-                  {activeTrib.estimatedAdults.toLocaleString()} <span className="text-[10px] text-[var(--text-muted)] font-normal">adults</span>
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-center">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold block mb-0.5">Est. Escapement</span>
+                <span className="text-lg sm:text-xl font-heading font-black text-[var(--text-main)]">
+                  {activeTrib.estimatedAdults.toLocaleString()}
                 </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-sans">Current return</span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">Season Projection</span>
-                <span className="text-base sm:text-lg font-black text-[var(--accent-amber)]">
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-center">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold block mb-0.5">Season Proj.</span>
+                <span className="text-lg sm:text-xl font-heading font-black text-[var(--accent-amber)]">
                   ~{activeTrib.projectedAdults.toLocaleString()}
                 </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-sans">Full season</span>
+              </div>
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] flex flex-col justify-center">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold block mb-0.5">Estuary Transit</span>
+                <span className="text-base sm:text-lg font-heading font-black text-sky-400">
+                  {sci?.meanTravelVelocity ? sci.meanTravelVelocity.split('(')[0].trim() : '12–24 days'}
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-sans">{sci?.migrationDistanceKm || 'Transit corridor'}</span>
               </div>
             </div>
 
             {/* VIEW MODE 1: PUBLIC SCIENTIFIC OVERVIEW & PROTOCOLS (Unified for Regular Visitors) */}
             {(!isAdmin || adminViewMode === 'overview') && (
-              <div className="space-y-4 animate-in fade-in duration-150 font-mono text-xs">
+              <div className="space-y-4 animate-in fade-in duration-150 text-xs">
                 {/* Description */}
-                <p className="font-sans text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-                  {activeTrib.description}
-                </p>
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)]">
+                  <p className="font-sans text-sm text-[var(--text-main)] leading-relaxed font-normal">
+                    {activeTrib.description}
+                  </p>
+                </div>
 
                 {/* Key Scientific Telemetry Cards */}
                 {sci && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {/* Migration Distance & Upriver Transit Velocity */}
-                    <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
-                      <div className="flex items-center gap-1.5 text-[var(--accent-teal)] font-bold uppercase tracking-wider text-[11px]">
-                        <Compass className="w-3.5 h-3.5" />
+                    <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5">
+                      <div className="flex items-center gap-2 text-[var(--accent-teal)] font-bold uppercase tracking-wider text-[11px]">
+                        <Compass className="w-4 h-4 shrink-0" />
                         <span>Migration Corridor</span>
                       </div>
-                      <div className="space-y-1.5 text-xs">
+                      <div className="space-y-2 text-xs">
                         <div>
-                          <span className="text-[var(--text-muted)] block text-[10px]">Estuary Distance:</span>
-                          <span className="text-[var(--text-main)] font-bold">{sci.migrationDistanceKm}</span>
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Estuary Distance:</span>
+                          <span className="text-[var(--text-main)] font-semibold text-sm font-sans">{sci.migrationDistanceKm}</span>
                         </div>
-                        <div className="pt-1 border-t border-[var(--border-main)]">
-                          <span className="text-[var(--text-muted)] block text-[10px]">Transit Velocity:</span>
-                          <span className="text-[var(--text-main)] font-semibold">{sci.meanTravelVelocity}</span>
+                        <div className="pt-1.5 border-t border-[var(--border-main)]">
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Transit Velocity:</span>
+                          <span className="text-[var(--text-main)] font-semibold text-xs font-sans">{sci.meanTravelVelocity}</span>
                         </div>
-                        <div className="pt-1 border-t border-[var(--border-main)]">
-                          <span className="text-[var(--text-muted)] block text-[10px]">Basin Area:</span>
-                          <span className="text-[var(--text-main)] font-bold">{sci.basinAreaKm2}</span>
+                        <div className="pt-1.5 border-t border-[var(--border-main)]">
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Basin Area:</span>
+                          <span className="text-[var(--text-main)] font-semibold text-xs font-sans">{sci.basinAreaKm2}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Hydrology & Thermal Regime */}
-                    <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
-                      <div className="flex items-center gap-1.5 text-[var(--accent-teal)] font-bold uppercase tracking-wider text-[11px]">
-                        <Waves className="w-3.5 h-3.5" />
+                    <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5">
+                      <div className="flex items-center gap-2 text-[var(--accent-teal)] font-bold uppercase tracking-wider text-[11px]">
+                        <Waves className="w-4 h-4 shrink-0" />
                         <span>Hydrology &amp; Buffering</span>
                       </div>
-                      <div className="space-y-1.5 text-xs">
+                      <div className="space-y-2 text-xs">
                         <div>
-                          <span className="text-[var(--text-muted)] block text-[10px]">Discharge &amp; Sediment:</span>
-                          <span className="text-[var(--text-secondary)] font-sans text-xs">{sci.lakeBuffering}</span>
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Discharge &amp; Silt Buffering:</span>
+                          <span className="text-[var(--text-secondary)] font-sans text-xs leading-relaxed">{sci.lakeBuffering}</span>
                         </div>
-                        <div className="pt-1 border-t border-[var(--border-main)]">
-                          <span className="text-[var(--text-muted)] block text-[10px]">Thermal Regime:</span>
-                          <span className="text-[var(--text-main)] font-bold">{sci.thermalRegime}</span>
+                        <div className="pt-1.5 border-t border-[var(--border-main)]">
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Thermal Regime:</span>
+                          <span className="text-[var(--text-main)] font-semibold text-xs font-sans">{sci.thermalRegime}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Conservation Status */}
-                    <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 sm:col-span-2 lg:col-span-1">
-                      <div className="flex items-center gap-1.5 text-[var(--accent-amber)] font-bold uppercase tracking-wider text-[11px]">
-                        <Trees className="w-3.5 h-3.5" />
+                    <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5 sm:col-span-2 lg:col-span-1">
+                      <div className="flex items-center gap-2 text-[var(--accent-amber)] font-bold uppercase tracking-wider text-[11px]">
+                        <Trees className="w-4 h-4 shrink-0" />
                         <span>Conservation Priority</span>
                       </div>
-                      <div className="space-y-1.5 text-xs">
+                      <div className="space-y-2 text-xs">
                         <div>
-                          <span className="text-[var(--text-muted)] block text-[10px]">Stock Status:</span>
-                          <span className="text-[var(--text-main)] font-bold">{sci.conservationPriority}</span>
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Stock Status:</span>
+                          <span className="text-[var(--text-main)] font-bold text-xs font-sans">{sci.conservationPriority}</span>
                         </div>
-                        <div className="pt-1 border-t border-[var(--border-main)]">
-                          <span className="text-[var(--text-muted)] block text-[10px]">Habitat Ecology:</span>
+                        <div className="pt-1.5 border-t border-[var(--border-main)]">
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wide">Habitat Ecology:</span>
                           <span className="text-[var(--text-secondary)] font-sans text-xs leading-relaxed">{sci.habitatEcology}</span>
                         </div>
                       </div>
@@ -950,28 +962,28 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                 {/* First Nations Territory Protocols & Permitting Rules */}
                 {activeTrib.tribalProtocols && (
-                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="p-4 sm:p-5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[var(--border-main)]">
                       <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-[var(--accent-teal)]" />
+                        <ShieldCheck className="w-4 h-4 text-[var(--accent-teal)] shrink-0" />
                         <span className="font-heading font-extrabold text-xs uppercase tracking-wide text-[var(--text-main)]">
                           First Nations Territory &amp; Permitting Protocols
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--accent-teal)]/30">
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded bg-[var(--accent-teal)]/10 text-[var(--accent-teal)] border border-[var(--accent-teal)]/30">
                         {activeTrib.tribalProtocols.nation}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      <div>
-                        <span className="text-[var(--text-muted)] block text-[10px] font-bold uppercase">Regulations &amp; Licencing:</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      <div className="space-y-1">
+                        <span className="text-[var(--text-muted)] block text-[10px] font-bold uppercase tracking-wider">Regulations &amp; Licencing:</span>
                         <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
                           {activeTrib.tribalProtocols.permitDetails}
                         </p>
                       </div>
-                      <div>
-                        <span className="text-[var(--text-muted)] block text-[10px] font-bold uppercase">Watershed Etiquette:</span>
+                      <div className="space-y-1">
+                        <span className="text-[var(--text-muted)] block text-[10px] font-bold uppercase tracking-wider">Watershed Etiquette:</span>
                         <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
                           {activeTrib.tribalProtocols.etiquette}
                         </p>
@@ -1013,39 +1025,39 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                 </div>
 
                 {/* Holding Water Anatomy & Fly Recommendations */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
-                    <span className="text-[var(--accent-teal)] block uppercase text-[10px] font-bold">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                    <span className="text-[var(--accent-teal)] block uppercase text-[10px] font-bold tracking-wider">
                       Key Holding Reaches &amp; Pools:
                     </span>
-                    <p className="font-sans text-xs text-[var(--text-main)] font-semibold leading-relaxed">
+                    <p className="font-sans text-xs sm:text-[13px] text-[var(--text-main)] font-medium leading-relaxed">
                       {adminIntel.keyReaches}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
-                    <span className="text-[var(--accent-amber)] block uppercase text-[10px] font-bold">
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                    <span className="text-[var(--accent-amber)] block uppercase text-[10px] font-bold tracking-wider">
                       Fly &amp; Tackle Recommendations:
                     </span>
-                    <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
+                    <p className="font-sans text-xs sm:text-[13px] text-[var(--text-secondary)] leading-relaxed">
                       {adminIntel.tacticalBiteTriggers}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
-                    <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                    <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold tracking-wider">
                       Water Clarity Dynamics:
                     </span>
-                    <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
+                    <p className="font-sans text-xs sm:text-[13px] text-[var(--text-secondary)] leading-relaxed">
                       {adminIntel.waterClarityDynamics}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1.5">
-                    <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold">
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2">
+                    <span className="text-[var(--text-muted)] block uppercase text-[10px] font-bold tracking-wider">
                       Run Timing &amp; River Notes:
                     </span>
-                    <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
+                    <p className="font-sans text-xs sm:text-[13px] text-[var(--text-secondary)] leading-relaxed">
                       {adminIntel.historicalGuideNotes || adminIntel.estuaryPassageNotes}
                     </p>
                   </div>
@@ -1053,26 +1065,26 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
 
                 {/* Backcountry Bear Safety & River Etiquette */}
                 {(adminIntel.bearSafetyNotes || adminIntel.streamEtiquette) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                     {adminIntel.bearSafetyNotes && (
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
-                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-[11px] truncate">
-                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-[11px] truncate">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
                           <span className="truncate">Bear Safety Protocols</span>
                         </div>
-                        <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
+                        <p className="text-xs sm:text-[13px] text-[var(--text-secondary)] font-sans leading-relaxed">
                           {adminIntel.bearSafetyNotes}
                         </p>
                       </div>
                     )}
 
                     {adminIntel.streamEtiquette && (
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
-                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-[11px] truncate">
-                          <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-[11px] truncate">
+                          <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-500" />
                           <span className="truncate">Etiquette &amp; Keep 'Em Wet</span>
                         </div>
-                        <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
+                        <p className="text-xs sm:text-[13px] text-[var(--text-secondary)] font-sans leading-relaxed">
                           {adminIntel.streamEtiquette}
                         </p>
                       </div>
@@ -1118,56 +1130,269 @@ export const TributaryForecastCard: React.FC<TributaryForecastCardProps> = ({
                   </div>
                 )}
 
-                {/* Float & Wade Safety Profiles */}
+                {/* Float & Wade Safety Profiles - Full 2-Column Span In-Depth Condition Cards */}
                 {(floatSafety || wadeSafety) && (
-                  <div className={`grid gap-3 pt-1 ${floatSafety && wadeSafety ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                  <div className="space-y-4 pt-2">
+                    {/* Full-Width Float Safety Dossier Card */}
                     {floatSafety && (
-                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 w-full">
-                        <div className="flex items-center gap-1.5 text-rose-500 font-bold uppercase tracking-wider text-[11px] truncate">
-                          <LifeBuoy className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">Float Navigation Profile</span>
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-4 shadow-sm w-full">
+                        {/* Float Header & Badges */}
+                        <div className="flex items-start sm:items-center justify-between flex-wrap gap-2.5 pb-3 border-b border-[var(--border-main)]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500">
+                              <LifeBuoy className="w-5 h-5 shrink-0" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-heading font-black text-sm uppercase tracking-wide text-[var(--text-main)]">
+                                  Float Navigation &amp; Whitewater Profile
+                                </h4>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                  {floatSafety.rating || 'Reach-Dependent Corridor'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                                Hydrology, Vessel Appropriateness &amp; Reach-by-Reach Hazard Matrix
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {floatSafety.ratingRange && (
+                            <span className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-main)] shrink-0">
+                              Classification: {floatSafety.ratingRange}
+                            </span>
+                          )}
                         </div>
-                        <div className="space-y-1 text-xs">
-                          <div>
-                            <span className="text-[var(--text-muted)] block text-[10px]">Rating:</span>
-                            <span className="text-[var(--text-main)] font-bold">{floatSafety.rating}</span>
+
+                        {/* Approved vs Prohibited Craft Banner */}
+                        <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                          <div className="flex items-center gap-2 text-xs font-bold font-heading uppercase tracking-wider text-[var(--accent-teal)]">
+                            <Waves className="w-4 h-4 shrink-0" />
+                            <span>Vessel Suitability &amp; Craft Certification</span>
                           </div>
-                          <div className="pt-1 border-t border-[var(--border-main)]">
-                            <span className="text-[var(--text-muted)] block text-[10px]">Whitewater Class:</span>
-                            <span className="text-[var(--text-secondary)] font-sans text-xs">{floatSafety.whitewaterClass}</span>
-                          </div>
-                          <div className="pt-1 border-t border-[var(--border-main)]">
-                            <span className="text-[var(--text-muted)] block text-[10px]">Hazard Warnings:</span>
-                            <ul className="list-disc list-inside space-y-0.5 text-[var(--text-secondary)] font-sans text-xs pt-0.5">
+                          <p className="text-xs sm:text-[13px] text-[var(--text-main)] font-sans leading-relaxed">
+                            {floatSafety.suitableCraft}
+                          </p>
+                          {floatSafety.whitewaterClass && (
+                            <p className="text-xs text-[var(--text-secondary)] font-sans pt-1 border-t border-[var(--border-main)]">
+                              <strong className="text-[var(--text-main)] font-mono text-[11px]">Hydraulic Regime:</strong> {floatSafety.whitewaterClass}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Safe vs Hazard Reaches Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                          {/* Safe Navigable Reaches */}
+                          {floatSafety.safeReaches && floatSafety.safeReaches.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span>Navigable &amp; Safe Float Reaches ({floatSafety.safeReaches.length})</span>
+                              </div>
+                              <div className="space-y-2.5">
+                                {floatSafety.safeReaches.map((sr, i) => (
+                                  <div key={i} className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/25 space-y-2 text-xs">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-heading font-bold text-[13px] text-[var(--text-main)]">{sr.name}</span>
+                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        {sr.skillLevel}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">{sr.description}</p>
+                                    <div className="flex flex-col gap-1 pt-1.5 border-t border-emerald-500/20 text-[11px] font-mono text-[var(--text-muted)]">
+                                      <div className="flex items-center gap-1.5 text-emerald-400">
+                                        <span className="font-bold">Craft:</span> <span>{sr.recommendedCraft}</span>
+                                      </div>
+                                      {sr.accessBounds && (
+                                        <div className="text-[var(--text-secondary)]">
+                                          <span className="font-bold">Bounds:</span> {sr.accessBounds}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Hazard & Unrunnable Reaches */}
+                          {floatSafety.hazardReaches && floatSafety.hazardReaches.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-rose-500 uppercase tracking-wider">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>Caution &amp; Impassable Canyon Hazards</span>
+                              </div>
+                              <div className="space-y-2.5">
+                                {floatSafety.hazardReaches.map((hr, i) => (
+                                  <div key={i} className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 text-xs">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-heading font-bold text-[13px] text-rose-400">{hr.name}</span>
+                                      <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 uppercase">
+                                        {hr.dangerLevel}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">{hr.description}</p>
+                                    {hr.mandatoryTakeout && (
+                                      <div className="p-2 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 font-sans font-bold text-xs">
+                                        🚨 Mandatory Take-Out / Evacuation: {hr.mandatoryTakeout}
+                                      </div>
+                                    )}
+                                    {hr.gpsOrKmMarker && (
+                                      <div className="text-[10px] font-mono text-rose-400/80">
+                                        Location: {hr.gpsOrKmMarker}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Hazard Warnings & Run Times */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-[var(--border-main)]">
+                          <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2">
+                            <span className="text-rose-400 block text-[11px] font-bold uppercase tracking-wider">
+                              Critical Hydraulic Hazard Warnings:
+                            </span>
+                            <ul className="list-disc list-inside space-y-1.5 text-[var(--text-secondary)] font-sans text-xs">
                               {floatSafety.hazardWarnings.map((h, i) => (
-                                <li key={i}>{h}</li>
+                                <li key={i} className="leading-relaxed">{h}</li>
                               ))}
                             </ul>
+                          </div>
+
+                          <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2 flex flex-col justify-between">
+                            <div>
+                              <span className="text-[var(--accent-teal)] block text-[11px] font-bold uppercase tracking-wider mb-1.5">
+                                Float Duration &amp; Logistics:
+                              </span>
+                              <p className="text-xs sm:text-[13px] text-[var(--text-main)] font-mono leading-relaxed">
+                                {floatSafety.typicalFloatTimes || 'Check local river levels and flow velocities.'}
+                              </p>
+                            </div>
+                            {floatSafety.summaryNote && (
+                              <div className="p-2.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-main)] text-xs text-[var(--text-secondary)] font-sans italic mt-2">
+                                💡 {floatSafety.summaryNote}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     )}
 
+                    {/* Full-Width Wade Safety Dossier Card */}
                     {wadeSafety && (
-                      <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-2 w-full">
-                        <div className="flex items-center gap-1.5 text-amber-500 font-bold uppercase tracking-wider text-[11px] truncate">
-                          <Footprints className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">Wading Safety Profile</span>
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-4 shadow-sm w-full">
+                        {/* Wade Header & Badges */}
+                        <div className="flex items-start sm:items-center justify-between flex-wrap gap-2.5 pb-3 border-b border-[var(--border-main)]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                              <Footprints className="w-5 h-5 shrink-0" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-heading font-black text-sm uppercase tracking-wide text-[var(--text-main)]">
+                                  Wading Safety &amp; Substrate Conditions
+                                </h4>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                  {wadeSafety.difficulty || 'Reach-Dependent Footing'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                                Substrate Composition, Boot Traction Recommendations &amp; Wade Hazards
+                              </p>
+                            </div>
+                          </div>
+
+                          {wadeSafety.difficultyRange && (
+                            <span className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-[var(--bg-card)] text-[var(--text-main)] border border-[var(--border-main)] shrink-0">
+                              Difficulty: {wadeSafety.difficultyRange}
+                            </span>
+                          )}
                         </div>
-                        <div className="space-y-1 text-xs">
-                          <div>
-                            <span className="text-[var(--text-muted)] block text-[10px]">Difficulty:</span>
-                            <span className="text-[var(--text-main)] font-bold">{wadeSafety.difficulty}</span>
+
+                        {/* Footwear & Wading Staff Protocol */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                            <span className="text-amber-400 block text-[11px] font-bold uppercase tracking-wider">
+                              Recommended Wading Footwear:
+                            </span>
+                            <p className="text-xs sm:text-[13px] text-[var(--text-main)] font-sans leading-relaxed">
+                              {wadeSafety.footwearRecommendation}
+                            </p>
                           </div>
-                          <div className="pt-1 border-t border-[var(--border-main)]">
-                            <span className="text-[var(--text-muted)] block text-[10px]">Footwear Advice:</span>
-                            <span className="text-[var(--text-secondary)] font-sans text-xs">{wadeSafety.footwearRecommendation}</span>
-                          </div>
-                          <div className="pt-1 border-t border-[var(--border-main)]">
-                            <span className="text-[var(--text-muted)] block text-[10px]">Wading Staff:</span>
-                            <span className="text-[var(--text-secondary)] font-sans text-xs">{wadeSafety.wadingStaffAdvice}</span>
+                          <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5">
+                            <span className="text-[var(--accent-teal)] block text-[11px] font-bold uppercase tracking-wider">
+                              Wading Staff &amp; Belt Advisory:
+                            </span>
+                            <p className="text-xs sm:text-[13px] text-[var(--text-secondary)] font-sans leading-relaxed">
+                              {wadeSafety.wadingStaffAdvice}
+                            </p>
                           </div>
                         </div>
+
+                        {/* Safe Bars vs Wade Hazards Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                          {/* Safe Wading Reaches */}
+                          {wadeSafety.safeWadingReaches && wadeSafety.safeWadingReaches.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span>Gentle Shingle Flats &amp; Safe Bars ({wadeSafety.safeWadingReaches.length})</span>
+                              </div>
+                              <div className="space-y-2.5">
+                                {wadeSafety.safeWadingReaches.map((sw, i) => (
+                                  <div key={i} className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/25 space-y-2 text-xs">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-heading font-bold text-[13px] text-[var(--text-main)]">{sw.name}</span>
+                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        {sw.wadingDifficulty}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">{sw.description}</p>
+                                    <div className="pt-1.5 border-t border-emerald-500/20 text-[11px] font-mono text-[var(--text-muted)]">
+                                      <span className="font-bold text-emerald-400">Terrain:</span> {sw.terrainType}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Hazardous Wading Zones */}
+                          {wadeSafety.hazardWadingReaches && wadeSafety.hazardWadingReaches.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-wider">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>Cautionary Wading Zones &amp; Ledges</span>
+                              </div>
+                              <div className="space-y-2.5">
+                                {wadeSafety.hazardWadingReaches.map((hw, i) => (
+                                  <div key={i} className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2 text-xs">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-heading font-bold text-[13px] text-amber-400">{hw.name}</span>
+                                      <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase">
+                                        {hw.riskLevel}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">{hw.description}</p>
+                                    <div className="pt-1.5 border-t border-amber-500/20 text-[11px] font-mono text-amber-400/90">
+                                      <span className="font-bold">Hazard:</span> {hw.hazardType}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Wading Summary & Immersion Note */}
+                        {wadeSafety.summaryNote && (
+                          <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] text-xs text-[var(--text-secondary)] font-sans italic">
+                            💡 {wadeSafety.summaryNote}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

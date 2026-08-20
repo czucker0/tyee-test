@@ -19,6 +19,7 @@ import {
   Download,
   Car,
   Radio,
+  CheckCircle2,
 } from 'lucide-react';
 import { RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile, TribalAccessProtocol } from '../types/steelhead';
 
@@ -547,23 +548,41 @@ export const RiverAccessMapModal: React.FC<RiverAccessMapModalProps> = ({
 
             {/* Float & Wading Quick Safety Badges */}
             {(floatSafety || wadeSafety) && (
-              <div className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1.5 text-[11px] font-mono shrink-0">
+              <div className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-2 text-[11px] font-mono shrink-0">
                 {floatSafety && (
-                  <div className="flex items-center justify-between text-[10px]">
-                    <div className="flex items-center gap-1 text-[var(--text-main)]">
-                      <LifeBuoy className="w-3 h-3 text-[var(--accent-teal)]" />
-                      <span>Float: <strong>{floatSafety.rating}</strong></span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-1 text-rose-500 font-bold">
+                        <LifeBuoy className="w-3 h-3 shrink-0" />
+                        <span>Float Profile</span>
+                      </div>
+                      <span className="text-[var(--text-main)] font-semibold text-[10px] text-right truncate max-w-[170px]">
+                        {floatSafety.ratingRange ? floatSafety.ratingRange.split('to')[0].trim() : floatSafety.rating}
+                      </span>
                     </div>
-                    <span className="text-[var(--text-secondary)]">{floatSafety.whitewaterClass}</span>
+                    {floatSafety.summaryNote && (
+                      <p className="text-[9.5px] font-sans text-[var(--text-secondary)] leading-tight">
+                        {floatSafety.summaryNote}
+                      </p>
+                    )}
                   </div>
                 )}
                 {wadeSafety && (
-                  <div className="pt-1.5 border-t border-[var(--border-main)] flex items-center justify-between text-[10px]">
-                    <div className="flex items-center gap-1 text-[var(--text-main)]">
-                      <Footprints className="w-3 h-3 text-[var(--accent-teal)]" />
-                      <span>Wading: <strong>{wadeSafety.difficulty}</strong></span>
+                  <div className="pt-1.5 border-t border-[var(--border-main)] space-y-1">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-1 text-amber-500 font-bold">
+                        <Footprints className="w-3 h-3 shrink-0" />
+                        <span>Wading Profile</span>
+                      </div>
+                      <span className="text-[var(--text-main)] font-semibold text-[10px] text-right truncate max-w-[170px]">
+                        {wadeSafety.difficultyRange ? 'Dynamic by Reach' : wadeSafety.difficulty}
+                      </span>
                     </div>
-                    <span className="text-[var(--text-secondary)]">{wadeSafety.bankAccessibility}</span>
+                    {wadeSafety.summaryNote && (
+                      <p className="text-[9.5px] font-sans text-[var(--text-secondary)] leading-tight">
+                        {wadeSafety.summaryNote}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -769,12 +788,53 @@ export const RiverAccessMapModal: React.FC<RiverAccessMapModalProps> = ({
                   )}
                 </div>
 
+                {/* Safe vs Hazard Reaches Quick Intel */}
+                {(floatSafety?.safeReaches || floatSafety?.hazardReaches) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {floatSafety?.safeReaches && floatSafety.safeReaches.length > 0 && (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 space-y-1">
+                        <div className="flex items-center gap-1 font-bold uppercase text-[10px] text-emerald-500">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Safe &amp; Floatable Reaches:</span>
+                        </div>
+                        <ul className="space-y-0.5 font-sans text-[11px] text-[var(--text-secondary)]">
+                          {floatSafety.safeReaches.map((sr, i) => (
+                            <li key={i} className="flex flex-col">
+                              <strong className="text-[var(--text-main)]">{sr.name}</strong>
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono">{sr.accessBounds || sr.recommendedCraft}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {floatSafety?.hazardReaches && floatSafety.hazardReaches.length > 0 && (
+                      <div className="p-2.5 rounded-lg bg-rose-500/5 border border-rose-500/25 space-y-1">
+                        <div className="flex items-center gap-1 font-bold uppercase text-[10px] text-rose-500">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Caution / Hazard Zones:</span>
+                        </div>
+                        <ul className="space-y-0.5 font-sans text-[11px] text-[var(--text-secondary)]">
+                          {floatSafety.hazardReaches.map((hr, i) => (
+                            <li key={i} className="flex flex-col">
+                              <strong className="text-rose-500">{hr.name} ({hr.dangerLevel})</strong>
+                              {hr.mandatoryTakeout && (
+                                <span className="text-[10px] text-rose-400 font-mono">Take-out: {hr.mandatoryTakeout}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Hazard Warnings Alert Box */}
                 {floatSafety?.hazardWarnings && floatSafety.hazardWarnings.length > 0 && (
                   <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 space-y-1 text-xs">
                     <div className="flex items-center gap-1.5 font-bold uppercase text-[10px] text-rose-500">
                       <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Navigational &amp; Safety Hazards:</span>
+                      <span>General Navigational Warnings:</span>
                     </div>
                     <ul className="space-y-0.5 pl-4 list-disc font-sans text-[11px] text-[var(--text-secondary)] font-medium leading-relaxed">
                       {floatSafety.hazardWarnings.map((hz, i) => (
