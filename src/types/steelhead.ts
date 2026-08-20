@@ -82,9 +82,34 @@ export interface RiverAccessPoint {
   lng: number;
   googleMapsUrl: string;
   roadAccess: string;
+  vehicleClearance?: '2WD Paved/Gravel' | 'High-Clearance AWD' | 'True 4x4 (Low-Range Required)';
+  parkingInfo?: string;
+  trailDistanceKm?: string;
   vesselSuitability?: string;
   bushwhackDifficulty?: string;
   landTenure?: string;
+  confidenceRating?: 'High Confidence' | 'Moderate Confidence' | 'Unverified/Anecdotal';
+}
+
+export interface SuggestedFloat {
+  id: string;
+  name: string;
+  distanceKm: string;
+  estimatedTime: string;
+  suitableCraft: string;
+  whitewaterClass: string;
+  putInParking: string;
+  takeOutParking: string;
+  vehicleClearance: '2WD Paved/Gravel' | 'High-Clearance AWD' | 'True 4x4 (Low-Range Required)';
+  hazardNotes: string;
+  mandatoryExitPoint?: string;
+}
+
+export interface RadioRoadProtocol {
+  roadName: string;
+  rrChannel: string;
+  frequencyMhz: string;
+  callingRules: string;
 }
 
 export interface TribalAccessProtocol {
@@ -97,7 +122,18 @@ export interface TribalAccessProtocol {
 }
 
 export interface FloatSafetyProfile {
-  rating: 'Personal Raft Friendly' | 'Intermediate Float with Hazards' | 'Extreme Whitewater Canyon' | 'Walk-In / Jetboat Only';
+  rating:
+    | 'Heavy Powercraft / Jetboat Only (Severe Volume)'
+    | 'Reach-Dependent: Upper Drift / Lower Lethal Canyon'
+    | 'Reach-Dependent: Drift Friendly / Mid-Canyon Hazard'
+    | 'Premier Drift Boat & Raft Friendly'
+    | 'Intermediate Float with Sweeper Hazards'
+    | 'Expert Whitewater Expedition Rafts Only'
+    | 'Fly-In Alpine Wilderness / Shallow Jetboat'
+    | 'Personal Raft Friendly'
+    | 'Intermediate Float with Hazards'
+    | 'Extreme Whitewater Canyon'
+    | 'Walk-In / Jetboat Only';
   whitewaterClass: string;
   suitableCraft: string;
   hazardWarnings: string[];
@@ -120,6 +156,10 @@ export interface TributaryAdminTacticalIntel {
   floatSafety?: FloatSafetyProfile;
   wadeSafety?: WadeSafetyProfile;
   accessPoints?: RiverAccessPoint[];
+  suggestedFloats?: SuggestedFloat[];
+  roadProtocols?: RadioRoadProtocol[];
+  bearSafetyNotes?: string;
+  streamEtiquette?: string;
   tribalProtocols?: TribalAccessProtocol;
 }
 

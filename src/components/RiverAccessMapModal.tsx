@@ -17,6 +17,8 @@ import {
   Activity,
   Waves,
   Download,
+  Car,
+  Radio,
 } from 'lucide-react';
 import { RiverAccessPoint, FloatSafetyProfile, WadeSafetyProfile, TribalAccessProtocol } from '../types/steelhead';
 
@@ -697,13 +699,36 @@ export const RiverAccessMapModal: React.FC<RiverAccessMapModalProps> = ({
                     </div>
                   )}
 
-                  {activePoint.bushwhackDifficulty && (
+                  {activePoint.vehicleClearance && (
                     <div className="p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border-main)] space-y-0.5">
-                      <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase block">
-                        Trail &amp; Terrain:
+                      <span className="text-[9px] font-bold text-amber-500 uppercase block">
+                        Vehicle Clearance:
+                      </span>
+                      <span className="text-[var(--text-main)] font-semibold text-[11px] flex items-center gap-1">
+                        <Car className="w-3 h-3 text-amber-500 shrink-0" />
+                        <span>{activePoint.vehicleClearance}</span>
+                      </span>
+                    </div>
+                  )}
+
+                  {activePoint.parkingInfo && (
+                    <div className="p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border-main)] space-y-0.5">
+                      <span className="text-[9px] font-bold text-sky-500 uppercase block">
+                        Parking &amp; Rig Staging:
                       </span>
                       <span className="text-[var(--text-main)] font-semibold text-[11px] block">
-                        {activePoint.bushwhackDifficulty}
+                        🅿️ {activePoint.parkingInfo}
+                      </span>
+                    </div>
+                  )}
+
+                  {(activePoint.trailDistanceKm || activePoint.bushwhackDifficulty) && (
+                    <div className="p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border-main)] space-y-0.5">
+                      <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase block">
+                        Trail &amp; Terrain ({activePoint.trailDistanceKm || 'Direct'}):
+                      </span>
+                      <span className="text-[var(--text-main)] font-semibold text-[11px] block">
+                        🥾 {activePoint.bushwhackDifficulty || 'Direct bank access'}
                       </span>
                     </div>
                   )}

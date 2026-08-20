@@ -57,15 +57,15 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
       index: 65,
       icon: (
         <Flame
-          className={`w-2.5 h-2.5 ${
+          className={`w-3 h-3 ${
             currentDayIndex === 65
-              ? 'text-white fill-white/20'
-              : 'text-[var(--accent-amber)]'
+              ? 'text-white fill-white/30'
+              : 'text-[var(--accent-amber)] fill-[var(--accent-amber)]/20'
           }`}
         />
       ),
     },
-    { label: `Latest (${latestRecordedMonthDay})`, shortLabel: `Latest (${latestRecordedMonthDay})`, index: latestRecordedDayIndex, highlight: true },
+    { label: `Latest (${latestRecordedMonthDay})`, shortLabel: 'Latest', index: latestRecordedDayIndex, highlight: true },
     { label: 'Sep 05', shortLabel: 'Sep 05', index: 87 },
     { label: 'Finish (Sep 30)', shortLabel: 'Finish', index: SEASON_DAYS.length - 1 },
   ];
@@ -305,16 +305,16 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
           </div>
         </div>
 
-        {/* Preset Milestones Grid - 100% Width on Mobile with Zero Scroll */}
+        {/* Preset Milestones Grid - 100% Single Row on Mobile */}
         <div className="pt-1 w-full min-w-0">
-          <div className="grid grid-cols-5 gap-1 sm:gap-1.5 w-full">
+          <div className="grid grid-cols-6 gap-1 w-full">
             {presets.map((preset) => {
               const isSelected = currentDayIndex === preset.index;
               return (
                 <button
                   key={preset.label}
                   onClick={() => onDayChange(preset.index)}
-                  className={`py-1.5 px-1 sm:px-2 rounded-lg text-[10px] sm:text-xs font-editorial transition flex items-center justify-center gap-1 sm:gap-1.5 w-full text-center truncate ${
+                  className={`py-1.5 px-0.5 sm:px-2 rounded-lg text-[10px] sm:text-xs font-editorial transition flex items-center justify-center gap-0.5 sm:gap-1.5 w-full text-center truncate ${
                     isSelected
                       ? 'bg-[var(--accent-amber)] text-white font-bold shadow-sm ring-1 ring-[var(--accent-amber)]'
                       : preset.highlight
@@ -323,9 +323,9 @@ export const DateSliderControl: React.FC<DateSliderControlProps> = ({
                   }`}
                   title={`${preset.label} (${SEASON_DAYS[preset.index]?.monthDay})`}
                 >
-                  <span className="shrink-0 hidden xs:inline">{preset.icon}</span>
+                  {preset.icon && <span className="shrink-0 inline-flex items-center">{preset.icon}</span>}
                   <span className="hidden sm:inline truncate">{preset.label}</span>
-                  <span className="sm:hidden truncate font-mono font-bold">{preset.shortLabel}</span>
+                  <span className="sm:hidden truncate font-mono text-[9.5px] font-bold">{preset.shortLabel}</span>
                 </button>
               );
             })}

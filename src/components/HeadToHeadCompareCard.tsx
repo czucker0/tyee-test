@@ -19,9 +19,6 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
-  Sparkles,
-  Award,
-  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -213,16 +210,6 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     });
   }, [currentYearRecord, benchmarkRecord, lastRecordedDayIndex, projection, mult]);
 
-  // Iconic multi-era benchmark pill presets
-  const benchmarkPills = [
-    { id: -1, label: '10-Yr Avg', badge: 'Baseline', icon: <Scale className="w-3 h-3 text-teal-500" /> },
-    { id: -2, label: 'All-Time Avg', badge: '1956+', icon: <Sparkles className="w-3 h-3 text-sky-500" /> },
-    { id: 2024, label: '2024 Season', badge: 'Recent High', icon: <TrendingUp className="w-3 h-3 text-emerald-500" /> },
-    { id: 2025, label: '2025 Season', badge: 'Last Year', icon: <Scale className="w-3 h-3 text-amber-500" /> },
-    { id: 2021, label: '2021 Record Low', badge: 'Crisis (22 pts)', icon: <AlertTriangle className="w-3 h-3 text-red-500" /> },
-    { id: 2018, label: '2018 Strong Run', badge: '185 pts', icon: <Award className="w-3 h-3 text-amber-500" /> },
-  ];
-
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
     return (
@@ -260,50 +247,39 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
           </h3>
         </div>
 
-        {/* Dropdown for any historical year */}
+        {/* Dropdown for any historical year organized by standout eras and full 1956-2025 archive */}
         <div className="flex items-center gap-1.5 shrink-0 font-mono">
           <select
             value={benchmarkYear}
             onChange={(e) => setBenchmarkYear(parseInt(e.target.value, 10))}
-            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2 sm:px-2.5 py-1 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer shadow-xs max-w-[140px] sm:max-w-[220px] truncate"
+            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2 sm:px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer shadow-xs max-w-[200px] sm:max-w-[260px] truncate"
             aria-label="Select historical year for head-to-head comparison"
           >
-            <option value={-1}>10-Yr DFO Average</option>
-            <option value={-2}>All-Time Archive Avg (1956+)</option>
-            {allYears
-              .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
-              .sort((a, b) => b.year - a.year)
-              .map((y) => (
-                <option key={y.year} value={y.year}>
-                  {y.year} Season ({y.totalIndex} pts)
-                </option>
-              ))}
+            <optgroup label="Core Baselines">
+              <option value={-1}>📊 10-Yr DFO Rolling Avg (2016–2025)</option>
+              <option value={-2}>📈 All-Time Archive Avg (1956–2025)</option>
+            </optgroup>
+            <optgroup label="Standout Historical Eras">
+              <option value={1998}>🏆 1998 All-Time Record High (306.4 pts)</option>
+              <option value={2021}>🚨 2021 Severe Crisis Low (22.3 pts)</option>
+              <option value={1985}>🌿 1985 Pre-Interception Peak (218.0 pts)</option>
+              <option value={2016}>🔥 2016 Modern Strong Year (189.7 pts)</option>
+              <option value={2019}>📉 2019 Historic Drought Return (34.1 pts)</option>
+              <option value={2025}>⏱️ 2025 Prior Season (116.8 pts)</option>
+              <option value={2024}>🌊 2024 Season (128.4 pts)</option>
+            </optgroup>
+            <optgroup label="Full Historical Archive (1956–2025)">
+              {allYears
+                .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
+                .sort((a, b) => b.year - a.year)
+                .map((y) => (
+                  <option key={y.year} value={y.year}>
+                    {y.year} Season ({y.totalIndex} pts)
+                  </option>
+                ))}
+            </optgroup>
           </select>
         </div>
-      </div>
-
-      {/* Streamlined Curated Benchmark Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full">
-        {benchmarkPills.map((pill) => {
-          const isSelected = benchmarkYear === pill.id;
-          return (
-            <button
-              key={pill.id}
-              onClick={() => setBenchmarkYear(pill.id)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                isSelected
-                  ? 'bg-[var(--accent-amber)] text-white font-bold shadow-xs'
-                  : 'bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border border-[var(--border-main)]'
-              }`}
-            >
-              {pill.icon}
-              <span className="font-semibold">{pill.label}</span>
-              <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)]'}`}>
-                {pill.badge}
-              </span>
-            </button>
-          );
-        })}
       </div>
 
       {/* Benchmark Head-to-Head Telemetry Cards */}

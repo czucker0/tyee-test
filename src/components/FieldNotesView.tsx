@@ -22,6 +22,7 @@ import {
   Download, 
   Layers, 
   ChevronRight, 
+  ChevronDown,
   Eye, 
   EyeOff,
   Share2, 
@@ -752,7 +753,7 @@ export const FieldNotesView: React.FC = () => {
                 <div className="flex items-center gap-2 mt-0.5 text-xs font-mono text-[var(--text-muted)]">
                   <span className="flex items-center gap-1 text-emerald-500">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Zero-Knowledge AES-256</span>
+                    <span>Encrypted (AES-256)</span>
                   </span>
                   <span>&bull;</span>
                   <span className="flex items-center gap-1">
@@ -767,44 +768,48 @@ export const FieldNotesView: React.FC = () => {
                     )}
                   </span>
                   <span>&bull;</span>
-                  <span>{notes.length} Encrypted Entries</span>
+                  <span>{notes.length} Encrypted Notes</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Actions Bar */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Actions Bar - Unified Segmented Pill Control Bar matching Standings Bars / Run Curve */}
+          <div className="bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-main)] flex items-center gap-1 font-mono text-xs shadow-2xs">
             <button
               type="button"
               onClick={() => setIsDisclosureOpen(true)}
-              className="px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1.5"
+              className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold"
             >
-              <Info className="w-4 h-4 text-[var(--accent-amber)]" />
-              <span>Security Fine Print</span>
+              <Info className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
+              <span>Security</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportVault}
               disabled={notes.length === 0}
-              className="px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--border-light)] border border-[var(--border-main)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition flex items-center gap-1.5 disabled:opacity-40"
+              className="px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer text-xs font-bold"
               title="Download encrypted backup file"
             >
-              <Download className="w-4 h-4" />
-              <span>Backup Vault</span>
+              <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <span>Export</span>
             </button>
 
             <button
               type="button"
               onClick={handleEncryptAndSync}
               disabled={syncing}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-amber)] hover:opacity-90 text-white font-bold transition shadow-sm flex items-center gap-2 disabled:opacity-50"
+              className={`px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs font-bold ${
+                syncing
+                  ? 'bg-[var(--accent-amber)] text-white'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--accent-amber)] border border-[var(--border-main)]'
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>Encrypt &amp; Sync</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-white' : 'text-[var(--accent-amber)]'}`} />
+              <span>Sync</span>
               {pendingCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-mono">
+                <span className="px-1.5 py-0.2 rounded-full bg-[var(--accent-amber)] text-white text-[9px] font-mono font-bold">
                   {pendingCount}
                 </span>
               )}
@@ -817,10 +822,10 @@ export const FieldNotesView: React.FC = () => {
                 handleSelectRiverOnMap('Bulkley River');
                 setIsModalOpen(true);
               }}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-sm flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent-amber)] text-white font-black hover:opacity-90 transition shadow-xs flex items-center gap-1.5 cursor-pointer text-xs"
             >
-              <Plus className="w-4 h-4" />
-              <span>New Field Entry</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Note</span>
             </button>
           </div>
         </div>
@@ -845,174 +850,264 @@ export const FieldNotesView: React.FC = () => {
       {/* Main Grid: Interactive Watershed Map & Notes Library */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Interactive Watershed River Map & Pins (5 Cols) */}
+        {/* Left Column: Interactive Watershed River Map (Clean Flow & Glowing Sections) (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
                 <h2 className="text-xs font-heading font-extrabold text-[var(--text-main)] uppercase tracking-wide">
-                  Skeena Watershed Interactive Map
+                  Skeena Watershed Interactive Topology
                 </h2>
               </div>
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">Click pin to filter</span>
+              <span className="text-[10px] font-mono text-[var(--text-muted)]">Click river reach to filter</span>
             </div>
 
             {/* River Map Canvas Container */}
             <div className="relative w-full aspect-[4/3] bg-[var(--bg-subtle)] border border-[var(--border-main)] rounded-xl overflow-hidden p-2 select-none">
               
-              {/* Watershed SVG Topology */}
-              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {/* Watershed SVG Topology with River Section Glow & Scale */}
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="skeenaWaterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.7" />
+                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.95" />
                   </linearGradient>
+                  
+                  {/* Glow filter for river highlights */}
+                  <filter id="glowEffect" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="1.5" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
 
-                {/* Mainstem Skeena River Curve */}
-                <path 
-                  d="M 12 85 Q 24 75 35 68 T 50 48 T 60 25 T 75 12" 
-                  fill="none" 
-                  stroke="url(#skeenaWaterGradient)" 
-                  strokeWidth="3.5" 
-                  strokeLinecap="round"
-                />
+                {/* 1. Lower Skeena Mainstem: Tyee Estuary (12,85) to Terrace/Kalum Junction (35,68) */}
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Skeena Lower Mainstem' ? 'all' : 'Skeena Lower Mainstem')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '24% 76%' }}
+                >
+                  <path 
+                    d="M 12 85 Q 24 75 35 68" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Skeena Lower Mainstem' ? '#38bdf8' : 'url(#skeenaWaterGradient)'} 
+                    strokeWidth={selectedTributaryFilter === 'Skeena Lower Mainstem' ? '5.2' : '4.2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Skeena Lower Mainstem' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#38bdf8] group-hover:stroke-[5.2] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Skeena Lower Mainstem' ? 'scale(1.03)' : 'scale(1)',
+                      transformOrigin: '24% 76%'
+                    }}
+                  />
+                </g>
+
+                {/* 2. Middle Skeena Mainstem: Terrace (35,68) to Hazelton / Bulkley Junction (50,48) */}
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Kitwanga River' || selectedTributaryFilter === 'Middle Skeena Mainstem' ? 'all' : 'Kitwanga River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '42% 58%' }}
+                >
+                  <path 
+                    d="M 35 68 Q 42 58 50 48" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Kitwanga River' || selectedTributaryFilter === 'Middle Skeena Mainstem' ? '#38bdf8' : 'url(#skeenaWaterGradient)'} 
+                    strokeWidth={selectedTributaryFilter === 'Kitwanga River' || selectedTributaryFilter === 'Middle Skeena Mainstem' ? '4.8' : '3.8'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Kitwanga River' || selectedTributaryFilter === 'Middle Skeena Mainstem' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#38bdf8] group-hover:stroke-[4.8] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Kitwanga River' || selectedTributaryFilter === 'Middle Skeena Mainstem' ? 'scale(1.03)' : 'scale(1)',
+                      transformOrigin: '42% 58%'
+                    }}
+                  />
+                </g>
+
+                {/* 3. Upper Skeena Corridor: Hazelton (50,48) through Kuldo/Sustut (60,25 T 75,12) */}
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Skeena Upper Watershed' ? 'all' : 'Skeena Upper Watershed')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '65% 25%' }}
+                >
+                  <path 
+                    d="M 50 48 Q 55 35 60 25 T 75 12" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Skeena Upper Watershed' ? '#818cf8' : 'url(#skeenaWaterGradient)'} 
+                    strokeWidth={selectedTributaryFilter === 'Skeena Upper Watershed' ? '4.2' : '3.2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Skeena Upper Watershed' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#818cf8] group-hover:stroke-[4.2] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Skeena Upper Watershed' ? 'scale(1.03)' : 'scale(1)',
+                      transformOrigin: '65% 25%'
+                    }}
+                  />
+                </g>
 
                 {/* Bulkley River Tributary Branch */}
-                <path 
-                  d="M 45 55 Q 58 60 68 64 T 82 75" 
-                  fill="none" 
-                  stroke="#d97706" 
-                  strokeWidth="2.5" 
-                  strokeDasharray="1,0"
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Bulkley River' ? 'all' : 'Bulkley River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '65% 65%' }}
+                >
+                  <path 
+                    d="M 45 55 Q 58 60 68 64 T 82 75" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Bulkley River' ? '#fbbf24' : '#d97706'} 
+                    strokeWidth={selectedTributaryFilter === 'Bulkley River' ? '3.8' : '2.8'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Bulkley River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#fbbf24] group-hover:stroke-[3.8] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Bulkley River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '65% 65%'
+                    }}
+                  />
+                </g>
 
                 {/* Babine River Branch */}
-                <path 
-                  d="M 52 45 Q 62 38 72 32 T 85 28" 
-                  fill="none" 
-                  stroke="#10b981" 
-                  strokeWidth="2.2" 
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Babine River' ? 'all' : 'Babine River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '70% 35%' }}
+                >
+                  <path 
+                    d="M 52 45 Q 62 38 72 32 T 85 28" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Babine River' ? '#34d399' : '#10b981'} 
+                    strokeWidth={selectedTributaryFilter === 'Babine River' ? '3.5' : '2.4'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Babine River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#34d399] group-hover:stroke-[3.5] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Babine River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '70% 35%'
+                    }}
+                  />
+                </g>
 
                 {/* Kispiox River Branch */}
-                <path 
-                  d="M 46 48 Q 48 38 52 28" 
-                  fill="none" 
-                  stroke="#f59e0b" 
-                  strokeWidth="2" 
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Kispiox River' ? 'all' : 'Kispiox River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '50% 38%' }}
+                >
+                  <path 
+                    d="M 46 48 Q 48 38 52 28" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Kispiox River' ? '#fde047' : '#f59e0b'} 
+                    strokeWidth={selectedTributaryFilter === 'Kispiox River' ? '3.2' : '2.2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Kispiox River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#fde047] group-hover:stroke-[3.2] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Kispiox River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '50% 38%'
+                    }}
+                  />
+                </g>
 
                 {/* Kalum River Branch */}
-                <path 
-                  d="M 28 68 Q 26 58 28 48" 
-                  fill="none" 
-                  stroke="#38bdf8" 
-                  strokeWidth="2" 
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Kalum (Kitsumkalum) River' ? 'all' : 'Kalum (Kitsumkalum) River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '28% 58%' }}
+                >
+                  <path 
+                    d="M 28 68 Q 26 58 28 48" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Kalum (Kitsumkalum) River' ? '#7dd3fc' : '#38bdf8'} 
+                    strokeWidth={selectedTributaryFilter === 'Kalum (Kitsumkalum) River' ? '3.2' : '2.2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Kalum (Kitsumkalum) River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#7dd3fc] group-hover:stroke-[3.2] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Kalum (Kitsumkalum) River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '28% 58%'
+                    }}
+                  />
+                </g>
 
                 {/* Copper / Zymoetz River Branch */}
-                <path 
-                  d="M 32 70 Q 40 75 48 82" 
-                  fill="none" 
-                  stroke="#06b6d4" 
-                  strokeWidth="2" 
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Zymoetz (Copper) River' ? 'all' : 'Zymoetz (Copper) River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '40% 75%' }}
+                >
+                  <path 
+                    d="M 32 70 Q 40 75 48 82" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Zymoetz (Copper) River' ? '#67e8f9' : '#06b6d4'} 
+                    strokeWidth={selectedTributaryFilter === 'Zymoetz (Copper) River' ? '3.2' : '2.2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Zymoetz (Copper) River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#67e8f9] group-hover:stroke-[3.2] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Zymoetz (Copper) River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '40% 75%'
+                    }}
+                  />
+                </g>
 
                 {/* Sustut Headwater Branch */}
-                <path 
-                  d="M 62 25 Q 74 18 84 14" 
-                  fill="none" 
-                  stroke="#059669" 
-                  strokeWidth="1.8" 
-                  strokeOpacity="0.8"
-                />
+                <g
+                  onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === 'Sustut River' ? 'all' : 'Sustut River')}
+                  className="cursor-pointer group transition-all duration-200"
+                  style={{ transformOrigin: '73% 20%' }}
+                >
+                  <path 
+                    d="M 62 25 Q 74 18 84 14" 
+                    fill="none" 
+                    stroke={selectedTributaryFilter === 'Sustut River' ? '#6ee7b7' : '#059669'} 
+                    strokeWidth={selectedTributaryFilter === 'Sustut River' ? '3' : '2'}
+                    strokeLinecap="round"
+                    filter={selectedTributaryFilter === 'Sustut River' ? 'url(#glowEffect)' : undefined}
+                    className="transition-all duration-200 group-hover:stroke-[#6ee7b7] group-hover:stroke-[3] group-hover:[filter:url(#glowEffect)]"
+                    style={{
+                      transform: selectedTributaryFilter === 'Sustut River' ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '73% 20%'
+                    }}
+                  />
+                </g>
               </svg>
 
-              {/* Tributary Map Pin Nodes */}
-              {Object.entries(TRIBUTARIES_COORDINATES).map(([name, data]) => {
-                const count = notes.filter(n => n.tributary === name).length;
-                const isSelected = selectedTributaryFilter === name;
-
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setSelectedTributaryFilter(selectedTributaryFilter === name ? 'all' : name)}
-                    style={{ left: `${data.x}%`, top: `${data.y}%` }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 group z-10 focus:outline-none"
-                  >
-                    <div 
-                      className={`relative flex items-center justify-center p-1.5 rounded-full border shadow-md transition-transform transform group-hover:scale-125 ${
-                        isSelected 
-                          ? 'bg-[var(--accent-amber)] border-white text-white ring-4 ring-amber-500/30 scale-110' 
-                          : 'bg-[var(--bg-surface)] border-[var(--border-main)] text-[var(--text-main)] hover:border-[var(--accent-amber)]'
-                      }`}
-                    >
-                      <MapPin className="w-3.5 h-3.5" style={{ color: isSelected ? '#ffffff' : data.color }} />
-                      {count > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 px-1 py-0.2 bg-emerald-500 text-white rounded-full text-[9px] font-mono font-bold leading-tight">
-                          {count}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Tooltip on hover */}
-                    <div className="absolute left-1/2 bottom-full mb-1.5 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
-                      <div className="px-2 py-1 bg-black/90 backdrop-blur-md text-white text-[10px] font-mono rounded-md shadow-lg whitespace-nowrap border border-white/10">
-                        <p className="font-bold">{name}</p>
-                        <p className="text-[9px] text-zinc-400">{count} private pins &bull; {data.desc}</p>
-                      </div>
-                      <div className="w-1.5 h-1.5 bg-black/90 rotate-45 -mt-0.5" />
-                    </div>
-                  </button>
-                );
-              })}
-
-              {/* Map Footer Info */}
-              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-surface)]/80 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-[var(--border-main)]">
-                <span>📍 Click river node to filter</span>
-                <span className="text-emerald-500 font-semibold">🔒 Secret coordinates encrypted</span>
+              {/* In-Map Active HUD / Watershed Title overlay on map directly */}
+              <div className="absolute top-2 left-2 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)]/90 backdrop-blur-md border border-[var(--border-main)] shadow-xs">
+                <Compass className="w-3.5 h-3.5 text-[var(--accent-amber)]" />
+                <span className="text-[11px] font-mono font-extrabold text-[var(--text-main)]">
+                  {selectedTributaryFilter === 'all' ? 'All Skeena Basins' : selectedTributaryFilter}
+                </span>
               </div>
             </div>
 
-            {/* Quick River Filter Chips */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setSelectedTributaryFilter('all')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition border ${
-                  selectedTributaryFilter === 'all'
-                    ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber)] font-bold'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-main)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                All Rivers ({notes.length})
-              </button>
-
-              {Object.keys(TRIBUTARIES_COORDINATES).map((name) => {
-                const count = notes.filter(n => n.tributary === name).length;
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setSelectedTributaryFilter(name)}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-mono transition border ${
-                      selectedTributaryFilter === name
-                        ? 'bg-[var(--accent-amber)] text-white border-[var(--accent-amber)] font-bold'
-                        : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-main)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    {name.replace(' River', '').replace(' Watershed', '')} {count > 0 ? `(${count})` : ''}
-                  </button>
-                );
-              })}
+            {/* Clean Watershed Dropdown Filter Selector */}
+            <div className="pt-1">
+              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                Filter by Watershed Basin
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedTributaryFilter}
+                  onChange={(e) => setSelectedTributaryFilter(e.target.value)}
+                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer appearance-none shadow-xs"
+                >
+                  <option value="all">All Basins &amp; Corridors ({notes.length} notes)</option>
+                  {Object.keys(TRIBUTARIES_COORDINATES).map((name) => {
+                    const count = notes.filter(n => n.tributary === name).length;
+                    return (
+                      <option key={name} value={name}>
+                        {name} {count > 0 ? `(${count} pinned)` : '(0 pins)'}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1849,7 +1944,7 @@ export const FieldNotesView: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight">
-                    {editingNoteId ? 'Edit Field Note' : 'New Private Field Note'}
+                    {editingNoteId ? 'Edit Note' : 'New Notes'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] font-mono">
                     {editingNoteId 
@@ -1926,7 +2021,7 @@ export const FieldNotesView: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-[var(--accent-amber)]" />
-                    <span className="font-bold text-[var(--text-main)] text-xs">GPS Coordinates (Encrypted Zero-Knowledge)</span>
+                    <span className="font-bold text-[var(--text-main)] text-xs">GPS Coordinates</span>
                   </div>
                   <button
                     type="button"
@@ -2023,7 +2118,7 @@ export const FieldNotesView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Water Temp (°C)</label>
+                  <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">Water Temp</label>
                   <input
                     type="number"
                     step="0.1"
@@ -2039,7 +2134,7 @@ export const FieldNotesView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block text-[10px] font-semibold text-[var(--text-secondary)] mb-1">
-                    Fly Pattern / Line / Rig Setup
+                    Fly Patterns &amp; Presentation
                   </label>
                   <input
                     type="text"
@@ -2092,7 +2187,7 @@ export const FieldNotesView: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
-                    Photos (Compressed &amp; Encrypted Client-Side)
+                    Photos
                   </label>
                   <button
                     type="button"
@@ -2223,7 +2318,7 @@ export const FieldNotesView: React.FC = () => {
               
               <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-main)] space-y-1">
                 <h4 className="font-heading font-bold text-sm text-[var(--text-main)] flex items-center gap-2">
-                  <span>🛡️ 1. Zero-Knowledge AES-256-GCM Encryption</span>
+                  <span>🛡️ 1. Client-Side AES-256-GCM Encryption</span>
                 </h4>
                 <p>
                   Before your GPS coordinates, pool names, observations, and photos ever leave your browser, they are encrypted locally using the <strong>Web Crypto API with AES-GCM (256-bit)</strong> and a cryptographically unique initialization vector (IV) &amp; salt. The server only receives scrambled ciphertext strings.

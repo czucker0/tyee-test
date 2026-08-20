@@ -193,7 +193,7 @@ export const DailyRunPulseChart: React.FC<DailyRunPulseChartProps> = ({
         <div className="flex items-center gap-2 min-w-0">
           <Activity className="w-5 h-5 text-[var(--accent-amber)] shrink-0" />
           <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight truncate">
-            Daily Migration Pulses
+            Run Progress
           </h3>
         </div>
 

@@ -297,14 +297,14 @@ export default function App() {
     },
     {
       id: 'tributaries' as MainTabType,
-      label: 'Watershed Escapement & Sub-Basin Stocks',
-      shortLabel: 'Sub-Basins',
+      label: 'Watershed Escapement',
+      shortLabel: 'Watersheds',
       icon: <MapPin className="w-4 h-4" />,
       badge: `${tributaries.length} Basins`,
     },
     {
       id: 'field-notes' as MainTabType,
-      label: 'Field Notes 🔒',
+      label: 'Field Notes',
       shortLabel: 'Field Notes',
       icon: <Lock className="w-4 h-4" />,
       badge: 'Encrypted',
