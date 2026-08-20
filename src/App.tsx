@@ -297,10 +297,10 @@ export default function App() {
     },
     {
       id: 'tributaries' as MainTabType,
-      label: 'Tributary Escapement',
-      shortLabel: 'Tributaries',
+      label: 'Watershed Escapement & Sub-Basin Stocks',
+      shortLabel: 'Sub-Basins',
       icon: <MapPin className="w-4 h-4" />,
-      badge: '7 Rivers',
+      badge: `${tributaries.length} Basins`,
     },
     {
       id: 'field-notes' as MainTabType,

@@ -548,7 +548,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Fetch all users for Admin
-  const fetchAllUsersForAdmin = async (): Promise<UserAccount[]> => {
+  const fetchAllUsersForAdmin = useCallback(async (): Promise<UserAccount[]> => {
     if (!user?.isAdmin) return [];
 
     try {
@@ -579,8 +579,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return list;
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, 'users');
+      return [];
     }
-  };
+  }, [user?.isAdmin]);
 
   // Ban User
   const banUser = async (targetUid: string, reason?: string) => {

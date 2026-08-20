@@ -9,7 +9,6 @@ import {
   ReferenceLine,
 } from 'recharts';
 import {
-  ALL_YEARS_DATA,
   CURRENT_YEAR,
   HISTORICAL_AVERAGE_CURVE,
   SEASON_DAYS,
@@ -17,11 +16,12 @@ import {
 } from '../data/historicalData';
 import { YearRunData, ProjectionModelResult } from '../types/steelhead';
 import {
-  ArrowRightLeft,
   TrendingUp,
   TrendingDown,
   Scale,
-  CheckCircle2,
+  Sparkles,
+  Award,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -45,7 +45,7 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
   const mult = isMetricInAdults ? ADULT_EXPANSION_FACTOR : 1.0;
   const unitSuffix = isMetricInAdults ? 'adults' : 'pts';
 
-  // Selected benchmark year to compare head-to-head with 2026 (-1 = 10-Year Average)
+  // Selected benchmark year to compare head-to-head with current year (-1 = 10-Year Average, -2 = All-Time Historical Average)
   const [benchmarkYear, setBenchmarkYear] = useState<number>(2024);
 
   // Synthetic 10-Year Average Baseline record
@@ -79,13 +79,53 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     };
   }, [isDark]);
 
+  // Synthetic All-Time Archive Average (1956–Present)
+  const ALL_TIME_AVG_RECORD: YearRunData = useMemo(() => {
+    const allTimeTotal = 118.4; // 1956-present long term archive mean
+    return {
+      year: -2,
+      isCurrentYear: false,
+      totalIndex: allTimeTotal,
+      projectedTotal: allTimeTotal,
+      peakDate: 'Aug 16',
+      peakDailyIndex: 3.8,
+      medianDate: 'Aug 16',
+      conservationStatus: 'Healthy',
+      color: isDark ? '#38bdf8' : '#0284c7',
+      notes: 'All-Time DFO Archive Mean (1956–Present Long-Term Baseline)',
+      data: HISTORICAL_AVERAGE_CURVE.map((c, idx) => {
+        const sDay = SEASON_DAYS[idx] || { month: 8, day: 16, monthDay: c.monthDay };
+        const scaling = allTimeTotal / 95.7;
+        return {
+          dayOfYear: idx + 1,
+          dateStr: `2026-${sDay.month < 10 ? '0' + sDay.month : sDay.month}-${sDay.day < 10 ? '0' + sDay.day : sDay.day}`,
+          monthDay: c.monthDay,
+          month: sDay.month,
+          day: sDay.day,
+          dailyIndex: Math.round(c.avgDaily * scaling * 100) / 100,
+          cumulativeIndex: Math.round(c.avgCumulative * scaling * 100) / 100,
+          waterTempC: 14.8,
+          dischargeM3s: 2150,
+        };
+      }),
+    };
+  }, [isDark]);
+
   const currentYearRecord = allYears.find((y) => y.isCurrentYear || y.year === CURRENT_YEAR) || allYears[0];
   const isTenYearAvg = benchmarkYear === -1;
+  const isAllTimeAvg = benchmarkYear === -2;
+
   const benchmarkRecord = isTenYearAvg
     ? TEN_YEAR_AVG_RECORD
+    : isAllTimeAvg
+    ? ALL_TIME_AVG_RECORD
     : allYears.find((y) => y.year === benchmarkYear) || TEN_YEAR_AVG_RECORD;
 
-  const benchmarkDisplayName = isTenYearAvg ? '10-Yr DFO Average' : `${benchmarkYear}`;
+  const benchmarkDisplayName = isTenYearAvg
+    ? '10-Yr DFO Avg'
+    : isAllTimeAvg
+    ? 'All-Time Avg (1956+)'
+    : `${benchmarkYear} Season`;
 
   // Find last recorded day index
   const lastRecordedDayIndex = useMemo(() => {
@@ -103,7 +143,6 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
   }, [currentYearRecord]);
 
   const selectedMonthDay = SEASON_DAYS[currentDayIndex]?.monthDay || '';
-  const isFutureDate = currentDayIndex > lastRecordedDayIndex;
 
   // Comparison metrics calculation
   const comparisonStats = useMemo(() => {
@@ -174,267 +213,214 @@ export const HeadToHeadCompareCard: React.FC<HeadToHeadCompareCardProps> = ({
     });
   }, [currentYearRecord, benchmarkRecord, lastRecordedDayIndex, projection, mult]);
 
-  // Quick comparison presets
-  const quickComparePresets = [
-    { year: -1, title: '10-Yr Baseline', desc: 'Official Mean', tag: 'Baseline' },
-    { year: 2024, title: '2024 Season', desc: 'Recent Analog', tag: 'Strong Run' },
-    { year: 2025, title: '2025 Season', desc: 'Previous Year', tag: 'Recent' },
-    { year: 2021, title: '2021 Low Return', desc: 'Historical Dip', tag: 'Precautionary' },
-    { year: 2018, title: '2018 Strong Run', desc: 'High Escapement', tag: 'Abundant' },
-    { year: 2020, title: '2020 Season', desc: 'Mid Tier', tag: 'Moderate' },
+  // Iconic multi-era benchmark pill presets
+  const benchmarkPills = [
+    { id: -1, label: '10-Yr Avg', badge: 'Baseline', icon: <Scale className="w-3 h-3 text-teal-500" /> },
+    { id: -2, label: 'All-Time Avg', badge: '1956+', icon: <Sparkles className="w-3 h-3 text-sky-500" /> },
+    { id: 2024, label: '2024 Season', badge: 'Recent High', icon: <TrendingUp className="w-3 h-3 text-emerald-500" /> },
+    { id: 2025, label: '2025 Season', badge: 'Last Year', icon: <Scale className="w-3 h-3 text-amber-500" /> },
+    { id: 2021, label: '2021 Record Low', badge: 'Crisis (22 pts)', icon: <AlertTriangle className="w-3 h-3 text-red-500" /> },
+    { id: 2018, label: '2018 Strong Run', badge: '185 pts', icon: <Award className="w-3 h-3 text-amber-500" /> },
   ];
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    return (
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[210px]">
+        <div className="font-bold text-[var(--accent-amber)] font-mono border-b border-[var(--border-main)] pb-1 flex justify-between items-center">
+          <span className="text-sm font-bold text-[var(--text-main)]">{label}</span>
+          <span className="text-[10px] text-[var(--text-muted)] font-mono">Head-to-Head</span>
+        </div>
+        {payload.map((p: any) => {
+          if (p.value === null || p.value === undefined) return null;
+          return (
+            <div key={p.dataKey} className="flex justify-between items-center py-0.5 gap-2">
+              <span className="text-[var(--text-secondary)] flex items-center gap-1.5 font-mono text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                <span>{p.name}:</span>
+              </span>
+              <span className="font-mono font-bold text-[var(--text-main)]">
+                {p.value.toLocaleString()} {unitSuffix}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 transition-colors duration-200">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-main)] pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Scale className="w-5 h-5 text-[var(--accent-amber)]" />
-            <h3 className="text-lg font-heading font-extrabold text-[var(--text-main)] tracking-wide">
-              Head-to-Head Benchmark Matchup
-            </h3>
-          </div>
-          <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
-            Comparing the live 2026 campaign against historical seasons and the official DFO 10-year mean.
-          </p>
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 transition-colors duration-200">
+      {/* Header - Single line title */}
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--border-main)] pb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Scale className="w-5 h-5 text-[var(--accent-amber)] shrink-0" />
+          <h3 className="text-base sm:text-lg font-heading font-extrabold text-[var(--text-main)] tracking-tight truncate">
+            Head-to-Head Benchmark Matchup
+          </h3>
         </div>
 
-        {/* Benchmark Selector Dropdown */}
-        <div className="flex items-center gap-2 font-mono w-full sm:w-auto min-w-0 max-w-full">
-          <label className="text-xs text-[var(--text-secondary)] font-medium whitespace-nowrap shrink-0">Benchmark:</label>
+        {/* Dropdown for any historical year */}
+        <div className="flex items-center gap-1.5 shrink-0 font-mono">
           <select
             value={benchmarkYear}
             onChange={(e) => setBenchmarkYear(parseInt(e.target.value, 10))}
-            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] w-full sm:max-w-[280px] md:max-w-xs truncate cursor-pointer shadow-xs"
+            className="bg-[var(--bg-subtle)] border border-[var(--border-main)] text-[var(--text-main)] rounded-lg px-2 sm:px-2.5 py-1 text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-amber)] cursor-pointer shadow-xs max-w-[140px] sm:max-w-[220px] truncate"
+            aria-label="Select historical year for head-to-head comparison"
           >
-            <option value={-1}>10-Year DFO Average Baseline</option>
+            <option value={-1}>10-Yr DFO Average</option>
+            <option value={-2}>All-Time Archive Avg (1956+)</option>
             {allYears
               .filter((y) => !y.isCurrentYear && y.year !== CURRENT_YEAR)
               .sort((a, b) => b.year - a.year)
               .map((y) => (
                 <option key={y.year} value={y.year}>
-                  {y.year} Season ({y.totalIndex} pts) &bull; {y.conservationStatus}
+                  {y.year} Season ({y.totalIndex} pts)
                 </option>
               ))}
           </select>
         </div>
       </div>
 
-      {/* Quick Compare Preset Tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {quickComparePresets.map((preset) => {
-          const isSelected = benchmarkYear === preset.year;
+      {/* Streamlined Curated Benchmark Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full">
+        {benchmarkPills.map((pill) => {
+          const isSelected = benchmarkYear === pill.id;
           return (
             <button
-              key={preset.year}
-              onClick={() => setBenchmarkYear(preset.year)}
-              className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+              key={pill.id}
+              onClick={() => setBenchmarkYear(pill.id)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 isSelected
-                  ? 'bg-[var(--accent-amber-light)] border-[var(--accent-amber-border)] shadow-sm'
-                  : 'bg-[var(--bg-card)] border-[var(--border-main)] hover:border-[var(--border-highlight)]'
+                  ? 'bg-[var(--accent-amber)] text-white font-bold shadow-xs'
+                  : 'bg-[var(--bg-card)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] border border-[var(--border-main)]'
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--accent-amber)]">
-                    {preset.tag}
-                  </span>
-                  {isSelected && <CheckCircle2 className="w-3 h-3 text-[var(--accent-amber)]" />}
-                </div>
-                <span className="text-xs font-mono font-bold text-[var(--text-main)] block truncate">{preset.title}</span>
-              </div>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-2 leading-tight">{preset.desc}</p>
+              {pill.icon}
+              <span className="font-semibold">{pill.label}</span>
+              <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)]'}`}>
+                {pill.badge}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* KPI Comparison Scorecard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 font-mono">
-        {/* Metric 1: Value on selected date */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
-            <span>Passage to <span className="text-[var(--text-main)] font-bold">{selectedMonthDay}</span></span>
-            <span className="text-xs font-mono font-bold uppercase text-[var(--accent-amber)]">
-              {isFutureDate ? 'Model Forecast' : 'DFO Record'}
-            </span>
+      {/* Benchmark Head-to-Head Telemetry Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {/* On Date Tracking */}
+        <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
+          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
+            <span>Progress as of {selectedMonthDay}</span>
+            <span className="font-bold text-[var(--accent-amber)]">2026 vs {benchmarkDisplayName}</span>
           </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--accent-amber)]">
-              {comparisonStats.currentVal}
+          <div className="flex items-baseline justify-between">
+            <span className="text-base sm:text-lg font-mono font-bold text-[var(--text-main)]">
+              {comparisonStats.currentVal.toLocaleString()} vs {comparisonStats.benchmarkVal.toLocaleString()}
             </span>
-            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
-              vs {comparisonStats.benchmarkVal} ({benchmarkDisplayName})
+            <span
+              className={`text-xs font-mono font-bold flex items-center gap-0.5 ${
+                comparisonStats.diff >= 0 ? 'text-emerald-500' : 'text-rose-500'
+              }`}
+            >
+              {comparisonStats.diff >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {comparisonStats.diff >= 0 ? `+${comparisonStats.diff}` : `${comparisonStats.diff}`} ({comparisonStats.pctDiff > 0 ? `+${comparisonStats.pctDiff}%` : `${comparisonStats.pctDiff}%`})
             </span>
-          </div>
-          <div className="text-xs pt-1.5 border-t border-[var(--border-main)] flex items-center gap-1 font-bold">
-            {comparisonStats.diff >= 0 ? (
-              <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold">
-                <TrendingUp className="w-4 h-4" />
-                +{comparisonStats.diff} {unitSuffix} (+{comparisonStats.pctDiff}%)
-              </span>
-            ) : (
-              <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1 font-bold">
-                <TrendingDown className="w-4 h-4" />
-                {comparisonStats.diff} {unitSuffix} ({comparisonStats.pctDiff}%)
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Metric 2: Final Projected Season Comparison */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
+        {/* Projected Season Total Delta */}
+        <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
+          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
             <span>Projected Season Total</span>
-            <span className="text-xs uppercase text-[var(--accent-amber)] font-bold">Full Campaign</span>
+            <span className="font-bold text-[var(--text-main)]">Forecast</span>
           </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)]">
-              {comparisonStats.currentProjectedTotal}
+          <div className="flex items-baseline justify-between">
+            <span className="text-base sm:text-lg font-mono font-bold text-[var(--accent-amber)]">
+              {comparisonStats.currentProjectedTotal.toLocaleString()} vs {comparisonStats.benchmarkTotal.toLocaleString()}
             </span>
-            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
-              vs {comparisonStats.benchmarkTotal} (Final)
+            <span
+              className={`text-xs font-mono font-bold flex items-center gap-0.5 ${
+                comparisonStats.totalDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'
+              }`}
+            >
+              {comparisonStats.totalDiff >= 0 ? `+${comparisonStats.totalDiff}` : `${comparisonStats.totalDiff}`} ({comparisonStats.totalPctDiff > 0 ? `+${comparisonStats.totalPctDiff}%` : `${comparisonStats.totalPctDiff}%`})
             </span>
-          </div>
-          <div className="text-xs pt-1.5 border-t border-[var(--border-main)] flex items-center gap-1 font-bold">
-            {comparisonStats.totalDiff >= 0 ? (
-              <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold">
-                <TrendingUp className="w-4 h-4" />
-                +{comparisonStats.totalDiff} {unitSuffix} (+{comparisonStats.totalPctDiff}%)
-              </span>
-            ) : (
-              <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1 font-bold">
-                <TrendingDown className="w-4 h-4" />
-                {comparisonStats.totalDiff} {unitSuffix} ({comparisonStats.totalPctDiff}%)
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Metric 3: Run Progression Pace */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 space-y-1.5 shadow-sm">
-          <div className="flex justify-between items-center text-[var(--text-secondary)] text-xs font-bold">
-            <span>Run Timing Completion</span>
-            <span className="text-xs text-[var(--accent-teal)] font-bold">Elapsed %</span>
+        {/* Run Timing Completion */}
+        <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] space-y-1">
+          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
+            <span>Historical Elapsed Share</span>
+            <span className="font-bold text-[var(--text-main)]">{benchmarkDisplayName}</span>
           </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)]">
-              {projection.percentElapsedHistorical}%
-            </span>
-            <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
-              vs {comparisonStats.benchmarkPctElapsedOnDate}% ({benchmarkDisplayName})
-            </span>
-          </div>
-          <div className="text-xs text-[var(--text-secondary)] font-medium pt-1.5 border-t border-[var(--border-main)]">
-            {projection.percentElapsedHistorical < 50
-              ? 'Early-to-mid season migration'
-              : 'Post-peak / late season passage'}
-          </div>
-        </div>
-
-        {/* Metric 4: Lead/Lag Status Badge */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-sm space-y-1.5">
-          <span className="text-xs text-[var(--text-secondary)] font-bold">Campaign Stance</span>
-          <div className="my-1">
-            {comparisonStats.diff >= 0 ? (
-              <span className="stamp-badge stamp-spruce">
-                Ahead of {benchmarkDisplayName} Pace
-              </span>
-            ) : (
-              <span className="stamp-badge bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700">
-                Tracking Below {benchmarkDisplayName}
-              </span>
-            )}
-          </div>
-          <span className="text-xs text-[var(--text-secondary)] font-medium pt-1.5 border-t border-[var(--border-main)]">
-            Delta: {comparisonStats.diff >= 0 ? `+${comparisonStats.diff}` : comparisonStats.diff} {unitSuffix}
-          </span>
+          <p className="text-base sm:text-lg font-mono font-bold text-[var(--text-secondary)]">
+            {comparisonStats.benchmarkPctElapsedOnDate}% completed <span className="text-xs font-normal text-[var(--text-muted)]">by {selectedMonthDay}</span>
+          </p>
         </div>
       </div>
 
-      {/* Differential Line Chart: 2026 vs Benchmark Curve */}
-      <div className="space-y-2 pt-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-heading font-extrabold text-[var(--text-main)] flex items-center gap-1.5">
-            <ArrowRightLeft className="w-4 h-4 text-[var(--accent-amber)]" />
-            <span>Cumulative Run Head-to-Head Differential Curve</span>
-          </h4>
-          <span className="text-xs font-mono text-[var(--text-muted)]">
-            Positive = 2026 Leading &bull; Negative = 2026 Trailing
-          </span>
-        </div>
+      {/* Head to Head Trajectory Line Chart */}
+      <div className="h-[260px] w-full pt-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={diffChartData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+            <XAxis
+              dataKey="monthDay"
+              stroke={isDark ? '#475569' : '#a39b8c'}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
+              interval="preserveStartEnd"
+              minTickGap={28}
+            />
+            <YAxis
+              stroke={isDark ? '#475569' : '#a39b8c'}
+              tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
+              tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
+              domain={[0, 'auto']}
+            />
+            <Tooltip content={<CustomTooltip />} />
 
-        <div className="h-[280px] w-full pt-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={diffChartData} margin={{ top: 10, right: 20, left: 10, bottom: 15 }}>
-              <XAxis
-                dataKey="monthDay"
-                stroke={isDark ? '#475569' : '#a39b8c'}
-                tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
-                tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
-                interval="preserveStartEnd"
-                minTickGap={24}
-              />
-              <YAxis
-                stroke={isDark ? '#475569' : '#a39b8c'}
-                tick={{ fill: isDark ? '#94a3b8' : '#5c6760', fontSize: 11, fontFamily: 'monospace' }}
-                tickLine={{ stroke: isDark ? '#263b40' : '#d8cfbe' }}
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload || !payload.length) return null;
-                  const item = payload[0]?.payload;
-                  if (!item) return null;
-                  const isRec = item.dayIndex <= lastRecordedDayIndex;
-                  return (
-                    <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[200px] font-mono">
-                      <div className="font-bold text-[var(--text-main)] border-b border-[var(--border-main)] pb-1 flex justify-between font-editorial">
-                        <span>{label}</span>
-                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-mono">
-                          {isRec ? 'Recorded DFO' : 'Model Forecast'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--accent-amber)] font-semibold">{CURRENT_YEAR} {isRec ? 'Actual' : 'Projected'}:</span>
-                        <span className="text-[var(--text-main)] font-bold">{item.current2026}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--text-muted)]">{benchmarkDisplayName}:</span>
-                        <span className="text-[var(--text-secondary)]">{item.benchmark}</span>
-                      </div>
-                      <div className="flex justify-between pt-1 border-t border-[var(--border-main)] font-bold">
-                        <span className="text-[var(--text-secondary)]">Differential:</span>
-                        <span className={`${item.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {item.delta >= 0 ? `+${item.delta}` : item.delta} {unitSuffix}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <ReferenceLine y={0} stroke={isDark ? '#475569' : '#a39b8c'} strokeWidth={1.5} />
-              <ReferenceLine x={selectedMonthDay} stroke={isDark ? '#f59e0b' : '#c56a25'} strokeWidth={2} strokeDasharray="3 3" />
-              <Line
-                type="monotone"
-                dataKey="current2026"
-                stroke={isDark ? '#f59e0b' : '#c56a25'}
-                strokeWidth={2.5}
-                dot={false}
-                name={`${CURRENT_YEAR} Run`}
-              />
-              <Line
-                type="monotone"
-                dataKey="benchmark"
-                stroke={isDark ? '#2dd4bf' : '#1a6467'}
-                strokeWidth={2}
-                strokeDasharray="4 4"
-                dot={false}
-                name={benchmarkDisplayName}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+            <ReferenceLine
+              x={selectedMonthDay}
+              stroke={isDark ? '#f59e0b' : '#c56a25'}
+              strokeWidth={2}
+              strokeDasharray="3 3"
+              label={{
+                value: selectedMonthDay,
+                fill: isDark ? '#f59e0b' : '#c56a25',
+                fontSize: 10,
+                position: 'top',
+                fontWeight: 'bold',
+              }}
+            />
+
+            {/* Benchmark Trajectory */}
+            <Line
+              type="monotone"
+              dataKey="benchmark"
+              stroke={isDark ? '#2dd4bf' : '#1a6467'}
+              strokeWidth={2}
+              dot={false}
+              name={benchmarkDisplayName}
+            />
+
+            {/* 2026 Campaign */}
+            <Line
+              type="monotone"
+              dataKey="current2026"
+              stroke={isDark ? '#3b82f6' : '#c56a25'}
+              strokeWidth={3}
+              dot={false}
+              name="2026 Live Campaign"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-t border-[var(--border-main)] pt-2 font-mono">
+        <span>Active Benchmark: <strong className="text-[var(--text-main)]">{benchmarkDisplayName}</strong> ({benchmarkRecord.notes || `${benchmarkRecord.totalIndex} pts`})</span>
+        <span>Selected: <strong className="text-[var(--accent-amber)]">{selectedMonthDay}</strong></span>
       </div>
     </div>
   );

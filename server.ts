@@ -18,6 +18,7 @@ import {
   recalculateCumulativeCurve,
   scrapeSpecificYear,
   scrapePastDecadeBatch,
+  scrapeBulkHistoricalArchive,
   getDFOUrlForYear,
 } from './server/services/dfoScraper.js';
 
@@ -176,6 +177,18 @@ app.post('/api/tyee/sync-daily', async (req, res) => {
 app.post('/api/tyee/scraper/scrape-decade', async (req, res) => {
   try {
     const result = await scrapePastDecadeBatch();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 3b-2. POST Scrape Deep Bulk Historical Archive (1956 to Present)
+app.post('/api/tyee/scraper/bulk-historical', async (req, res) => {
+  try {
+    const startYear = parseInt(req.body.startYear, 10) || 1956;
+    const endYear = parseInt(req.body.endYear, 10) || 2025;
+    const result = await scrapeBulkHistoricalArchive(startYear, endYear);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

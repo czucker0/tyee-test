@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'overview' as MainTabType, label: 'Overview & Telemetry', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'forecast' as MainTabType, label: 'Forecast & Projections', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'compare' as MainTabType, label: 'Historical Comparison', icon: <ArrowRightLeft className="w-4 h-4" /> },
-    { id: 'tributaries' as MainTabType, label: 'Tributary Escapement', icon: <MapPin className="w-4 h-4" /> },
+    { id: 'tributaries' as MainTabType, label: 'Watershed Escapement & Sub-Basin Stocks', icon: <MapPin className="w-4 h-4" /> },
     { id: 'field-notes' as MainTabType, label: 'Field Notes 🔒', icon: <Lock className="w-4 h-4" /> },
   ];
 
